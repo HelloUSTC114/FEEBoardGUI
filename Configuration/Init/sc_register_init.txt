@@ -1,0 +1,195 @@
+0000 % Ch0 4-bit DAC_t ([0..3])
+0000 % Ch1 4-bit DAC_t ([0..3])
+0000 % Ch2 4-bit DAC_t ([0..3])
+0000 % Ch3 4-bit DAC_t ([0..3])
+0000 % Ch4 4-bit DAC_t ([0..3])
+0000 % Ch5 4-bit DAC_t ([0..3])
+0000 % Ch6 4-bit DAC_t ([0..3])
+0000 % Ch7 4-bit DAC_t ([0..3])
+0000 % Ch8 4-bit DAC_t ([0..3])
+0000 % Ch9 4-bit DAC_t ([0..3])
+0000 % Ch10 4-bit DAC_t ([0..3])
+0000 % Ch11 4-bit DAC_t ([0..3])
+0000 % Ch12 4-bit DAC_t ([0..3])
+0000 % Ch13 4-bit DAC_t ([0..3])
+0000 % Ch14 4-bit DAC_t ([0..3])
+0000 % Ch15 4-bit DAC_t ([0..3])
+0000 % Ch16 4-bit DAC_t ([0..3])
+0000 % Ch17 4-bit DAC_t ([0..3])
+0000 % Ch18 4-bit DAC_t ([0..3])
+0000 % Ch19 4-bit DAC_t ([0..3])
+0000 % Ch20 4-bit DAC_t ([0..3])
+0000 % Ch21 4-bit DAC_t ([0..3])
+0000 % Ch22 4-bit DAC_t ([0..3])
+0000 % Ch23 4-bit DAC_t ([0..3])
+0000 % Ch24 4-bit DAC_t ([0..3])
+0000 % Ch25 4-bit DAC_t ([0..3])
+0000 % Ch26 4-bit DAC_t ([0..3])
+0000 % Ch27 4-bit DAC_t ([0..3])
+0000 % Ch28 4-bit DAC_t ([0..3])
+0000 % Ch29 4-bit DAC_t ([0..3])
+0000 % Ch30 4-bit DAC_t ([0..3])
+0000 % Ch31 4-bit DAC_t ([0..3])
+0000 % Ch0 4-bit DAC ([0..3])
+0000 % Ch1 4-bit DAC ([0..3])
+0000 % Ch2 4-bit DAC ([0..3])
+0000 % Ch3 4-bit DAC ([0..3])
+0000 % Ch4 4-bit DAC ([0..3])
+0000 % Ch5 4-bit DAC ([0..3])
+0000 % Ch6 4-bit DAC ([0..3])
+0000 % Ch7 4-bit DAC ([0..3])
+0000 % Ch8 4-bit DAC ([0..3])
+0000 % Ch9 4-bit DAC ([0..3])
+0000 % Ch10 4-bit DAC ([0..3])
+0000 % Ch11 4-bit DAC ([0..3])
+0000 % Ch12 4-bit DAC ([0..3])
+0000 % Ch13 4-bit DAC ([0..3])
+0000 % Ch14 4-bit DAC ([0..3])
+0000 % Ch15 4-bit DAC ([0..3])
+0000 % Ch16 4-bit DAC ([0..3])
+0000 % Ch17 4-bit DAC ([0..3])
+0000 % Ch18 4-bit DAC ([0..3])
+0000 % Ch19 4-bit DAC ([0..3])
+0000 % Ch20 4-bit DAC ([0..3])
+0000 % Ch21 4-bit DAC ([0..3])
+0000 % Ch22 4-bit DAC ([0..3])
+0000 % Ch23 4-bit DAC ([0..3])
+0000 % Ch24 4-bit DAC ([0..3])
+0000 % Ch25 4-bit DAC ([0..3])
+0000 % Ch26 4-bit DAC ([0..3])
+0000 % Ch27 4-bit DAC ([0..3])
+0000 % Ch28 4-bit DAC ([0..3])
+0000 % Ch29 4-bit DAC ([0..3])
+0000 % Ch30 4-bit DAC ([0..3])
+0000 % Ch31 4-bit DAC ([0..3])
+1 %Enable discriminator
+1 % Disable trigger discriminator power pulsing mode (force ON)
+0 % Select latched (RS : 1) or direct output (trigger : 0)
+1 % Enable Discriminator Two
+1 % Disable trigger discriminator power pulsing mode (force ON)
+1 % EN_4b_dac
+1 %PP: 4b_dac
+1 % EN_4b_dac_t
+1 %PP: 4b_dac_t
+00000000 00000000 00000000 11000000 % Allows to Mask Discriminator (channel 0 to 31) [active low]
+1 % Disable High Gain Track & Hold power pulsing mode (force ON)
+1 % Enable High Gain Track & Hold
+1 % Disable Low Gain Track & Hold power pulsing mode (force ON)
+1 % Enable Low Gain Track & Hold
+0 % SCA bias ( 1 = weak bias, 0 = high bias 5MHz ReadOut Speed)
+1 %PP: HG Pdet
+1 % EN_HG_Pdet
+1 %PP: LG Pdet
+1 % EN_LG_Pdet
+0 % Sel SCA or PeakD HG
+0 % Sel SCA or PeakD LG
+0 % Bypass Peak Sensing Cell
+1 % Sel Trig Ext PSC
+1 % Disable fast shaper follower power pulsing mode (force ON)
+1 % Enable fast shaper
+1 % Disable fast shaper power pulsing mode (force ON)
+1 % Disable low gain slow shaper power pulsing mode (force ON)
+1 % Enable Low Gain Slow Shaper
+110 % Low gain shaper time constant commands (0…2)  [active low] 100
+1 % Disable high gain slow shaper power pulsing mode (force ON)
+1 % Enable high gain Slow Shaper
+110 % High gain shaper time constant commands (0…2)  [active low] 100
+0 % Low Gain PreAmp bias ( 1 = weak bias, 0 = normal bias)
+1 % Disable High Gain preamp power pulsing mode (force ON)
+1 % Enable High Gain preamp
+1 % Disable Low Gain preamp power pulsing mode (force ON)
+1 % Enable Low Gain preamp
+0 % Select LG PA to send to Fast Shaper
+1 % Enable 32 input 8-bit DACs
+1 % 8-bit input DAC Voltage Reference (1 = external 4,5V , 0 = internal 2,5V)
+10000000 1 % Input 8-bit DAC Data channel 0 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11001011 1 % Input 8-bit DAC Data channel 1 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11001011 1 % Input 8-bit DAC Data channel 2 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11001010 1 % Input 8-bit DAC Data channel 3 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11000000 1 % Input 8-bit DAC Data channel 4 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11001011 1 % Input 8-bit DAC Data channel 5 – (DAC7…DAC0 + DAC ON), higher-higher bias
+10111111 1 % Input 8-bit DAC Data channel 6 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11001010 1 % Input 8-bit DAC Data channel 7 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11000011 1 % Input 8-bit DAC Data channel 8 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11001011 1 % Input 8-bit DAC Data channel 9 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11000001 1 % Input 8-bit DAC Data channel 10 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11000101 1 % Input 8-bit DAC Data channel 11 – (DAC7…DAC0 + DAC ON), higher-higher bias
+10111111 1 % Input 8-bit DAC Data channel 12 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11001001 1 % Input 8-bit DAC Data channel 13 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11000001 1 % Input 8-bit DAC Data channel 14 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11001101 1 % Input 8-bit DAC Data channel 15 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11001100 1 % Input 8-bit DAC Data channel 16 – (DAC7…DAC0 + DAC ON), higher-higher bias
+10111110 1 % Input 8-bit DAC Data channel 17 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11000110 1 % Input 8-bit DAC Data channel 18 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11000011 1 % Input 8-bit DAC Data channel 19 – (DAC7…DAC0 + DAC ON), higher-higher bias
+10111111 1 % Input 8-bit DAC Data channel 20 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11000001 1 % Input 8-bit DAC Data channel 21 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11000101 1 % Input 8-bit DAC Data channel 22 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11000000 1 % Input 8-bit DAC Data channel 23 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11000011 1 % Input 8-bit DAC Data channel 24 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11000011 1 % Input 8-bit DAC Data channel 25 – (DAC7…DAC0 + DAC ON), higher-higher bias
+10111011 1 % Input 8-bit DAC Data channel 26 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11000000 1 % Input 8-bit DAC Data channel 27 – (DAC7…DAC0 + DAC ON), higher-higher bias
+10111111 1 % Input 8-bit DAC Data channel 28 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11000011 1 % Input 8-bit DAC Data channel 29 – (DAC7…DAC0 + DAC ON), higher-higher bias
+10111100 1 % Input 8-bit DAC Data channel 30 – (DAC7…DAC0 + DAC ON), higher-higher bias
+11000110 1 % Input 8-bit DAC Data channel 31 – (DAC7…DAC0 + DAC ON), higher-higher bias
+110011 101111 000 % Ch0   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch1   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 111101 000 % Ch2   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch3   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch4   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch5   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch6   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch7   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+000011 111011 000 % Ch8   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch9   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch10   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch11   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch12   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch13   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch14   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch15   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch16   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch17   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch18   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch19   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch20   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch21   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch22   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch23   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+000011 111011 000 % Ch24   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+000011 111011 000 % Ch25   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch26   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch27   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch28   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch29   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch30   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+110011 101111 000 % Ch31   PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)
+1 % Disable Temperature Sensor power pulsing mode (force ON)
+1 % Enable Temperature Sensor
+1 % Disable BandGap power pulsing mode (force ON)
+1 % Enable BandGap
+1 % Enable DAC1
+1 % Disable DAC1 power pulsing mode (force ON)
+1 % Enable DAC2
+1 % Disable DAC2 power pulsing mode (force ON)
+0011100000 % 10-bit DAC1 (MSB-LSB): 00 1100 0000 for 0.5 p.e. charge discriminator threshold
+0100000000 % 10-bit DAC2 (MSB-LSB): 00 1100 0000 for 0.5 p.e. time discriminator threshold
+1 % Enable High Gain OTA%  -- start byte 
+1 % Disable High Gain OTA power pulsing mode (force ON)
+1 % Enable Low Gain OTA
+1 % Disable Low Gain OTA power pulsing mode (force ON)
+1 % Enable Probe OTA
+1 % Disable Probe OTA power pulsing mode (force ON)
+0 % Otaq test bit
+0 % Enable Val_Evt receiver
+0 % Disable Val_Evt receiver power pulsing mode (force ON)
+0 % Enable Raz_Chn receiver
+0 % Disable Raz Chn receiver power pulsing mode (force ON)
+1 % Enable digital multiplexed output (hit mux out)
+1 % Enable digital OR32 output
+1 % Enable digital OR32 Open Collector output
+0 % Trigger Polarity
+1 % Enable digital OR32_T Open Collector output
+1 % Enable 32 channels triggers outputs
