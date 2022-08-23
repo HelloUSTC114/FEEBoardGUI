@@ -16,19 +16,8 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 find_package(ROOT REQUIRED COMPONENTS Core)
 
 
-include_directories("C:/Program\ Files/Zaber\ Motion\ Library/include" "include/")
-#link_directories("C:/Program\ Files/Zaber\ Motion\ Library/lib")
-#link_libraries(zml.lib)
-
-find_library(ZMLLIB zml.lib "C:/Program\ Files/Zaber\ Motion\ Library/lib")
-#Ws2_32.lib : windowssokets2 lib
-link_libraries(${ZMLLIB} Ws2_32)
-message(${ZMLLIB})
-
-link_libraries(
-    ROOT::Core ROOT::Imt ROOT::RIO ROOT::Net ROOT::Hist ROOT::Graf ROOT::Graf3d ROOT::Gpad ROOT::ROOTDataFrame ROOT::Tree ROOT::TreePlayer ROOT::Rint ROOT::Postscript ROOT::Matrix ROOT::Physics ROOT::MathCore ROOT::Thread ROOT::ROOTVecOps
-)
-
+include_directories( "include/")
+link_libraries(Ws2_32)
 
 
 set(PROJECT_SOURCES
@@ -38,33 +27,14 @@ set(PROJECT_SOURCES
         src/FEEControlWidget.ui
         src/FEEControlWidget.cpp
 
-        include/ConnectionManager.h
-        src/ConnectionManager.cpp
-
         include/feecontrol.h
         src/feecontrol.cpp
 
-        include/datamanager.h
-        src/datamanager.cpp
+#        include/datamanager.h
+#        src/datamanager.cpp
 
         include/configfileparser.h
         src/configfileparser.cpp
-
-        include/ROOTDraw.h
-        src/ROOTDraw.cpp
-
-        include/analyzer.h
-        src/analyzer.cpp
-
-        include/ftanalyzerwin.h 
-        src/ftanalyzerwin.cpp 
-        src/ftanalyzerwin.ui
-
-        include/zabercontrolwidget.h
-        src/zabercontrolwidget.cpp
-        src/zabercontrolwidget.ui
-
-        src/ROOTDraw.ui
 
 )
 

@@ -108,7 +108,7 @@ public:
     /// @param reg value of mask
     /// @return changed mask
     static uint32_t &SetChannelMask(int ch, bool flag, uint32_t &reg);
-    static uint32_t &SetMasks(bool *flag);
+    static uint32_t SetMasks(bool *flag);
     static bool GetMask(int ch, uint32_t reg);
 
 private:

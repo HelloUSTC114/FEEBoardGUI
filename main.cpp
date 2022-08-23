@@ -3,18 +3,8 @@
 #include <QApplication>
 
 // This three headers are conflicted with each other, should arrage like: ROOT, ZML, winsock
-#include "datamanager.h"
-#include "ConnectionManager.h"
 // #include "feecontrol.h"
 #include "configfileparser.h"
-#include "analyzer.h"
-#include "ROOTDraw.h"
-#include "ftanalyzerwin.h"
-#include "zabercontrolwidget.h"
-
-#include <TApplication.h>
-#include <TH1D.h>
-#include <TDatime.h>
 
 #include <QDateTime>
 
@@ -27,7 +17,6 @@
 
 int main(int argc, char *argv[])
 {
-    new TApplication("QTCanvas Demo", &argc, argv);
     QApplication qapp(argc, argv);
 
     //    std::vector<Device> deviceList;

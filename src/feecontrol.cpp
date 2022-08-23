@@ -933,7 +933,7 @@ uint32_t &FEEControl::SetChannelMask(int ch, bool flag, uint32_t &reg)
     return reg;
 }
 
-uint32_t &FEEControl::SetMasks(bool *flag)
+uint32_t FEEControl::SetMasks(bool *flag)
 {
     uint32_t reg;
     for (int i = 0; i < 32; i++)
