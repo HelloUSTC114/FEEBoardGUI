@@ -618,7 +618,7 @@ int FEEControl::HVSend(string scmd)
     char input_cmd[256];
     strcpy(input_cmd, scmd.c_str());
 
-    if (start_socket() != EXIT_SUCCESS)
+    if (!start_socket())
         return EXIT_FAILURE;
 
     // send and receive data
@@ -861,7 +861,7 @@ int FEEControl::SendConfig(ConfigFileParser *parser)
     if (!parser->sConfigValidate())
         return -1;
 
-    if (start_socket() != EXIT_SUCCESS)
+    if (!start_socket())
         return EXIT_FAILURE;
 
     // send and receive data

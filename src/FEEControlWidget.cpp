@@ -32,6 +32,8 @@ FEEControlWin::FEEControlWin(QWidget *parent)
     ui->setupUi(this);
 
     // FEE control Tab
+    ui->lineIP->setEnabled(false);
+    ui->boxPort->setEnabled(false);
 
     ui->grpFEEInfo->setEnabled(false);
     ui->grpHVctrl->setEnabled(false);
@@ -272,13 +274,12 @@ void FEEControlWin::on_btnConnect_clicked()
     std::string ip = ui->lineIP->text().toStdString();
     int port = ui->boxPort->value();
 
+    gBoard->InitPort(ip, port);
     ui->brsMessage->setTextColor(QColor(0, 0, 0));
     ui->brsMessage->setFontWeight(QFont::Bold);
     ui->brsMessage->append("Try to connect: ");
     ui->brsMessage->setFontWeight(QFont::Normal);
     ui->brsMessage->append(QString::fromStdString(gBoard->GetIP()) + ":" + QString::number(gBoard->GetPort()));
-
-    gBoard->InitPort(ip, port);
 
     fConnected = gBoard->TestConnect();
     PrintConnection(fConnected);
@@ -472,7 +473,7 @@ bool FEEControlWin::ScanFromScreen()
 bool FEEControlWin::SendCITIROCConfig()
 {
     auto rtn = gBoard->SendConfig(gParser);
-    if (rtn < 0 || rtn == EXIT_FAILURE)
+    if (!rtn)
     {
         ui->brsMessage->setTextColor(redColor);
         ui->brsMessage->setFontWeight(QFont::Bold);
@@ -552,4 +553,25 @@ void FEEControlWin::on_btnMask_clicked()
     ui->brsMessage->setTextColor(QColor(0, 255, 0));
     ui->brsMessage->setFontWeight(QFont::Bold);
     ui->brsMessage->append("Sent Masks: " + QString::number(fChannelMasks));
+}
+
+void FEEControlWin::on_btnGenerateIP_clicked()
+{
+    string ip;
+    int port;
+    FEEControl::GenerateIP(ui->boxBoardNo->value(), ip, port);
+    ui->boxPort->setValue(port);
+    ui->lineIP->setText(QString::fromStdString(ip));
+}
+
+void FEEControlWin::on_btnExit_clicked()
+{
+    gBoard->BoardExit();
+
+    ui->brsMessage->setTextColor(greenColor);
+    ui->brsMessage->setFontWeight(QFont::Bold);
+    ui->brsMessage->append(tr("Board Exited."));
+
+    ui->brsMessage->setTextColor(blackColor);
+    ui->brsMessage->setFontWeight(QFont::Normal);
 }

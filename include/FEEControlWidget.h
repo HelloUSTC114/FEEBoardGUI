@@ -114,6 +114,8 @@ private slots:
 
     void on_btnMask_clicked();
 
+    void on_btnGenerateIP_clicked();
+    void on_btnExit_clicked();
 };
 #define gFEEControlWin (FEEControlWin::Instance())
 
