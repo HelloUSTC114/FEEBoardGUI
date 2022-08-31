@@ -161,11 +161,23 @@ public:
     // Mask Control END
 
     // FIFO Read Control
-    int ReadFifo(int sleepms = 200);                    // Read fifo once (sleep time in unit of ms)
-    void SetFifoReadBreak() { fBreakFlag = 1; }         // Set Read stop status
-    const uint32_t *GetFifoData() { return fifoData; }; // Get fifodata pointer
-    bool GetDataValidation() { return fDataFlag; };     // Validate fifo data
-    int GetDataLength() { return fDataLength; };        // Get Data length;
+    /// @brief Read fifo Controller. Contains HG, LG, TDC fifo read actions. If no break flag is set, read fifo length continuously, until fifo length is larger than approximate leansNEvents * factors, factors varies from fifos.
+    /// @param sleepms when fifos are not long enough, how long should be wait for next length read try, in unit of ms, default set as 1ms
+    /// @param leastNEvents At least N events should be read. If fifo length is less than this, wait sleepms until next try
+    /// @return whether is successful
+    bool ReadFifo(int sleepms = 1, int leastNEvents = 10);
+    void SetFifoReadBreak() { fBreakFlag = 1; }     // Set Read stop status
+    bool GetDataValidation() { return fDataFlag; }; // Validate fifo data
+
+    int GetDataLength() { return fTestDataLength; };   // Get Data length;
+    int GetHGDataLength() { return fHGDataLength; };   // Get HG Data length;
+    int GetLGDataLength() { return fLGDataLength; };   // Get LG Data length;
+    int GetTDCDataLength() { return fTDCDataLength; }; // Get TDC Data length;
+
+    const uint32_t *GetTestFIFOData() { return fTestQueueData; }; // Get fifodata pointer
+    const uint32_t *GetTDCFIFOData() { return fTDCQueueData; };   // Get fifodata pointer
+    const uint32_t *GetHGFIFOData() { return fHGQueueData; };     // Get fifodata pointer
+    const uint32_t *GetLGFIFOData() { return fLGQueueData; };     // Get fifodata pointer
     // FIFO Read Control END
 
 private:
@@ -191,15 +203,24 @@ private:
     double fTemp[4]; // temperature of SiPM0-7, 8-15, 16-23, 24-31
 
     // DAQ Read control
-    uint32_t *fifoData;           // fifo data
-    bool fDataFlag = 0;           // fifo data validation
-    int fDataLength = 0;          // fifo data length
+    uint32_t *fTestQueueData; // fifo data
+    uint32_t *fHGQueueData;   // HG fifo data
+    uint32_t *fLGQueueData;   // LG fifo data
+    uint32_t *fTDCQueueData;  // TDC fifo data
+    bool fDataFlag = 0;      // fifo data validation
+
+    int fHGDataLength = 0;   // Read HG fifo data length
+    int fLGDataLength = 0;   // Read LG fifo data length
+    int fTDCDataLength = 0;  // Read TDC fifo data length
+    int fTestDataLength = 0; // Read Test fifo data length
+
     int fifoReadCount = 0;        // fifo read counter
     volatile bool fBreakFlag = 0; // fifo read break flag
 
-    static const int fHG_fifoFactor = 1378; // How many HG points in one event, not so accurate
-    static const int fLG_fifoFactor = 1378; // How many LG points in one event, not so accurate
-    static const int fTDC_fifoFactor = 136; // How many TDC points in one event, not so accurate
+    static const int fMaxSaveEvents;  // Limit of save events
+    static const int fHGPointFactor;  // How many HG points in one event, not so accurate
+    static const int fLGPointFactor;  // How many LG points in one event, not so accurate
+    static const int fTDCPointFactor; // How many TDC points in one event, not so accurate
 
 private:
     // private basic control function

@@ -13,31 +13,42 @@ WSADATA fWsaData; // Unused unimportant data, used to put inside class FEEContro
 
 #define SIZE_STR 150
 
-const int FEEControl::fPortBase = 1306;      // Port Base for all fee
-const int FEEControl::fIPBase = 101;         // IP Base for all fee
-const int FEEControl::fHG_fifoFactor = 1378; // How many HG points in one event, not so accurate
-const int FEEControl::fLG_fifoFactor = 1378; // How many LG points in one event, not so accurate
-const int FEEControl::fTDC_fifoFactor = 136; // How many TDC points in one event, not so accurate
+const int FEEControl::fPortBase = 1306; // Port Base for all fee
+const int FEEControl::fIPBase = 101;    // IP Base for all fee
+
+const int FEEControl::fMaxSaveEvents = 50;   // How many Events can be saved in one time
+const int FEEControl::fHGPointFactor = 1378; // How many HG points in one event, not so accurate
+const int FEEControl::fLGPointFactor = 1378; // How many LG points in one event, not so accurate
+const int FEEControl::fTDCPointFactor = 136; // How many TDC points in one event, not so accurate
 
 using namespace std;
 
 FEEControl::FEEControl(std::string ip, int port) : ip_address(ip), fPort(port)
 {
-    fifoData = new uint32_t[MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH];
+    fTestQueueData = new uint32_t[5000];
+    fHGQueueData = new uint32_t[fMaxSaveEvents * fHGPointFactor];
+    fLGQueueData = new uint32_t[fMaxSaveEvents * fLGPointFactor];
+    fTDCQueueData = new uint32_t[fMaxSaveEvents * fTDCPointFactor];
 }
 
 FEEControl::FEEControl(int boardNo) : FEEControl()
 {
-    // Test whether arrays are malloced
-    std::cout << fifoData[0] << std::endl;
+    // John Test: Test whether arrays are malloced
+    std::cout << fTestQueueData[0] << std::endl;
 
     InitPort(boardNo);
 }
 
 FEEControl::~FEEControl()
 {
-    delete[] fifoData;
-    fifoData = NULL;
+    delete[] fTestQueueData;
+    delete[] fHGQueueData;
+    delete[] fLGQueueData;
+    delete[] fTDCQueueData;
+    fTestQueueData = NULL;
+    fHGQueueData = NULL;
+    fLGQueueData = NULL;
+    fTDCQueueData = NULL;
 }
 
 void FEEControl::GenerateIP(int boardNo, std::string &ip, int &port)
@@ -827,36 +838,62 @@ bool FEEControl::BoardExit()
     return 1;
 }
 
-int FEEControl::ReadFifo(int sleepms)
+bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
 {
-    // test fifo read
-    int read_num = MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH; // the read_num must be Integer multiple of 5, and no more than MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH
+    // test queue read
+    int maxEvents = (int)(0.9 * fMaxSaveEvents);
+    int nEvents = leastNEvents > (maxEvents) ? maxEvents : leastNEvents;
 
-    int fifo_length = 0;
-    hg_fifo_length_read(fifo_length);
-    while (2 * fifo_length < read_num && !fBreakFlag)
+    int hg_queue_length = 0;
+    int lg_queue_length = 0;
+    int tdc_queue_length = 0;
+
+    // Deside when to start read queue, break flag means force to read
+    while (hg_queue_length_read(hg_queue_length) && !fBreakFlag)
     {
-        //        printf("Data in fifo is insufficient, waiting 2s. Fifo length: %d\n", 2 * fifo_length);
-        //         return -1;
-        hg_fifo_length_read(fifo_length);
-        // cout << "There are not enough numbers in fifo. waiting 0.2s" << endl;
-        // cout << "fifo_length: " << fifo_length << endl;
-        // Sleep(1); // Sleep 1 ms
-        Sleep(sleepms); // Sleep 1 ms
+        if (hg_queue_length > nEvents * fHGPointFactor)
+            break;
+        Sleep(sleepms);
     }
-    fBreakFlag = 0;
+    fBreakFlag = 0; // Set break flag to zero, regardless of whether is break.
 
-    if (!hg_data_read(read_num, fifoData))
+    // Judge read length
+    hg_queue_length_read(hg_queue_length);
+    lg_queue_length_read(lg_queue_length);
+    tdc_queue_length_read(tdc_queue_length);
+
+    // Compare queue length with save array length, take smaller one as read length
+    fHGDataLength = (hg_queue_length > maxEvents * fHGPointFactor) ? maxEvents * fHGPointFactor : hg_queue_length;
+    fLGDataLength = (lg_queue_length > maxEvents * fLGPointFactor) ? maxEvents * fLGPointFactor : lg_queue_length;
+    fTDCDataLength = (tdc_queue_length > maxEvents * fTDCPointFactor) ? maxEvents * fTDCPointFactor : tdc_queue_length;
+
+    if (!hg_data_read(fHGDataLength, fHGQueueData))
     {
-        cout << "fifo read failed." << endl;
+        cout << "HG queue read failed." << endl;
         fDataFlag = 0;
-        fDataLength = 0;
-        return -1;
+        fHGDataLength = 0;
+        return false;
     }
+
+    if (!lg_data_read(fLGDataLength, fLGQueueData))
+    {
+        cout << "LG queue read failed." << endl;
+        fDataFlag = 0;
+        fLGDataLength = 0;
+        return false;
+    }
+
+    if (!tdc_data_read(fTDCDataLength, fTDCQueueData))
+    {
+        cout << "TDC queue read failed." << endl;
+        fDataFlag = 0;
+        fTDCDataLength = 0;
+        return false;
+    }
+
     fifoReadCount++;
     fDataFlag = 1;
-    fDataLength = fifo_length;
-    return fifo_length;
+    return true;
 }
 
 int FEEControl::SendConfig(ConfigFileParser *parser)
@@ -910,7 +947,6 @@ bool FEEControl::GetMask(int ch, uint32_t reg)
 
 bool FEEControl::hg_fifo_read(int read_num, int loop_times, const char *hg_file_name)
 {
-    read_num = read_num > MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH ? MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH : read_num;
     int i, j, queue_num, fifo_num;
     for (i = 0; i < loop_times; i++)
     {
@@ -934,7 +970,7 @@ bool FEEControl::hg_fifo_read(int read_num, int loop_times, const char *hg_file_
             printf("hg_queue_num:%5d, hg_fifo_num:%3d, loop times:%3d\n", queue_num, fifo_num, i);
         }
 
-        if (!hg_data_read(read_num, fifoData))
+        if (!hg_data_read(read_num, fHGQueueData))
         {
             cout << "hg data read failed." << endl;
             return false;
@@ -961,7 +997,7 @@ bool FEEControl::hg_fifo_read(int read_num, int loop_times, const char *hg_file_
         while (j < read_num)
         {
             // fprintf(fp,"%f\n",queue_data[j]/32.768-1000);
-            fprintf(fp, "%d\n", fifoData[j]);
+            fprintf(fp, "%d\n", fHGQueueData[j]);
             j++;
         }
         fclose(fp);
@@ -971,7 +1007,6 @@ bool FEEControl::hg_fifo_read(int read_num, int loop_times, const char *hg_file_
 
 bool FEEControl::lg_fifo_read(int read_num, int loop_times, const char *lg_file_name)
 {
-    read_num = read_num > MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH ? MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH : read_num;
     int i, j, queue_num, fifo_num;
     for (i = 0; i < loop_times; i++)
     {
@@ -995,7 +1030,7 @@ bool FEEControl::lg_fifo_read(int read_num, int loop_times, const char *lg_file_
             printf("lg_queue_num:%5d, lg_fifo_num:%3d, loop times:%3d\n", queue_num, fifo_num, i);
         }
 
-        if (!lg_data_read(read_num, fifoData))
+        if (!lg_data_read(read_num, fLGQueueData))
         {
             cout << "lg data read failed." << endl;
             return false;
@@ -1022,7 +1057,7 @@ bool FEEControl::lg_fifo_read(int read_num, int loop_times, const char *lg_file_
         while (j < read_num)
         {
             // fprintf(fp,"%f\n",queue_data[j]/32.768-1000);
-            fprintf(fp, "%d\n", fifoData[j]);
+            fprintf(fp, "%d\n", fLGQueueData[j]);
             j++;
         }
         fclose(fp);
@@ -1032,7 +1067,6 @@ bool FEEControl::lg_fifo_read(int read_num, int loop_times, const char *lg_file_
 
 bool FEEControl::test_fifo_read(int read_num, int loop_times, const char *test_file_name)
 {
-    read_num = read_num > MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH ? MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH : read_num;
     int i, j, queue_num, fifo_num;
     for (i = 0; i < loop_times; i++)
     {
@@ -1056,7 +1090,7 @@ bool FEEControl::test_fifo_read(int read_num, int loop_times, const char *test_f
             printf("test_queue_num:%5d, test_fifo_num:%3d, loop times:%3d\n", queue_num, fifo_num, i);
         }
 
-        if (!test_data_read(read_num, fifoData))
+        if (!test_data_read(read_num, fTestQueueData))
         {
             cout << "test data read failed." << endl;
             return false;
@@ -1083,7 +1117,7 @@ bool FEEControl::test_fifo_read(int read_num, int loop_times, const char *test_f
         while (j < read_num)
         {
             // fprintf(fp,"%f\n",queue_data[j]/32.768-1000);
-            fprintf(fp, "%d\n", fifoData[j]);
+            fprintf(fp, "%d\n", fTestQueueData[j]);
             j++;
         }
         fclose(fp);
@@ -1093,7 +1127,6 @@ bool FEEControl::test_fifo_read(int read_num, int loop_times, const char *test_f
 
 bool FEEControl::tdc_fifo_read(int read_num, int loop_times, const char *tdc_file_name)
 {
-    read_num = read_num > MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH ? MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH : read_num;
     int i, j, queue_num, fifo_num;
     for (i = 0; i < loop_times; i++)
     {
@@ -1117,7 +1150,7 @@ bool FEEControl::tdc_fifo_read(int read_num, int loop_times, const char *tdc_fil
             printf("tdc_queue_num:%5d, tdc_fifo_num:%3d, loop times:%3d\n", queue_num, fifo_num, i);
         }
 
-        if (!tdc_data_read(read_num, fifoData))
+        if (!tdc_data_read(read_num, fTDCQueueData))
         {
             cout << "tdc data read failed." << endl;
             return false;
@@ -1144,7 +1177,7 @@ bool FEEControl::tdc_fifo_read(int read_num, int loop_times, const char *tdc_fil
         while (j < read_num)
         {
             // fprintf(fp,"%f\n",queue_data[j]/32.768-1000);
-            fprintf(fp, "%d\n", fifoData[j]);
+            fprintf(fp, "%d\n", fTDCQueueData[j]);
             j++;
         }
         fclose(fp);

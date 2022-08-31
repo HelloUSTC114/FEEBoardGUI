@@ -61,7 +61,7 @@ void DAQRuning::startDAQ(FEEControlWin *w)
     for (nDAQLoop = 0; loopFlag; nDAQLoop++)
     {
         auto rtnRead = gBoard->ReadFifo(w->fDAQBufferSleepms);
-        if (rtnRead < 0)
+        if (!rtnRead)
             break;
         nDAQEventCount += gDataManager->ProcessFEEData(gBoard);
         emit UpdateDAQCount(gDataManager->GetTotalCount());
@@ -597,7 +597,7 @@ bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nD
 
     // Draw Start
     on_btnStartDraw_clicked();
-    gDataManager->Draw(ui->boxDrawCh->value());
+    gDataManager->DrawHG(ui->boxDrawCh->value());
     if (fdrawWin)
         fdrawWin->Update();
 
@@ -929,7 +929,7 @@ void FEEControlWin::DrawSingle()
         gReadManager->Init((fsFilePath + "/" + fsFileName).toStdString());
     if (!gReadManager->IsOpen())
         return;
-    gReadManager->Draw(ui->boxDrawCh->value());
+    gReadManager->DrawHG(ui->boxDrawCh->value());
     fdrawWin->Update();
 
     // cout << ui->boxDrawCh->value() << '\t' << i++ << endl;
@@ -951,7 +951,7 @@ void FEEControlWin::handle_ContinousDraw()
     if (ch != ui->boxDrawCh->value())
     {
         ch = ui->boxDrawCh->value();
-        gDataManager->Draw(ui->boxDrawCh->value());
+        gDataManager->DrawHG(ui->boxDrawCh->value());
     }
     if (!fdrawWin->isHidden())
         fdrawWin->Update();

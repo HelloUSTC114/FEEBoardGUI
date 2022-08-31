@@ -3,6 +3,7 @@
 #include "feecontrol.h"
 #include <TTree.h>
 #include <TFile.h>
+#include <TH1S.h>
 #include <TH1I.h>
 
 using namespace std;
@@ -16,22 +17,21 @@ DataManager *gDataManager = new DataManager();
 
 DataManager::DataManager()
 {
-    fData = new uint32_t[N_BOARD_CHANNELS * N_SAMPLE_POINTS];
-    memset(fData, '\0', sizeof(uint32_t) * N_BOARD_CHANNELS * N_SAMPLE_POINTS);
+    fHGData = new uint32_t[N_BOARD_CHANNELS * N_SAMPLE_POINTS];
+    memset(fHGData, '\0', sizeof(uint32_t) * N_BOARD_CHANNELS * N_SAMPLE_POINTS);
 }
 
-DataManager::DataManager(string sInput) : sFileName(sInput)
+DataManager::DataManager(string sInput) : DataManager()
 {
-    fData = new uint32_t[N_BOARD_CHANNELS * N_SAMPLE_POINTS];
-    memset(fData, '\0', sizeof(uint32_t) * N_BOARD_CHANNELS * N_SAMPLE_POINTS);
+    sFileName = sInput;
     Init(sInput);
 }
 
 DataManager::~DataManager()
 {
     Close();
-    delete[] fData;
-    fData = NULL;
+    delete[] fHGData;
+    fHGData = NULL;
 }
 
 bool DataManager::IsOpen()
@@ -55,11 +55,16 @@ bool DataManager::Init(string sInput)
 
     for (int i = 0; i < N_BOARD_CHANNELS; i++)
     {
-        fHist[i] = new TH1I(Form("h%d", i), Form("h%d", i), 2047, 2048, 4095);
+        fHGHist[i] = new TH1S(Form("hHG%d", i), Form("High Gain ch%d", i), 2047, 2048, 4095);
+        fLGHist[i] = new TH1S(Form("hLG%d", i), Form("Low Gain ch%d", i), 2047, 2048, 4095);
+        fTDCHist[i] = new TH1I(Form("hTDC%d", i), Form("TDC Value ch%d", i), 2 ^ 16, 0, 2 ^ 32);
     }
+    fTDCHist[32] = new TH1I(Form("hTDC%d", 32), Form("TDC Value ch%d", 32), 2 ^ 16, 0, 2 ^ 32);
 
-    // fTree->Branch("data", fData, "data[1600]/i");
-    fTree->Branch("ch", fch, "ch[32]/D");
+    // fTree->Branch("data", fHGData, "data[1600]/i");
+    fTree->Branch("chHG", fHGamp, "chHG[32]/D");
+    fTree->Branch("chLG", fLGamp, "chLG[32]/D");
+    fTree->Branch("chTDC", fTDCdata, "chLG[33]/I");
     fTree->AutoSave();
     fEventCount = 0;
 
@@ -79,18 +84,46 @@ void DataManager::Close()
     fFile = NULL;
     fTree = NULL;
 
-    memset(fHist, '\0', N_BOARD_CHANNELS * sizeof(TH1I *));
+    memset(fHGHist, '\0', N_BOARD_CHANNELS * sizeof(TH1S *));
 
     fEventCount = 0;
 }
 
-bool DataManager::Draw(int ch)
+bool DataManager::DrawHG(int ch)
 {
+    if (ch < 0 || ch > 31)
+        return false;
     if (!IsOpen() || !fTree)
     {
         return false;
     }
-    fHist[ch]->Draw();
+    fHGHist[ch]->Draw();
+    return true;
+}
+
+bool DataManager::DrawLG(int ch)
+{
+    if (ch < 0 || ch > 31)
+        return false;
+
+    if (!IsOpen() || !fTree)
+    {
+        return false;
+    }
+    fLGHist[ch]->Draw();
+    return true;
+}
+
+bool DataManager::DrawTDC(int ch)
+{
+    if (ch < 0 || ch > 32)
+        return false;
+
+    if (!IsOpen() || !fTree)
+    {
+        return false;
+    }
+    fTDCHist[ch]->Draw();
     return true;
 }
 
@@ -113,7 +146,7 @@ int DataManager::ProcessFEEData(FEEControl *fee)
 
 bool DataManager::ProcessOneEvent(FEEControl *fee, int &currentIndex)
 {
-    auto dat = fee->GetFifoData();
+    auto dat = fee->GetTestFIFOData();
     // dealing with unexpected case, where the first point lies beyond threshold
     if (dat[currentIndex] >= gEventADCThreshold)
     {
@@ -148,20 +181,20 @@ bool DataManager::ProcessOneEvent(FEEControl *fee, int &currentIndex)
     int addCounter = 0; // stat how many points are added together
     for (int ch = 0; ch < N_BOARD_CHANNELS; ch++)
     {
-        fch[ch] = 0;
+        fHGamp[ch] = 0;
         addCounter = 0;
         for (int point = 0; point < N_SAMPLE_POINTS; point++)
         {
             if (point >= 5 && point < 46)
             {
                 double sampleValue = dat[startPoint + ch * N_SAMPLE_POINTS + point];
-                // fData[ch * N_SAMPLE_POINTS + point] = sampleValue;
-                fch[ch] += sampleValue;
+                // fHGData[ch * N_SAMPLE_POINTS + point] = sampleValue;
+                fHGamp[ch] += sampleValue;
                 addCounter++;
             }
         }
-        // fch is average of these points
-        fch[ch] /= addCounter;
+        // fHGamp is average of these points
+        fHGamp[ch] /= addCounter;
     }
 
     // end of the event, counter increment
@@ -170,7 +203,7 @@ bool DataManager::ProcessOneEvent(FEEControl *fee, int &currentIndex)
     fTree->Fill();
     for (int ch = 0; ch < N_BOARD_CHANNELS; ch++)
     {
-        fHist[ch]->Fill(fch[ch]);
+        fHGHist[ch]->Fill(fHGamp[ch]);
     }
     return true;
 }
@@ -185,9 +218,8 @@ ReadManager::ReadManager()
     fGaus = new TF1("fGausFTAnalyzer", "gaus", 0, 4096);
 }
 
-ReadManager::ReadManager(string sInput)
+ReadManager::ReadManager(string sInput) : ReadManager()
 {
-    fGaus = new TF1("fGausFTAnalyzer", "gaus", 0, 4096);
     Init(sInput);
 }
 
@@ -227,9 +259,11 @@ bool ReadManager::Init(string sInput)
         return false;
     fTree = (TTree *)fFile->Get("fifo");
 
-    // fTree->Branch("data", fData, "data[1600]/i");
-    fTree->SetBranchAddress("ch", fch);
-
+    // fTree->Branch("data", fHGData, "data[1600]/i");
+    fTree->SetBranchAddress("ch", fHGamp);
+    fTree->SetBranchAddress("chHG", fHGamp);
+    fTree->SetBranchAddress("chLG", fLGamp);
+    fTree->SetBranchAddress("chTDC", fTDCdata);
     return true;
 }
 
@@ -239,66 +273,85 @@ ReadManager *&ReadManager::Instance()
     return fInstance;
 }
 
-bool ReadManager::Draw(int ch)
+bool ReadManager::DrawHG(int ch)
 {
+    if (ch < 0 || ch > 31)
+        return false;
 
     if (!IsOpen() || !fTree)
     {
-        // return false;
-        Init("F:/Projects/MuonTestControl/Data/Fiber-00.root");
+        // Init("F:/Projects/MuonTestControl/Data/Fiber-00.root");
+        return false;
     }
 
-    auto h = (TH1F *)fFile->Get(Form("h%d", ch));
-    if (h)
+    auto hHG = (TH1F *)fFile->Get(Form("hHG%d", ch));
+    if (hHG)
     {
-        h->Draw();
+        hHG->Draw();
         return true;
     }
     fFile->cd();
-    fTree->Draw(Form("ch[%d]>>h%d(2047, 2048, 4095)", ch, ch));
-    h = (TH1F *)fFile->Get(Form("h%d", ch));
+    fTree->Draw(Form("chHG[%d]>>hHG%d(2047, 2048, 4095)", ch, ch));
+    hHG = (TH1F *)fFile->Get(Form("hHG%d", ch));
 
-    if (!h)
+    if (!hHG)
         return false;
 
-    h->SetTitle(Form("Draw channel:%d;ADC Value; Counts", ch));
+    hHG->SetTitle(Form("HG Draw channel:%d;ADC Value; Counts", ch));
     return true;
 }
 
-bool ReadManager::FitChannel(int ch, double *par, double *parE)
+bool ReadManager::DrawLG(int ch)
 {
-    if (!fFile)
-    {
-        cout << "Not Open file" << endl;
-        return false;
-    }
-    auto h = (TH1F *)fFile->Get(Form("h%d", ch));
-    if (!h)
-    {
-        auto rtn = this->ReadManager::Draw(ch);
-        cout << rtn << endl;
-        if (!rtn)
-        {
-            return false;
-        }
-        fFile->ls();
-    }
-    h = (TH1F *)fFile->Get(Form("h%d", ch));
-    if (!h)
+    if (ch < 0 || ch > 31)
         return false;
 
-    h->Fit(fGaus, "RQ");
-    for (int i = 0; i < 3; i++)
+    if (!IsOpen() || !fTree)
     {
-        parCh[i] = fGaus->GetParameter(i);
-        parECh[i] = fGaus->GetParError(i);
-        if (par)
-            par[i] = parCh[i];
-        if (parE)
-            parE[i] = parECh[i];
+        // Init("F:/Projects/MuonTestControl/Data/Fiber-00.root");
+        return false;
     }
 
-    fChFlag = 1;
-    fCh = ch;
+    auto hLG = (TH1F *)fFile->Get(Form("hLG%d", ch));
+    if (hLG)
+    {
+        hLG->Draw();
+        return true;
+    }
+    fFile->cd();
+    fTree->Draw(Form("chLG[%d]>>hLG%d(2047, 2048, 4095)", ch, ch));
+    hLG = (TH1F *)fFile->Get(Form("hLG%d", ch));
+
+    if (!hLG)
+        return false;
+
+    hLG->SetTitle(Form("LG Draw channel:%d;ADC Value; Counts", ch));
+    return true;
+}
+
+bool ReadManager::DrawTDC(int ch)
+{
+    if (ch < 0 || ch > 32)
+        return false;
+    if (!IsOpen() || !fTree)
+    {
+        // Init("F:/Projects/MuonTestControl/Data/Fiber-00.root");
+        return false;
+    }
+
+    auto hTDC = (TH1F *)fFile->Get(Form("hTDC%d", ch));
+    if (hTDC)
+    {
+        hTDC->Draw();
+        return true;
+    }
+    fFile->cd();
+    fTree->Draw(Form("chTDC[%d]>>hTDC%d(2047, 2048, 4095)", ch, ch));
+    hTDC = (TH1F *)fFile->Get(Form("hTDC%d", ch));
+
+    if (!hTDC)
+        return false;
+
+    hTDC->SetTitle(Form("TDC Draw channel:%d;ADC Value; Counts", ch));
     return true;
 }

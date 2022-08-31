@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
     //     // auto rtn = gBoard->ReadFifo();
     //     // cout << endl
     //     //      << rtn << endl;
-    //     // auto dat = gBoard->GetFifoData();
+    //     // auto dat = gBoard->GetTestFIFOData();
     //     // for (int i = 0; i < gBoard->GetDataLength(); i++)
     //     // {
     //     //     cout << dat[i] << ' ';

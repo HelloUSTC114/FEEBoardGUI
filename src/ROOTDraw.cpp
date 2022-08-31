@@ -559,7 +559,7 @@ void ROOTDraw::on_btnFileDraw_clicked()
     }
     if (!gReadManager->IsOpen())
         return;
-    gReadManager->Draw(ui->boxFiberCh_2->value());
+    gReadManager->DrawHG(ui->boxFiberCh_2->value());
     Update();
 }
 
