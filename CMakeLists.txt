@@ -15,56 +15,62 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 find_package(ROOT REQUIRED COMPONENTS Core)
 
-
-include_directories( "include/")
+include_directories("include/")
 link_libraries(Ws2_32)
-
+link_libraries(
+    ROOT::Core ROOT::Imt ROOT::RIO ROOT::Net ROOT::Hist ROOT::Graf ROOT::Graf3d ROOT::Gpad ROOT::ROOTDataFrame ROOT::Tree ROOT::TreePlayer ROOT::Rint ROOT::Postscript ROOT::Matrix ROOT::Physics ROOT::MathCore ROOT::Thread ROOT::ROOTVecOps
+)
 
 set(PROJECT_SOURCES
-        main.cpp
+    main.cpp
 
-        include/FEEControlWidget.h
-        src/FEEControlWidget.ui
-        src/FEEControlWidget.cpp
+    include/FEEControlWidget.h
+    src/FEEControlWidget.ui
+    src/FEEControlWidget.cpp
 
-        include/feecontrol.h
-        src/feecontrol.cpp
+    include/feecontrol.h
+    src/feecontrol.cpp
 
-#        include/datamanager.h
-#        src/datamanager.cpp
+    include/datamanager.h
+    src/datamanager.cpp
 
-        include/configfileparser.h
-        src/configfileparser.cpp
+    include/configfileparser.h
+    src/configfileparser.cpp
 
+    include/ROOTDraw.h
+    src/ROOTDraw.cpp
+    src/ROOTDraw.ui
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(MuonTestControl
+    qt_add_executable(FEEBoardGUI
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
     )
+
 # Define target properties for Android with Qt 6 as:
-#    set_property(TARGET MuonTestControl APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
-#                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
+# set_property(TARGET FEEBoardGUI APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
+# ${CMAKE_CURRENT_SOURCE_DIR}/android)
 # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
 else()
     if(ANDROID)
-        add_library(MuonTestControl SHARED
+        add_library(FEEBoardGUI SHARED
             ${PROJECT_SOURCES}
         )
-# Define properties for Android with Qt 5 after find_package() calls as:
-#    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
+
+    # Define properties for Android with Qt 5 after find_package() calls as:
+    # set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
     else()
-        add_executable(MuonTestControl
+        add_executable(FEEBoardGUI
             ${PROJECT_SOURCES}
         )
     endif()
 endif()
 
-target_link_libraries(MuonTestControl PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
+target_link_libraries(FEEBoardGUI PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
 )
 
-set_target_properties(MuonTestControl PROPERTIES
+set_target_properties(FEEBoardGUI PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
@@ -73,5 +79,5 @@ set_target_properties(MuonTestControl PROPERTIES
 )
 
 if(QT_VERSION_MAJOR EQUAL 6)
-    qt_finalize_executable(MuonTestControl)
+    qt_finalize_executable(FEEBoardGUI)
 endif()

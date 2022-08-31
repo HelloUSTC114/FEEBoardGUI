@@ -12,9 +12,12 @@ WSADATA fWsaData; // Unused unimportant data, used to put inside class FEEContro
 #pragma comment(lib, "Ws2_32.lib")
 
 #define SIZE_STR 150
-// #define fPortBase 1306
 
-const int FEEControl::fPortBase = 1306;
+const int FEEControl::fPortBase = 1306;      // Port Base for all fee
+const int FEEControl::fIPBase = 101;         // IP Base for all fee
+const int FEEControl::fHG_fifoFactor = 1378; // How many HG points in one event, not so accurate
+const int FEEControl::fLG_fifoFactor = 1378; // How many LG points in one event, not so accurate
+const int FEEControl::fTDC_fifoFactor = 136; // How many TDC points in one event, not so accurate
 
 using namespace std;
 
@@ -39,7 +42,7 @@ FEEControl::~FEEControl()
 
 void FEEControl::GenerateIP(int boardNo, std::string &ip, int &port)
 {
-    ip = "192.168.1." + to_string(101 + boardNo);
+    ip = "192.168.1." + to_string(fIPBase + boardNo);
     port = fPortBase + boardNo;
 }
 
@@ -114,7 +117,7 @@ bool FEEControl::citiroc1a_configure(const char *sc_file_name, const char *probe
     {
         return false;
     }
-    if (!send_cmd(up_configCitiroc, str_out, strlen(str_out) + 2))
+    if (!send_cmd(up_configCitiroc, str_out, (int)strlen(str_out) + 2))
     {
         return false;
     }
@@ -262,7 +265,7 @@ bool FEEControl::logic_select(int select_data)
     return true;
 }
 
-bool FEEControl::set_channel_mask(uint32_t mask_num)
+bool FEEControl::send_ch_masks(uint32_t mask_num)
 {
     if (!start_socket())
     {
@@ -310,7 +313,7 @@ bool FEEControl::HV_config(void)
             return false;
         }
 
-        if (!send_cmd(up_configC11204, input_cmd, strlen(input_cmd) + 2))
+        if (!send_cmd(up_configC11204, input_cmd, (int)strlen(input_cmd) + 2))
         {
             return false;
         }
@@ -559,10 +562,9 @@ int FEEControl::hexToDec(char *source)
 {
     int sum = 0;
     int t = 1;
-    int i, len;
 
-    len = strlen(source);
-    for (i = len - 1; i >= 0; i--)
+    int len = (int)strlen(source);
+    for (int i = len - 1; i >= 0; i--)
     {
         sum += t * getIndexOfSigns(*(source + i));
         t *= 16;
@@ -825,36 +827,37 @@ bool FEEControl::BoardExit()
     return 1;
 }
 
-// int FEEControl::ReadFifo(int sleepms)
-// {
-//     // test fifo read
-//     int read_num = MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH; // the read_num must be Integer multiple of 5, and no more than MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH
+int FEEControl::ReadFifo(int sleepms)
+{
+    // test fifo read
+    int read_num = MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH; // the read_num must be Integer multiple of 5, and no more than MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH
 
-//     int fifo_length = hg_fifo_length_read();
-//     while (2 * fifo_length < read_num && !fBreakFlag)
-//     {
-//         //        printf("Data in fifo is insufficient, waiting 2s. Fifo length: %d\n", 2 * fifo_length);
-//         //         return -1;
-//         fifo_length = hg_fifo_length_read();
-//         // cout << "There are not enough numbers in fifo. waiting 0.2s" << endl;
-//         // cout << "fifo_length: " << fifo_length << endl;
-//         // Sleep(1); // Sleep 1 ms
-//         Sleep(sleepms); // Sleep 1 ms
-//     }
-//     fBreakFlag = 0;
+    int fifo_length = 0;
+    hg_fifo_length_read(fifo_length);
+    while (2 * fifo_length < read_num && !fBreakFlag)
+    {
+        //        printf("Data in fifo is insufficient, waiting 2s. Fifo length: %d\n", 2 * fifo_length);
+        //         return -1;
+        hg_fifo_length_read(fifo_length);
+        // cout << "There are not enough numbers in fifo. waiting 0.2s" << endl;
+        // cout << "fifo_length: " << fifo_length << endl;
+        // Sleep(1); // Sleep 1 ms
+        Sleep(sleepms); // Sleep 1 ms
+    }
+    fBreakFlag = 0;
 
-//     if (hg_fifo_read(read_num, fifoData) < 0)
-//     {
-//         cout << "fifo read failed." << endl;
-//         fDataFlag = 0;
-//         fDataLength = 0;
-//         return -1;
-//     }
-//     fifoReadCount++;
-//     fDataFlag = 1;
-//     fDataLength = fifo_length;
-//     return fifo_length;
-// }
+    if (!hg_data_read(read_num, fifoData))
+    {
+        cout << "fifo read failed." << endl;
+        fDataFlag = 0;
+        fDataLength = 0;
+        return -1;
+    }
+    fifoReadCount++;
+    fDataFlag = 1;
+    fDataLength = fifo_length;
+    return fifo_length;
+}
 
 int FEEControl::SendConfig(ConfigFileParser *parser)
 {

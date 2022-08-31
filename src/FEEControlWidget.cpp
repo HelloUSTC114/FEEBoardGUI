@@ -4,6 +4,8 @@
 // User
 #include "feecontrol.h"
 #include "configfileparser.h"
+#include "datamanager.h"
+#include "ROOTDraw.h"
 
 // STL
 #include <string>
@@ -26,6 +28,49 @@ using namespace std;
 
 QColor redColor(255, 0, 0), blackColor(0, 0, 0), greenColor(0, 255, 0);
 
+bool DAQRuning::JudgeLoopFlag(FEEControlWin *w, int nEventCount)
+{
+    // bool timeFlag = (w->fDAQSettingTime == QTime(0, 0, 0, 0)) || (w->fDAQSettingTime >= QTime::fromMSecsSinceStartOfDay(w->fDAQStartTime.msecsTo(QTime::currentTime())));
+    // cout << "Flag Judging: " << endl;
+    // std::cout << w->fDAQStartTime.toString("yyyy-MM-dd,hh:mm:ss").toStdString() << std::endl;
+    // std::cout << w->fDAQSettingTime.msecsSinceStartOfDay() << std::endl;
+    // std::cout << w->fDAQStartTime.addMSecs(w->fDAQSettingTime.msecsSinceStartOfDay()).toString("yyyy-MM-dd,hh:mm:ss").toStdString() << std::endl;
+    // std::cout << QDateTime::currentDateTime().toString("yyyy-MM-dd,hh:mm:ss").toStdString() << std::endl;
+    // std::cout << (w->fDAQStartTime.addMSecs(w->fDAQSettingTime.msecsSinceStartOfDay()) < QDateTime::currentDateTime()) << std::endl;
+    // std::cout << timeFlag << std::endl;
+
+    bool timeFlag = (w->fDAQSettingTime == QTime(0, 0, 0, 0)) || (w->fDAQStartTime.addMSecs(w->fDAQSettingTime.msecsSinceStartOfDay()) >= QDateTime::currentDateTime());
+
+    // (w->fDAQSettingTime >= QTime::fromMSecsSinceStartOfDay(w->fDAQStartTime.msecsTo(QTime::currentTime())));
+
+    bool nEventFlag = (w->fDAQSettingCount < 0 || nEventCount < w->fDAQSettingCount);
+    bool loopFlag = w->fDAQRuningFlag && nEventFlag && timeFlag;
+    return loopFlag;
+}
+
+void DAQRuning::startDAQ(FEEControlWin *w)
+{
+    cout << "Starting DAQ in DAQRuning" << endl;
+    cout << w->fDAQRuningFlag << endl;
+
+    int nDAQLoop = 0;
+    int nDAQEventCount = 0;
+    w->fDAQStartTime = QDateTime::currentDateTime();
+
+    bool loopFlag = JudgeLoopFlag(w, 0);
+    for (nDAQLoop = 0; loopFlag; nDAQLoop++)
+    {
+        auto rtnRead = gBoard->ReadFifo(w->fDAQBufferSleepms);
+        if (rtnRead < 0)
+            break;
+        nDAQEventCount += gDataManager->ProcessFEEData(gBoard);
+        emit UpdateDAQCount(gDataManager->GetTotalCount());
+
+        loopFlag = JudgeLoopFlag(w, nDAQEventCount);
+    }
+    emit DAQStopSignal(nDAQLoop);
+}
+
 FEEControlWin::FEEControlWin(QWidget *parent)
     : QWidget(parent), ui(new Ui::FEEControlWin)
 {
@@ -39,6 +84,20 @@ FEEControlWin::FEEControlWin(QWidget *parent)
     ui->grpHVctrl->setEnabled(false);
     ui->grpTMea->setEnabled(false);
     ui->grpTMoni->setEnabled(false);
+
+    // FEE DAQ
+    fDAQProcessor = new DAQRuning;
+    fDAQProcessor->moveToThread(&fWorkThread3);
+    connect(this, &FEEControlWin::startDAQSignal, fDAQProcessor, &DAQRuning::startDAQ);
+    connect(fDAQProcessor, &DAQRuning::UpdateDAQCount, this, &FEEControlWin::handle_DAQCount);
+    connect(fDAQProcessor, &DAQRuning::DAQStopSignal, this, &FEEControlWin::on_DAQStoped);
+    connect(&fWorkThread3, &QThread::finished, fDAQProcessor, &QObject::deleteLater);
+
+    connect(&fDAQClock, &QTimer::timeout, this, &FEEControlWin::update_DAQClock);
+    fDAQClock.setTimerType(Qt::VeryCoarseTimer);
+
+    ui->grpDAQctrl->setEnabled(false);
+    fWorkThread3.start();
 
     // FEE CITIROC CONFIG tab
     ui->tabCITIROC->setEnabled(false);
@@ -133,6 +192,15 @@ FEEControlWin::FEEControlWin(QWidget *parent)
         gBoard->GenerateChMask(i, 0, fChannelMasks);
     }
 
+    // FEE Masks control
+    ConnectMasks();
+
+    // DAQ setting & DAQ Draw
+    ui->timeDAQSetting->setTime(QTime(0, 0, 0, 0));
+    ui->boxDAQEvent->setValue(-1);
+    connect(&fDrawerTimer, SIGNAL(timeout()), this, SLOT(handle_ContinousDraw()));
+    connect(fDAQProcessor, &DAQRuning::DAQStopSignal, this, &FEEControlWin::on_btnStopDraw_clicked); // If DAQ stop, than stop Fiber Draw Timer
+
     // End
     // show();
     ui->tabTotal->setCurrentIndex(0);
@@ -148,6 +216,18 @@ FEEControlWin *FEEControlWin::Instance()
 
 FEEControlWin::~FEEControlWin()
 {
+    fWorkThread3.quit();
+    fWorkThread3.wait();
+
+    for (int i = 0; i < fWinList.size(); i++)
+    {
+        delete fWinList[i];
+        fWinList[i] = NULL;
+    }
+    fdrawWin = NULL;
+    fWinList.clear();
+    // delete fdrawWin2;
+
     delete ui;
 }
 
@@ -226,6 +306,9 @@ void FEEControlWin::ProcessConnect()
 {
     ui->btnConnect->setEnabled(false);
 
+    // DAQ Control
+    ui->grpDAQctrl->setEnabled(true);
+
     // tab FEE Control
     ui->grpFEEInfo->setEnabled(true);
     ui->grpHVctrl->setEnabled(true);
@@ -234,6 +317,18 @@ void FEEControlWin::ProcessConnect()
 
     // other tabs
     ui->tabCITIROC->setEnabled(true);
+
+    // Init File manager
+    if (!gDataManager->IsOpen())
+    {
+        ui->grpDAQStart->setEnabled(false);
+        ui->btnDAQStop->setEnabled(false);
+    }
+    else
+    {
+        ui->grpDAQStart->setEnabled(true);
+        ui->btnDAQStop->setEnabled(false);
+    }
 
     // Logic module
     ui->btnSendLogic->setEnabled(true);
@@ -247,6 +342,7 @@ void FEEControlWin::ProcessConnect()
 
     // Select Default Logic
     on_btnSendLogic_clicked();
+    on_btnMask_clicked();
     bool parserFlag = gParser->Init();
     if (parserFlag)
     {
@@ -322,7 +418,260 @@ void FEEControlWin::on_btnTMon_clicked()
 {
     PrintT();
 }
+
+void FEEControlWin::on_btnGenerateIP_clicked()
+{
+    string ip;
+    int port;
+    FEEControl::GenerateIP(ui->boxBoardNo->value(), ip, port);
+    ui->boxPort->setValue(port);
+    ui->lineIP->setText(QString::fromStdString(ip));
+}
+
+void FEEControlWin::on_btnExit_clicked()
+{
+    gBoard->BoardExit();
+
+    ui->brsMessage->setTextColor(greenColor);
+    ui->brsMessage->setFontWeight(QFont::Bold);
+    ui->brsMessage->append(tr("Board Exited."));
+
+    ui->brsMessage->setTextColor(blackColor);
+    ui->brsMessage->setFontWeight(QFont::Normal);
+}
 // FEE Control END
+
+// ROOT File Open, DAQ Control: Start, Stop
+void FEEControlWin::on_btnPath_clicked()
+{
+    fsFilePath = QFileDialog::getExistingDirectory(this, tr("Choosing File Path"), QDir::currentPath() + "/../MuonTestControl");
+
+    if (fsFilePath == "")
+        return;
+
+    ui->brsMessage->setTextColor(redColor);
+    ui->brsMessage->setFontWeight(QFont::Bold);
+    ui->brsMessage->append(tr("Change File Path: "));
+
+    ui->brsMessage->setTextColor(blackColor);
+    ui->brsMessage->setFontWeight(QFont::Normal);
+    ui->brsMessage->append(tr("File Path: ") + fsFilePath);
+
+    ui->btnFileInit->setEnabled(true);
+}
+
+bool FEEControlWin::GenerateROOTFile()
+{
+    fFileTimeStamp = QDateTime::currentDateTime();
+    ui->lblFileOut->setText(fsFilePath + "/" + fsFileName + "*.root");
+    fsFileNameTotal = fsFileName;
+    fsFileNameTotal += fFileTimeStamp.toString("-yyyy-MM-dd-hh-mm-ss");
+    fsFileNameTotal += ".root";
+
+    std::cout << fsFileNameTotal.toStdString() << std::endl;
+
+    ui->brsMessage->setTextColor(greenColor);
+    ui->brsMessage->setFontWeight(QFont::Bold);
+    ui->brsMessage->append(tr("Generating File: "));
+
+    ui->brsMessage->setTextColor(blackColor);
+    ui->brsMessage->setFontWeight(QFont::Normal);
+    ui->brsMessage->append(tr("File Path: ") + fsFilePath);
+    ui->brsMessage->append(tr("File Name: ") + fsFileNameTotal);
+
+    bool rtn = gDataManager->Init((fsFilePath + "/" + fsFileNameTotal).toStdString());
+    if (!rtn)
+    {
+        ui->brsMessage->setTextColor(redColor);
+        ui->brsMessage->setFontWeight(QFont::Bold);
+        ui->brsMessage->append(tr("Generating File Error!"));
+    }
+    return rtn;
+}
+
+void FEEControlWin::on_btnFileInit_clicked()
+{
+    fsFileName = ui->lblFileName->text();
+    auto rtn = GenerateROOTFile();
+    if (!rtn)
+        return;
+    ui->btnFileInit->setEnabled(false);
+    ui->btnFileClose->setEnabled(true);
+
+    ui->grpDAQStart->setEnabled(true);
+    ui->btnDAQStop->setEnabled(false);
+}
+
+void FEEControlWin::on_btnFileClose_clicked()
+{
+    gDataManager->Close();
+    ui->btnFileInit->setEnabled(true);
+    ui->btnFileClose->setEnabled(false);
+
+    ui->brsMessage->setTextColor(greenColor);
+    ui->brsMessage->setFontWeight(QFont::Bold);
+    ui->brsMessage->append(tr("File Closed. "));
+
+    ui->brsMessage->setTextColor(blackColor);
+    ui->brsMessage->setFontWeight(QFont::Normal);
+    ui->brsMessage->append(tr("File Path: ") + fsFilePath);
+    ui->brsMessage->append(tr("File Name: ") + fsFileName);
+
+    ui->grpDAQStart->setEnabled(false);
+
+    ui->btnDAQStop->setEnabled(false);
+}
+
+void FEEControlWin::handle_DAQCount(int nCount)
+{
+    // Update real count and time monitor first
+    fDAQRealCount = nCount;
+    fDAQRealTime = fDAQStartTime.msecsTo(QDateTime::currentDateTime());
+
+    auto sCount = QString::number(nCount);
+    ui->lineDAQCount->setText(sCount);
+
+    double countRate = nCount / (double)fDAQRealTime * 1000; // Count rate in unit 1/s
+    ui->lineCountRate->setText(QString::number(countRate));
+
+    double percentCount = nCount / (double)fDAQSettingCount * 100;
+    double percentTime = fDAQRealTime / (double)fDAQSettingTime.msecsSinceStartOfDay() * 100;
+
+    if (fDAQSettingCount < 0)
+    {
+        if (fDAQSettingTime == QTime(0, 0, 0, 0))
+            ui->pbarDAQ->setValue(0);
+        else
+            ui->pbarDAQ->setValue(percentTime);
+    }
+    else
+    {
+        if (fDAQSettingTime == QTime(0, 0, 0, 0))
+            ui->pbarDAQ->setValue(percentCount);
+        else
+            ui->pbarDAQ->setValue(percentCount > percentTime ? percentCount : percentTime);
+    }
+}
+
+// Only used to show rough clock
+void FEEControlWin::update_DAQClock()
+{
+    int time = fDAQStartTime.msecsTo(QDateTime::currentDateTime());
+    ui->timerDAQ->setTime(QTime::fromMSecsSinceStartOfDay(time));
+}
+
+void FEEControlWin::on_btnDAQStart_clicked()
+{
+    TryStartDAQ(fsFilePath.toStdString(), fsFileName.toStdString(), ui->boxDAQEvent->value(), ui->timeDAQSetting->time(), ui->boxBufferWait->value());
+}
+
+bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nDAQCount, QTime DAQTime, int msBufferSleep)
+{
+    if (fDAQRuningFlag)
+        return false;
+    if (!fConnected)
+    {
+        on_btnConnect_clicked();
+        if (!fConnected)
+            return false;
+    }
+
+    QString tempFileName = QString::fromStdString(sFileName);
+    ui->lblFileName->setText(tempFileName);
+    fsFilePath = QString::fromStdString(sPath);
+    fsFileName = QString::fromStdString(sFileName);
+
+    if (gDataManager->IsOpen())
+    {
+        on_btnFileClose_clicked();
+    }
+
+    auto rtn = GenerateROOTFile();
+    if (!rtn)
+        return false;
+    if (!gDataManager->IsOpen())
+        return false;
+
+    // Force DAQ start
+    ForceStartDAQ(nDAQCount, DAQTime, msBufferSleep);
+
+    // Draw Start
+    on_btnStartDraw_clicked();
+    gDataManager->Draw(ui->boxDrawCh->value());
+    if (fdrawWin)
+        fdrawWin->Update();
+
+    return true;
+}
+
+void FEEControlWin::ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting)
+{
+    fDAQSettingCount = nCount;
+    fDAQSettingTime = daqTime;
+    fDAQBufferSleepms = msBufferWaiting;
+
+    ui->boxDAQEvent->setValue(nCount);
+    ui->timeDAQSetting->setTime(daqTime);
+    ui->boxBufferWait->setValue(fDAQBufferSleepms);
+
+    fDAQRuningFlag = 1;
+
+    QDateTime dateTime(QDateTime::currentDateTime()); // Start Message
+    ui->brsMessage->setTextColor(blackColor);
+    ui->brsMessage->setFontWeight(QFont::Bold);
+    ui->brsMessage->append(tr("DAQ Start: "));
+
+    ui->brsMessage->setTextColor(blackColor);
+    ui->brsMessage->setFontWeight(QFont::Normal);
+    ui->brsMessage->append(dateTime.toString("yyyy-MM-dd  hh:mm:ss"));
+
+    on_btnHVON_clicked();
+    Sleep(1000);
+
+    emit startDAQSignal(this);
+    fDAQClock.start(1000);
+
+    // GUI Setting
+    ui->btnFileInit->setEnabled(false);
+    ui->btnFileClose->setEnabled(false);
+    ui->btnDAQStop->setEnabled(true);
+    ui->grpDAQStart->setEnabled(false);
+}
+
+void FEEControlWin::on_DAQStoped(int nDAQLoop)
+{
+    cout << "DAQ Stoped" << endl;
+    ui->brsMessage->setTextColor(blackColor);
+    ui->brsMessage->setFontWeight(QFont::Bold);
+    ui->brsMessage->append(tr("DAQ Stopped"));
+
+    ui->brsMessage->setTextColor(blackColor);
+    ui->brsMessage->setFontWeight(QFont::Normal);
+    ui->brsMessage->append(tr("Total Loop Number:%1").arg(nDAQLoop));
+
+    ui->grpDAQStart->setEnabled(true);
+
+    ui->btnDAQStop->setEnabled(false);
+    ui->btnFileClose->setEnabled(true);
+
+    fDAQRuningFlag = 0;
+
+    fDAQClock.stop();
+    update_DAQClock();
+
+    on_btnFileClose_clicked();
+    on_btnHVOFF_clicked();
+
+    // Tell other class that DAQ is done
+    emit stopDAQSignal();
+}
+
+void FEEControlWin::on_btnDAQStop_clicked()
+{
+    fDAQRuningFlag = 0;
+    gBoard->SetFifoReadBreak();
+}
+// DAQ control end
 
 // CITIROC Configuration control
 void FEEControlWin::SelectLogic(int logic)
@@ -545,33 +894,198 @@ void FEEControlWin::on_btnSaveCITIROC_clicked()
 }
 // CITIROC Configuration control End
 
+//! Draw Control
+void FEEControlWin::SetDrawChannel(int channel)
+{
+    ui->boxDrawCh->setValue(channel);
+}
+
+void FEEControlWin::on_btnStartDraw_clicked()
+{
+    fDrawFlag = 1;
+    on_btnDraw_clicked();
+    if (!fDAQRuningFlag || !fDrawFlag)
+    {
+        DrawSingle();
+        return;
+    }
+    else
+    {
+        fdrawWin->SetOccupied(this);
+        fDrawerTimer.setSingleShot(0);
+        auto fre = ui->boxRefreshTime->value();
+        fDrawerTimer.setTimerType(Qt::VeryCoarseTimer);
+        fDrawerTimer.start((fre >= 100) ? fre : 500);
+    }
+}
+
+void FEEControlWin::DrawSingle()
+{
+    // static int i = 0;
+    // fdrawWin->getROOTWidget()->getCanvas()->cd();
+    if (gReadManager->IsOpen() && gReadManager->GetFileName() != (fsFilePath + "/" + fsFileName).toStdString())
+        gReadManager->Close();
+    if (!gReadManager->IsOpen())
+        gReadManager->Init((fsFilePath + "/" + fsFileName).toStdString());
+    if (!gReadManager->IsOpen())
+        return;
+    gReadManager->Draw(ui->boxDrawCh->value());
+    fdrawWin->Update();
+
+    // cout << ui->boxDrawCh->value() << '\t' << i++ << endl;
+}
+
+void FEEControlWin::on_btnStopDraw_clicked()
+{
+    fDrawerTimer.stop();
+    fDrawFlag = 0;
+    if (!fdrawWin)
+        return;
+    fdrawWin->Update();
+    fdrawWin->SetOccupied(false);
+}
+
+void FEEControlWin::handle_ContinousDraw()
+{
+    static int ch = -1;
+    if (ch != ui->boxDrawCh->value())
+    {
+        ch = ui->boxDrawCh->value();
+        gDataManager->Draw(ui->boxDrawCh->value());
+    }
+    if (!fdrawWin->isHidden())
+        fdrawWin->Update();
+}
+
+void FEEControlWin::on_btnDraw_clicked()
+{
+    static int winid = 0;
+    // if (!fdrawWin || fdrawWin->isHidden())
+    if (fdrawWin && !fdrawWin->isHidden())
+    {
+        fdrawWin->activateWindow();
+        return;
+    }
+    if (fdrawWin && fdrawWin->isHidden())
+    {
+        // fdrawWin = new PlotWindow(*fdrawWin);
+        fdrawWin = new ROOTDraw(*fdrawWin);
+        // delete fWinList[0];
+        fWinList[0] = fdrawWin;
+    }
+    if (!fdrawWin)
+    {
+        // fdrawWin = new PlotWindow(winid++);
+        fdrawWin = new ROOTDraw(winid++);
+        fWinList.push_back(fdrawWin);
+        // fdrawWin->show();
+        // fdrawWin->Update();
+        // return;
+    }
+
+    // fWinList.push_back(fdrawWin);
+    fdrawWin->show();
+    // fdrawWin->Update();
+    fdrawWin->Update();
+}
+// Draw Control End
+
+// FEE Mask Control
 void FEEControlWin::on_btnMask_clicked()
 {
-    ScanFromScreen();
-    gBoard->set_channel_mask(fChannelMasks);
+    ScanMaskFromSpinbox();
+    gBoard->send_ch_masks(fChannelMasks);
 
     ui->brsMessage->setTextColor(QColor(0, 255, 0));
     ui->brsMessage->setFontWeight(QFont::Bold);
     ui->brsMessage->append("Sent Masks: " + QString::number(fChannelMasks));
 }
 
-void FEEControlWin::on_btnGenerateIP_clicked()
+void FEEControlWin::PrintMaskToScreen()
 {
-    string ip;
-    int port;
-    FEEControl::GenerateIP(ui->boxBoardNo->value(), ip, port);
-    ui->boxPort->setValue(port);
-    ui->lineIP->setText(QString::fromStdString(ip));
+    DisconnectMasks();
+    uint8_t gr0 = (uint8_t)fChannelMasks;
+    uint8_t gr1 = (uint8_t)(fChannelMasks >> 8);
+    uint8_t gr2 = (uint8_t)(fChannelMasks >> 16);
+    uint8_t gr3 = (uint8_t)(fChannelMasks >> 24);
+
+    ui->lblMask0->setValue(gr0);
+    ui->lblMask1->setValue(gr1);
+    ui->lblMask2->setValue(gr2);
+    ui->lblMask3->setValue(gr3);
+
+    for (int ch = 0; ch < 32; ch++)
+    {
+        fcbChannelMask[ch]->setChecked(FEEControl::GetMask(ch, fChannelMasks));
+    }
+    ConnectMasks();
 }
 
-void FEEControlWin::on_btnExit_clicked()
+void FEEControlWin::ScanMaskFromCheckbox()
 {
-    gBoard->BoardExit();
-
-    ui->brsMessage->setTextColor(greenColor);
-    ui->brsMessage->setFontWeight(QFont::Bold);
-    ui->brsMessage->append(tr("Board Exited."));
-
-    ui->brsMessage->setTextColor(blackColor);
-    ui->brsMessage->setFontWeight(QFont::Normal);
+    for (int ch = 0; ch < 32; ch++)
+    {
+        FEEControl::GenerateChMask(ch, fcbChannelMask[ch]->isChecked(), fChannelMasks);
+    }
 }
+
+void FEEControlWin::ScanMaskFromSpinbox()
+{
+    uint32_t gr0 = ((uint8_t)ui->lblMask0->value());
+    uint32_t gr1 = ((uint8_t)ui->lblMask1->value()) << 8;
+    uint32_t gr2 = ((uint8_t)ui->lblMask2->value()) << 16;
+    uint32_t gr3 = ((uint8_t)ui->lblMask3->value()) << 24;
+
+    fChannelMasks = gr0 + gr1 + gr2 + gr3;
+}
+
+void FEEControlWin::handle_ScanSpinboxMask()
+{
+    ScanMaskFromSpinbox();
+    PrintMaskToScreen();
+}
+
+void FEEControlWin::handle_ScanCheckboxMask()
+{
+    ScanMaskFromCheckbox();
+    PrintMaskToScreen();
+}
+
+void FEEControlWin::ConnectMasks()
+{
+    connect(ui->lblMask0, &QSpinBox::textChanged, this, &FEEControlWin::handle_ScanSpinboxMask);
+    connect(ui->lblMask1, &QSpinBox::textChanged, this, &FEEControlWin::handle_ScanSpinboxMask);
+    connect(ui->lblMask2, &QSpinBox::textChanged, this, &FEEControlWin::handle_ScanSpinboxMask);
+    connect(ui->lblMask3, &QSpinBox::textChanged, this, &FEEControlWin::handle_ScanSpinboxMask);
+
+    for (int ch = 0; ch < 32; ch++)
+    {
+        connect(fcbChannelMask[ch], &QCheckBox::toggled, this, &FEEControlWin::handle_ScanCheckboxMask);
+    }
+}
+
+void FEEControlWin::DisconnectMasks()
+{
+    disconnect(ui->lblMask0, &QSpinBox::textChanged, this, &FEEControlWin::handle_ScanSpinboxMask);
+    disconnect(ui->lblMask1, &QSpinBox::textChanged, this, &FEEControlWin::handle_ScanSpinboxMask);
+    disconnect(ui->lblMask2, &QSpinBox::textChanged, this, &FEEControlWin::handle_ScanSpinboxMask);
+    disconnect(ui->lblMask3, &QSpinBox::textChanged, this, &FEEControlWin::handle_ScanSpinboxMask);
+
+    for (int ch = 0; ch < 32; ch++)
+    {
+        disconnect(fcbChannelMask[ch], &QCheckBox::toggled, this, &FEEControlWin::handle_ScanCheckboxMask);
+    }
+}
+
+void FEEControlWin::on_btnClearMask_clicked()
+{
+    fChannelMasks = 0;
+    PrintMaskToScreen();
+}
+
+void FEEControlWin::on_btnAllSetMask_clicked()
+{
+    fChannelMasks = 0xffffffff;
+    PrintMaskToScreen();
+}
+// FEE Mask Control END
