@@ -10,23 +10,25 @@
 WSADATA fWsaData; // Unused unimportant data, used to put inside class FEEControl, but win sock2.h is like a piece of shit, which is conflict with <TTree.h>, <zaber>
 
 #pragma comment(lib, "Ws2_32.lib")
-using namespace std;
 
 #define SIZE_STR 150
+// #define fPortBase 1306
 
-static void str_process(char *in_str, char *out_str);
+const int FEEControl::fPortBase = 1306;
 
-static bool SendAll(SOCKET sock, char *buffer, int size);
-
-static bool RecvAll(SOCKET sock, char *buffer, int size);
-
-static int hexToDec(char *source);
-
-static int getIndexOfSigns(char ch);
+using namespace std;
 
 FEEControl::FEEControl(std::string ip, int port) : ip_address(ip), fPort(port)
 {
     fifoData = new uint32_t[MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH];
+}
+
+FEEControl::FEEControl(int boardNo) : FEEControl()
+{
+    // Test whether arrays are malloced
+    std::cout << fifoData[0] << std::endl;
+
+    InitPort(boardNo);
 }
 
 FEEControl::~FEEControl()
@@ -35,57 +37,62 @@ FEEControl::~FEEControl()
     fifoData = NULL;
 }
 
+void FEEControl::GenerateIP(int boardNo, std::string &ip, int &port)
+{
+    ip = "192.168.1." + to_string(101 + boardNo);
+    port = fPortBase + boardNo;
+}
+
 void FEEControl::InitPort(std::string ip, int port)
 {
     ip_address = ip;
     fPort = port;
 }
 
-int FEEControl::server_exit()
+void FEEControl::InitPort(uint8_t boardNo)
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
-
-    // send an receive data
-    int byte_num = sizeof(char);
-    InitCMD(byte_num);
-    *cmd = cmd_exit;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
-    {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    // close socket
-    CloseSock();
-
-    return EXIT_SUCCESS;
+    GenerateIP(boardNo, ip_address, fPort);
 }
 
-#include <fstream>
-#include <QDebug>
-
-int FEEControl::citiroc1a_configure(string sc_file_name, string probe_file_name)
+FEEControl *&FEEControl::Instance()
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
+    static FEEControl *instance = new FEEControl;
+    return instance;
+}
 
+// static SOCKET sock;
+
+bool FEEControl::server_exit()
+{
+    if (!start_socket())
+    {
+        return false;
+    }
+    if (!send_cmd(up_exit, NULL, 1))
+    {
+        return false;
+    }
+    close_socket();
+    return true;
+}
+
+bool FEEControl::citiroc1a_configure(const char *sc_file_name, const char *probe_file_name)
+{
     // send and receive data
     FILE *fp_sc, *fp_probe;
     char str_get[SIZE_STR] = {0};
     char str_temp[SIZE_STR]{0};
     char str_out[1500] = "11111111";
 
-    if ((fp_sc = fopen(sc_file_name.c_str(), "r")) == NULL)
+    if ((fp_sc = fopen(sc_file_name, "r")) == NULL)
     {
         printf("can\'t open file!\n");
-        exit(0);
+        return false;
     }
-    if ((fp_probe = fopen(probe_file_name.c_str(), "r")) == NULL)
+    if ((fp_probe = fopen(probe_file_name, "r")) == NULL)
     {
         printf("can\'t open file!\n");
-        exit(0);
+        return false;
     }
 
     while (fgets(str_get, SIZE_STR, fp_sc) != NULL)
@@ -103,469 +110,193 @@ int FEEControl::citiroc1a_configure(string sc_file_name, string probe_file_name)
     fclose(fp_sc);
     fclose(fp_probe);
 
-    int byte_num = (int)((strlen(str_out) + 2) * sizeof(char));
-    InitCMD(byte_num);
-    memset(cmd, '\0', byte_num);
-    *cmd = cmd_configCitiroc;
-    strcat(cmd, str_out);
-    if (!SendAll(fSock, cmd, byte_num))
+    if (!start_socket())
     {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
+        return false;
     }
-
-    // close socket
-    CloseSock();
-
-    return EXIT_SUCCESS;
+    if (!send_cmd(up_configCitiroc, str_out, strlen(str_out) + 2))
+    {
+        return false;
+    }
+    close_socket();
+    return true;
 }
 
-int FEEControl::ad9635_reg_write(const int dev_addr, int wr_data)
+bool FEEControl::ad9645_reg_write(int addr, int wr_data)
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
-
-    // send and receive data
-    int byte_num = (int)(sizeof(char) + 2 * sizeof(int));
-    InitCMD(byte_num);
-    *cmd = cmd_writeAD9635;
-    int *arg = (int *)(cmd + 1);
-    *arg = dev_addr;
-    *(arg + 1) = wr_data;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
-    {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    // close socket
-    CloseSock();
-
-    return EXIT_SUCCESS;
+    return reg_write(up_writeAD9645, addr, wr_data);
 }
 
-int FEEControl::ad9635_reg_read(const int dev_addr)
+bool FEEControl::ad9645_reg_read(int addr, int &reg)
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
-
-    // send and receive data
-    int byte_num = (int)(sizeof(char) + sizeof(int));
-    InitCMD(byte_num);
-    *cmd = cmd_readAD9635;
-    int *arg = (int *)(cmd + 1);
-    *arg = dev_addr;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
-    {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    int reg;
-    if (recv(fSock, (char *)(&reg), sizeof(int), 0) <= 0)
-    {
-        cout << "receive error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    // close socket
-    CloseSock();
-
-    return reg;
+    return reg_read(up_readAD9645, addr, reg);
 }
 
-int FEEControl::logic_select(int select_data)
+bool FEEControl::si570_set(double freq)
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
-
-    // send and receive data
-    int byte_num = sizeof(char) + sizeof(int);
-    InitCMD(byte_num);
-    *cmd = cmd_logicSelect;
-    int *arg = (int *)(cmd + 1);
-    *arg = select_data;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
+    if (!start_socket())
     {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
+        return false;
     }
-
-    // close socket
-    CloseSock();
-
-    return EXIT_SUCCESS;
+    if (!send_cmd(up_setSi570Freq, (char *)(&freq), sizeof(double) + 1))
+    {
+        return false;
+    }
+    close_socket();
+    return true;
 }
 
-int FEEControl::send_ch_masks(uint32_t mask)
+bool FEEControl::si570_get(double &freq)
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
-
-    // send and receive data
-    int byte_num = sizeof(char) + sizeof(uint32_t);
-    InitCMD(byte_num);
-    *cmd = cmd_channelMask;
-    uint32_t *arg = (uint32_t *)(cmd + 1);
-    *arg = mask;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
+    if (!start_socket())
     {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
+        return false;
     }
-
-    // close socket
-    CloseSock();
-
-    return EXIT_SUCCESS;
+    if (!send_cmd(up_getSi570Freq, NULL, 1))
+    {
+        return false;
+    }
+    if (!recv_data((char *)(&freq), sizeof(double)))
+    {
+        return false;
+    }
+    close_socket();
+    return true;
 }
 
-int FEEControl::si570_set(double freq)
+bool FEEControl::hg_fifo_length_read(int &len)
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
-
-    // send and receive data
-    int byte_num = (int)(sizeof(char) + sizeof(double));
-    InitCMD(byte_num);
-    *cmd = cmd_setSi570Freq;
-    double *arg = (double *)(cmd + 1);
-    *arg = freq;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
-    {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    // close socket
-    CloseSock();
-
-    return EXIT_SUCCESS;
+    return length_read(up_getHgFifoLen, len);
 }
 
-double FEEControl::si570_get()
+bool FEEControl::hg_queue_length_read(int &len)
 {
-
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
-
-    // send and receive data
-    int byte_num = (int)sizeof(char);
-    InitCMD(byte_num);
-    *cmd = cmd_getSi570Freq;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
-    {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    double freq;
-    if (recv(fSock, (char *)(&freq), sizeof(double), 0) <= 0)
-    {
-        cout << "receive error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    // close socket
-    CloseSock();
-
-    return freq;
+    return length_read(up_getHgQueueLen, len);
 }
 
-int FEEControl::lg_fifo_length_read()
+bool FEEControl::hg_data_read(int data_num, uint32_t *data_addr)
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
-
-    // send and receive data
-    int byte_num = sizeof(char);
-    InitCMD(byte_num);
-    *cmd = cmd_getLgFifoLen;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
-    {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    int len;
-    if (recv(fSock, (char *)(&len), sizeof(int), 0) <= 0)
-    {
-        cout << "receive error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    // close socket
-    CloseSock();
-
-    return len;
+    return data_read(up_getHgData, data_num, data_addr);
 }
 
-int FEEControl::lg_fifo_read(int data_num, uint32_t *data_addr)
+bool FEEControl::lg_fifo_length_read(int &len)
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
-
-    // send and receive data
-    int byte_num = sizeof(char) + sizeof(int);
-    InitCMD(byte_num);
-    *cmd = cmd_getLgFifoData;
-    int *arg = (int *)(cmd + 1);
-    *arg = data_num;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
-    {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    if (!RecvAll(fSock, (char *)data_addr, data_num * sizeof(uint32_t)))
-    {
-        cout << "receive error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    // close socket
-    CloseSock();
-
-    return EXIT_SUCCESS;
+    return length_read(up_getLgFifoLen, len);
 }
 
-int FEEControl::hg_fifo_length_read()
+bool FEEControl::lg_queue_length_read(int &len)
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
-
-    // send and receive data
-    int byte_num = sizeof(char);
-    InitCMD(byte_num);
-    *cmd = cmd_getHgFifoLen;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
-    {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    int len;
-    if (recv(fSock, (char *)(&len), sizeof(int), 0) <= 0)
-    {
-        cout << "receive error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    // close socket
-    CloseSock();
-
-    return len;
+    return length_read(up_getLgQueueLen, len);
 }
 
-int FEEControl::hg_fifo_read(int data_num, uint32_t *data_addr)
+bool FEEControl::lg_data_read(int data_num, uint32_t *data_addr)
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
-
-    // send and receive data
-    int byte_num = sizeof(char) + sizeof(int);
-    InitCMD(byte_num);
-    *cmd = cmd_getHgFifoData;
-    int *arg = (int *)(cmd + 1);
-    *arg = data_num;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
-    {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    if (!RecvAll(fSock, (char *)data_addr, data_num * sizeof(uint32_t)))
-    {
-        cout << "receive error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    // close socket
-    CloseSock();
-
-    return EXIT_SUCCESS;
+    return data_read(up_getLgData, data_num, data_addr);
 }
 
-int FEEControl::test_fifo_length_read()
+bool FEEControl::test_fifo_length_read(int &len)
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
-
-    // send and receive data
-    int byte_num = sizeof(char);
-    InitCMD(byte_num);
-    *cmd = cmd_getTestFifoLen;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
-    {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    int len;
-    if (recv(fSock, (char *)(&len), sizeof(int), 0) <= 0)
-    {
-        cout << "receive error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    // close socket
-    CloseSock();
-
-    return len;
+    return length_read(up_getTestFifoLen, len);
 }
 
-int FEEControl::test_fifo_read(int data_num, uint32_t *data_addr)
+bool FEEControl::test_queue_length_read(int &len)
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
-
-    // send and receive data
-    int byte_num = sizeof(char) + sizeof(int);
-    InitCMD(byte_num);
-    *cmd = cmd_getTestFifoData;
-    int *arg = (int *)(cmd + 1);
-    *arg = data_num;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
-    {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    if (!RecvAll(fSock, (char *)data_addr, data_num * sizeof(uint32_t)))
-    {
-        cout << "receive error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-
-    // close socket
-    CloseSock();
-
-    return EXIT_SUCCESS;
+    return length_read(up_getTestQueueLen, len);
 }
 
-int FEEControl::sipm_temp_read(double *temp)
+bool FEEControl::test_data_read(int data_num, uint32_t *data_addr)
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
+    return data_read(up_getTestData, data_num, data_addr);
+}
 
-    // send and receive data
-    int byte_num = (int)sizeof(char);
-    InitCMD(byte_num);
-    *cmd = cmd_getSimpTemp;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
-    {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
+bool FEEControl::tdc_fifo_length_read(int &len)
+{
+    return length_read(up_getTdcFifoLen, len);
+}
 
-    int num = 4;
-    if (recv(fSock, (char *)temp, num * sizeof(double), 0) <= 0)
+bool FEEControl::tdc_queue_length_read(int &len)
+{
+    return length_read(up_getTdcQueueLen, len);
+}
+
+bool FEEControl::tdc_data_read(int data_num, uint32_t *data_addr)
+{
+    return data_read(up_getTdcData, data_num, data_addr);
+}
+
+bool FEEControl::sipm_temp_read(double *temp)
+{
+    if (!start_socket())
     {
-        cout << "receive error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
+        return false;
     }
+    if (!send_cmd(up_getSimpTemp, NULL, 1))
+    {
+        return false;
+    }
+    if (!recv_data((char *)temp, 4 * sizeof(double)))
+    {
+        return false;
+    }
+    close_socket();
 
     printf("SiPM0_7 temperature is %.2f degrees Celsius\n", *temp);
     printf("SiPM8_15 temperature is %.2f degrees Celsius\n", *(temp + 1));
     printf("SiPM16_23 temperature is %.2f degrees Celsius\n", *(temp + 2));
     printf("SiPM24_31 temperature is %.2f degrees Celsius\n", *(temp + 3));
 
-    // close socket
-    CloseSock();
-
-    return EXIT_SUCCESS;
+    return true;
 }
 
-int FEEControl::read_reg_test(int reg_num)
+bool FEEControl::logic_select(int select_data)
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
-
-    // send and receive data
-    int byte_num = (int)(sizeof(char) + sizeof(int));
-    InitCMD(byte_num);
-    *cmd = cmd_readRegTest;
-    int *arg = (int *)(cmd + 1);
-    *arg = reg_num;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
+    if (!start_socket())
     {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
+        return false;
     }
-
-    int reg;
-    if (recv(fSock, (char *)(&reg), sizeof(int), 0) <= 0)
+    if (!send_cmd(up_logicSelect, (char *)(&select_data), sizeof(int) + 1))
     {
-        cout << "receive error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
+        return false;
     }
-
-    // close socket
-    CloseSock();
-
-    return reg;
+    close_socket();
+    return true;
 }
 
-int FEEControl::write_reg_test(int reg_num, int wr_data)
+bool FEEControl::set_channel_mask(uint32_t mask_num)
 {
-    if (InitSock() != EXIT_SUCCESS)
-        return EXIT_FAILURE;
-
-    // send and receive data
-    int byte_num = sizeof(char) + 2 * sizeof(int);
-    InitCMD(byte_num);
-    *cmd = cmd_writeRegTest;
-    int *arg = (int *)(cmd + 1);
-    *arg = reg_num;
-    *(arg + 1) = wr_data;
-    if (send(fSock, cmd, byte_num, 0) <= 0)
+    if (!start_socket())
     {
-        cout << "send error." << endl;
-        closesocket(fSock);
-        return EXIT_FAILURE;
+        return false;
     }
-
-    // close socket
-    CloseSock();
-
-    return EXIT_SUCCESS;
+    if (!send_cmd(up_channelMask, (char *)(&mask_num), sizeof(uint32_t) + 1))
+    {
+        return false;
+    }
+    close_socket();
+    return true;
 }
 
-int FEEControl::HV_config(void)
+bool FEEControl::write_reg_test(int addr, int wr_data)
+{
+    return reg_write(up_writeRegTest, addr, wr_data);
+}
+
+bool FEEControl::read_reg_test(int addr, int &reg)
+{
+    return reg_read(up_readRegTest, addr, reg);
+}
+
+bool FEEControl::HV_config(void)
 {
     char input_cmd[15] = {0};
+    char HV_reply[50] = {0};
     printf("--------------------please input HV command!--------------------\n");
     printf(">>>>>>> input \"HPO\" to get status.\n");
     printf(">>>>>>> input \"HST 56.6\" to set the voltage to 56.6V at 30 degrees Celsius.\n");
     printf(">>>>>>> input \"HOF\" to turn off HV output.\n");
     printf(">>>>>>> input \"HON\" to turn on HV output.\n");
     printf(">>>>>>> input \"ext\" to exit HV set.\n");
-    while (strcmp(input_cmd, "ext"))
+    while (1)
     {
         printf(">>> your input cmd:");
         gets_s(input_cmd);
@@ -573,60 +304,24 @@ int FEEControl::HV_config(void)
         {
             break;
         }
-        WSADATA wsaData;
-        if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+
+        if (!start_socket())
         {
-            return EXIT_FAILURE;
+            return false;
         }
 
-        // create socket
-        SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-        if (sock == INVALID_SOCKET)
+        if (!send_cmd(up_configC11204, input_cmd, strlen(input_cmd) + 2))
         {
-            cout << "Socket error." << endl;
-            return EXIT_FAILURE;
+            return false;
         }
 
-        // Connect to the server
-        sockaddr_in sockAddr;
-        memset(&sockAddr, 0, sizeof(sockAddr));
-        sockAddr.sin_family = AF_INET;
-        sockAddr.sin_addr.s_addr = inet_addr(ip_address.c_str());
-        sockAddr.sin_port = htons(fPort);
-        if (connect(sock, (SOCKADDR *)&sockAddr, sizeof(SOCKADDR)) == SOCKET_ERROR)
-        {
-            cout << "Connect error." << endl;
-            closesocket(sock);
-            return EXIT_FAILURE;
-        }
-
-        // send and receive data
-        int byte_num = (int)(sizeof(char) + strlen(input_cmd) + 1);
-        char *cmd = (char *)malloc(byte_num);
-        memset(cmd, '\0', byte_num);
-        *cmd = cmd_configC11204;
-        strcat(cmd, input_cmd);
-        if (send(sock, cmd, byte_num, 0) <= 0)
-        {
-            cout << "send error." << endl;
-            closesocket(sock);
-            free(cmd);
-            return EXIT_FAILURE;
-        }
-        free(cmd);
-
-        char HV_reply[50] = {0};
-        if (recv(sock, HV_reply, 50, 0) <= 0)
+        if (recv(fSock, HV_reply, 50, 0) <= 0)
         {
             cout << "receive error." << endl;
-            closesocket(sock);
-            free(cmd);
-            return EXIT_FAILURE;
+            close_socket();
+            return false;
         }
-
-        // close socket
-        closesocket(sock);
-        WSACleanup();
+        close_socket();
 
         char HV_cmd[4] = {0};
         strncpy(HV_cmd, input_cmd, 3);
@@ -651,21 +346,285 @@ int FEEControl::HV_config(void)
             printf("%s\n\n", HV_reply);
         }
     }
-    return EXIT_SUCCESS;
+    return true;
 }
+
+bool FEEControl::clean_queue(int queue_id)
+{
+    if (!start_socket())
+    {
+        return false;
+    }
+    if (!send_cmd(up_cleanQueue, (char *)(&queue_id), sizeof(int) + 1))
+    {
+        return false;
+    }
+    close_socket();
+    return true;
+}
+
+bool FEEControl::length_read(cmd_up cmd, int &len)
+{
+    if (!start_socket())
+    {
+        return false;
+    }
+    if (!send_cmd(cmd, NULL, 1))
+    {
+        return false;
+    }
+    if (!recv_data((char *)(&len), sizeof(int)))
+    {
+        return false;
+    }
+    close_socket();
+    return true;
+}
+
+bool FEEControl::data_read(cmd_up cmd, int data_num, uint32_t *data_addr)
+{
+    if (!start_socket())
+    {
+        return false;
+    }
+    if (!send_cmd(cmd, (char *)(&data_num), sizeof(int) + 1))
+    {
+        return false;
+    }
+    if (!recv_data((char *)data_addr, data_num * sizeof(uint32_t)))
+    {
+        return false;
+    }
+    close_socket();
+    return true;
+}
+
+bool FEEControl::reg_write(cmd_up cmd, int addr, int wr_data)
+{
+    if (!start_socket())
+    {
+        return false;
+    }
+    int arg[2];
+    arg[0] = addr;
+    arg[1] = wr_data;
+    if (!send_cmd(cmd, (char *)arg, sizeof(int) + sizeof(int) + 1))
+    {
+        return false;
+    }
+    close_socket();
+    return true;
+}
+
+bool FEEControl::reg_read(cmd_up cmd, int addr, int &reg)
+{
+    if (!start_socket())
+    {
+        return false;
+    }
+    if (!send_cmd(cmd, (char *)(&addr), sizeof(addr) + 1))
+    {
+        return false;
+    }
+    if (!recv_data((char *)(&reg), sizeof(int)))
+    {
+        return false;
+    }
+    close_socket();
+    return true;
+}
+
+bool FEEControl::send_cmd(cmd_up input_cmd, char *arg, int size)
+{
+    // when arg is NULL, size must be 1
+    InitCMD(size);
+    memset(cmd, '\0', size);
+    *cmd = (char)input_cmd;
+
+    if (arg != NULL)
+    {
+        // for (int i = 1; i < size; i++)
+        // {
+        //     *(cmd + i) = *(arg + i - 1);
+        // }
+
+        // ! TODO: Test this block
+
+        memcpy(cmd + 1, arg, size - 1);
+    }
+    if (!SendAll(cmd, size))
+    {
+        cout << "send error." << endl;
+        close_socket();
+        return false;
+    }
+    return true;
+}
+
+bool FEEControl::recv_data(char *buffer, int size)
+{
+    if (!RecvAll(buffer, size))
+    {
+        cout << "receive error." << endl;
+        close_socket();
+        return false;
+    }
+    return true;
+}
+
+bool FEEControl::SendAll(char *buffer, int size)
+{
+    while (size > 0)
+    {
+        int SendSize = send(fSock, buffer, size, 0);
+        if (SendSize == SOCKET_ERROR)
+            return false;
+        size = size - SendSize;
+        buffer += SendSize;
+    }
+    return true;
+}
+
+bool FEEControl::RecvAll(char *buffer, int size)
+{
+    while (size > 0)
+    {
+        int RecvSize = recv(fSock, buffer, size, 0);
+        if (RecvSize == SOCKET_ERROR)
+            return false;
+        size = size - RecvSize;
+        buffer += RecvSize;
+    }
+    return true;
+}
+
+bool FEEControl::start_socket()
+{
+
+    if (WSAStartup(MAKEWORD(2, 2), &fWsaData) != 0)
+    {
+        fSockInitFlag = false;
+        cout << "Startup error." << endl;
+        return false;
+    }
+
+    // create socket
+    fSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (fSock == INVALID_SOCKET)
+    {
+        fSockInitFlag = false;
+        cout << "Socket error." << endl;
+        return false;
+    }
+
+    // Connect to the server
+    sockaddr_in sockAddr;
+    memset(&sockAddr, 0, sizeof(sockAddr));
+    sockAddr.sin_family = AF_INET;
+    sockAddr.sin_addr.s_addr = inet_addr(ip_address.c_str());
+    sockAddr.sin_port = htons(fPort);
+    if (connect(fSock, (SOCKADDR *)&sockAddr, sizeof(SOCKADDR)) == SOCKET_ERROR)
+    {
+        cout << "Connect error." << endl;
+        fSockInitFlag = 0;
+        closesocket(fSock);
+        return false;
+    }
+    fSockInitFlag = true;
+    return fSockInitFlag;
+}
+
+void FEEControl::close_socket()
+{
+    closesocket(fSock);
+    WSACleanup();
+}
+
+void FEEControl::str_process(char *in_str, char *out_str)
+{
+    int i = 0, j = 0;
+    while (*(in_str + i) != '%')
+    {
+        if (*(in_str + i) != ' ')
+        {
+            *(out_str + j) = *(in_str + i);
+            j++;
+        }
+        i++;
+    }
+    *(out_str + j) = '\0';
+}
+
+int FEEControl::hexToDec(char *source)
+{
+    int sum = 0;
+    int t = 1;
+    int i, len;
+
+    len = strlen(source);
+    for (i = len - 1; i >= 0; i--)
+    {
+        sum += t * getIndexOfSigns(*(source + i));
+        t *= 16;
+    }
+    return sum;
+}
+
+int FEEControl::getIndexOfSigns(char ch)
+{
+    if (ch >= '0' && ch <= '9')
+    {
+        return ch - '0';
+    }
+    if (ch >= 'A' && ch <= 'F')
+    {
+        return ch - 'A' + 10;
+    }
+    if (ch >= 'a' && ch <= 'f')
+    {
+        return ch - 'a' + 10;
+    }
+    return -1;
+}
+
+// bool FEEControl::SendAll(SOCKET sock, char *buffer, int size)
+// {
+//     while (size > 0)
+//     {
+//         int SendSize = send(sock, buffer, size, 0);
+//         if (SendSize == SOCKET_ERROR)
+//             return false;
+//         size = size - SendSize;
+//         buffer += SendSize;
+//     }
+//     return true;
+// }
+
+// bool FEEControl::RecvAll(SOCKET sock, char *buffer, int size)
+// {
+//     while (size > 0)
+//     {
+//         int RecvSize = recv(sock, buffer, size, 0);
+//         if (RecvSize == SOCKET_ERROR)
+//             return false;
+//         size = size - RecvSize;
+//         buffer += RecvSize;
+//     }
+//     return true;
+// }
 
 int FEEControl::HVSend(string scmd)
 {
     char input_cmd[256];
     strcpy(input_cmd, scmd.c_str());
 
-    if (InitSock() != EXIT_SUCCESS)
+    if (start_socket() != EXIT_SUCCESS)
         return EXIT_FAILURE;
 
     // send and receive data
     int byte_num = (int)(sizeof(char) + strlen(input_cmd) + 1);
     InitCMD(byte_num);
-    *cmd = cmd_configC11204;
+    *cmd = up_configC11204;
     strcat(cmd, input_cmd);
     if (send(fSock, cmd, byte_num, 0) <= 0)
     {
@@ -682,7 +641,7 @@ int FEEControl::HVSend(string scmd)
     }
 
     // close socket
-    CloseSock();
+    close_socket();
     return EXIT_SUCCESS;
 }
 
@@ -739,59 +698,61 @@ char *FEEControl::InitCMD(int length)
     return cmd;
 };
 
-int FEEControl::InitSock()
-{
-    if (WSAStartup(MAKEWORD(2, 2), &fWsaData) != 0)
-    {
-        fSockInitFlag = EXIT_FAILURE;
-        cout << "Startup error." << endl;
-        return EXIT_FAILURE;
-    }
+// int FEEControl::InitSock()
+// {
+//     if (WSAStartup(MAKEWORD(2, 2), &fWsaData) != 0)
+//     {
+//         fSockInitFlag = EXIT_FAILURE;
+//         cout << "Startup error." << endl;
+//         return EXIT_FAILURE;
+//     }
 
-    // create socket
-    fSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (fSock == INVALID_SOCKET)
-    {
-        fSockInitFlag = EXIT_FAILURE;
-        cout << "Socket error." << endl;
-        return EXIT_FAILURE;
-    }
+//     // create socket
+//     fSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+//     if (fSock == INVALID_SOCKET)
+//     {
+//         fSockInitFlag = EXIT_FAILURE;
+//         cout << "Socket error." << endl;
+//         return EXIT_FAILURE;
+//     }
 
-    // Connect to the server
-    sockaddr_in sockAddr;
-    memset(&sockAddr, 0, sizeof(sockAddr));
-    sockAddr.sin_family = AF_INET;
-    sockAddr.sin_addr.s_addr = inet_addr(ip_address.c_str());
-    sockAddr.sin_port = htons(fPort);
-    if (connect(fSock, (SOCKADDR *)&sockAddr, sizeof(SOCKADDR)) == SOCKET_ERROR)
-    {
-        cout << "Connect error." << endl;
-        fSockInitFlag = 0;
-        closesocket(fSock);
-        return EXIT_FAILURE;
-    }
-    fSockInitFlag = EXIT_SUCCESS;
-    return fSockInitFlag;
-}
+//     // Connect to the server
+//     sockaddr_in sockAddr;
+//     memset(&sockAddr, 0, sizeof(sockAddr));
+//     sockAddr.sin_family = AF_INET;
+//     sockAddr.sin_addr.s_addr = inet_addr(ip_address.c_str());
+//     sockAddr.sin_port = htons(fPort);
+//     if (connect(fSock, (SOCKADDR *)&sockAddr, sizeof(SOCKADDR)) == SOCKET_ERROR)
+//     {
+//         cout << "Connect error." << endl;
+//         fSockInitFlag = 0;
+//         closesocket(fSock);
+//         return EXIT_FAILURE;
+//     }
+//     fSockInitFlag = EXIT_SUCCESS;
+//     return fSockInitFlag;
+// }
 
-void FEEControl::CloseSock()
-{
-    // close socket
-    closesocket(fSock);
-    WSACleanup();
-}
+// void FEEControl::CloseSock()
+// {
+//     // close socket
+//     closesocket(fSock);
+//     WSACleanup();
+// }
 
 bool FEEControl::TestConnect()
 {
     // reg test
     int reg_test, reg_addr_test = 50, wr_data_test = 0xf;
     wr_data_test = 0x1;
-    if (write_reg_test(reg_addr_test, wr_data_test) < 0)
+    if (!write_reg_test(reg_addr_test, wr_data_test))
     {
         cout << "AD9635 write failed." << endl;
         return 0;
     }
-    reg_test = read_reg_test(reg_addr_test);
+    auto rtn = read_reg_test(reg_addr_test, reg_test);
+    if (!rtn)
+        return false;
 
     return (reg_test == wr_data_test);
 }
@@ -800,14 +761,14 @@ double FEEControl::ReadFreq()
 {
     // si570 read and set
     double freq;
-    freq = si570_get();
+    si570_get(freq);
     printf("\nThe output clock frequency of the Si570 is %.4f.\n", freq);
-    if (si570_set(320) < 0)
+    if (!si570_set(320))
     {
         cout << "Si570 set failed." << endl;
         return -1;
     }
-    freq = si570_get();
+    si570_get(freq);
     printf("The output clock frequency of the Si570 is %.4f.\n\n", freq);
     return freq;
 }
@@ -816,15 +777,13 @@ int FEEControl::BoardCheck()
 {
     // //ad9635 write and read
     int reg, reg_addr = 0x19, wr_data = 0xff;
-    reg = ad9635_reg_read(reg_addr);
-    printf("\nThe value of AD9635 reg %02x is %02x.\n", reg_addr, reg);
-    if (ad9635_reg_write(reg_addr, wr_data) < 0)
+    ad9645_reg_read(reg_addr, reg);
+    printf("\nThe value of AD9645 reg %02x is %02x.\n", reg_addr, reg);
+    if (!ad9645_reg_write(reg_addr, wr_data))
     {
-        cout << "AD9635 write failed." << endl;
+        cout << "AD9645 write failed." << endl;
         return -1;
     }
-    reg = ad9635_reg_read(reg_addr);
-    printf("The value of AD9635 reg %02x is %02x.\n", reg_addr, reg);
 
     return 1;
 }
@@ -832,7 +791,7 @@ int FEEControl::BoardCheck()
 bool FEEControl::ReadTemp()
 {
     // sipm temperature read
-    if (sipm_temp_read(fTemp) < 0)
+    if (!sipm_temp_read(fTemp))
     {
         cout << "sipm temp read failed." << endl;
         return 0;
@@ -844,15 +803,13 @@ int FEEControl::TestReg()
 {
     // reg test
     int reg_test, reg_addr_test = 50, wr_data_test = 0xf;
-    reg_test = read_reg_test(reg_addr_test);
+    read_reg_test(reg_addr_test, reg_test);
     printf("\nThe value of test reg %2d is %02x.\n", reg_addr_test, reg_test);
-    if (write_reg_test(reg_addr_test, wr_data_test) < 0)
+    if (!write_reg_test(reg_addr_test, wr_data_test))
     {
         cout << "AD9635 write failed." << endl;
         return -1;
     }
-    reg_test = read_reg_test(reg_addr_test);
-    printf("The value of test reg %2d is %02x.\n", reg_addr_test, reg_test);
 
     return reg_test;
 }
@@ -860,7 +817,7 @@ int FEEControl::TestReg()
 bool FEEControl::BoardExit()
 {
     // exit
-    if (server_exit() < 0)
+    if (!server_exit())
     {
         cout << "exit failed." << endl;
         return 0;
@@ -868,52 +825,52 @@ bool FEEControl::BoardExit()
     return 1;
 }
 
-int FEEControl::ReadFifo(int sleepms)
-{
-    // test fifo read
-    int read_num = MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH; // the read_num must be Integer multiple of 5, and no more than MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH
+// int FEEControl::ReadFifo(int sleepms)
+// {
+//     // test fifo read
+//     int read_num = MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH; // the read_num must be Integer multiple of 5, and no more than MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH
 
-    int fifo_length = hg_fifo_length_read();
-    while (2 * fifo_length < read_num && !fBreakFlag)
-    {
-        //        printf("Data in fifo is insufficient, waiting 2s. Fifo length: %d\n", 2 * fifo_length);
-        //         return -1;
-        fifo_length = hg_fifo_length_read();
-        // cout << "There are not enough numbers in fifo. waiting 0.2s" << endl;
-        // cout << "fifo_length: " << fifo_length << endl;
-        // Sleep(1); // Sleep 1 ms
-        Sleep(sleepms); // Sleep 1 ms
-    }
-    fBreakFlag = 0;
+//     int fifo_length = hg_fifo_length_read();
+//     while (2 * fifo_length < read_num && !fBreakFlag)
+//     {
+//         //        printf("Data in fifo is insufficient, waiting 2s. Fifo length: %d\n", 2 * fifo_length);
+//         //         return -1;
+//         fifo_length = hg_fifo_length_read();
+//         // cout << "There are not enough numbers in fifo. waiting 0.2s" << endl;
+//         // cout << "fifo_length: " << fifo_length << endl;
+//         // Sleep(1); // Sleep 1 ms
+//         Sleep(sleepms); // Sleep 1 ms
+//     }
+//     fBreakFlag = 0;
 
-    if (hg_fifo_read(read_num, fifoData) < 0)
-    {
-        cout << "fifo read failed." << endl;
-        fDataFlag = 0;
-        fDataLength = 0;
-        return -1;
-    }
-    fifoReadCount++;
-    fDataFlag = 1;
-    fDataLength = fifo_length;
-    return fifo_length;
-}
+//     if (hg_fifo_read(read_num, fifoData) < 0)
+//     {
+//         cout << "fifo read failed." << endl;
+//         fDataFlag = 0;
+//         fDataLength = 0;
+//         return -1;
+//     }
+//     fifoReadCount++;
+//     fDataFlag = 1;
+//     fDataLength = fifo_length;
+//     return fifo_length;
+// }
 
 int FEEControl::SendConfig(ConfigFileParser *parser)
 {
     if (!parser->sConfigValidate())
         return -1;
 
-    if (InitSock() != EXIT_SUCCESS)
+    if (start_socket() != EXIT_SUCCESS)
         return EXIT_FAILURE;
 
     // send and receive data
     int byte_num = (int)((parser->GetString().size() + 2) * sizeof(char));
     InitCMD(byte_num);
     memset(cmd, '\0', byte_num);
-    *cmd = cmd_configCitiroc;
+    *cmd = up_configCitiroc;
     strcat(cmd, parser->GetString().c_str());
-    if (!SendAll(fSock, cmd, byte_num))
+    if (!SendAll(cmd, byte_num))
     {
         cout << "send error." << endl;
         closesocket(fSock);
@@ -921,24 +878,24 @@ int FEEControl::SendConfig(ConfigFileParser *parser)
     }
 
     // close socket
-    CloseSock();
+    close_socket();
 
     return EXIT_SUCCESS;
 }
 
-uint32_t &FEEControl::SetChannelMask(int ch, bool flag, uint32_t &reg)
+uint32_t &FEEControl::GenerateChMask(int ch, bool flag, uint32_t &reg)
 {
     uint32_t flag_now = GetMask(ch, reg);
     reg += (int)(flag - flag_now) * (1 << ch);
     return reg;
 }
 
-uint32_t FEEControl::SetMasks(bool *flag)
+uint32_t FEEControl::GenerateMasks(bool *flag)
 {
     uint32_t reg;
     for (int i = 0; i < 32; i++)
     {
-        SetChannelMask(i, flag[i], reg);
+        GenerateChMask(i, flag[i], reg);
     }
     return reg;
 }
@@ -948,7 +905,251 @@ bool FEEControl::GetMask(int ch, uint32_t reg)
     return (reg >> ch) & 1;
 }
 
-FEEControl *gBoard = new FEEControl;
+bool FEEControl::hg_fifo_read(int read_num, int loop_times, const char *hg_file_name)
+{
+    read_num = read_num > MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH ? MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH : read_num;
+    int i, j, queue_num, fifo_num;
+    for (i = 0; i < loop_times; i++)
+    {
+        if (!hg_queue_length_read(queue_num))
+        {
+            cout << "hg queue length read failed." << endl;
+            return false;
+        }
+        while (queue_num < read_num)
+        {
+            if (!hg_queue_length_read(queue_num))
+            {
+                cout << "hg queue length read failed." << endl;
+                return false;
+            }
+            if (!hg_fifo_length_read(fifo_num))
+            {
+                cout << "hg fifo length read failed." << endl;
+                return false;
+            }
+            printf("hg_queue_num:%5d, hg_fifo_num:%3d, loop times:%3d\n", queue_num, fifo_num, i);
+        }
+
+        if (!hg_data_read(read_num, fifoData))
+        {
+            cout << "hg data read failed." << endl;
+            return false;
+        }
+
+        FILE *fp;
+        j = 0;
+        if (!i)
+        {
+            if ((fp = fopen(hg_file_name, "w")) == NULL)
+            {
+                printf("cannot open hg_data.dat");
+                return false;
+            }
+        }
+        else
+        {
+            if ((fp = fopen(hg_file_name, "a")) == NULL)
+            {
+                printf("cannot open this hg_data.dat");
+                return false;
+            }
+        }
+        while (j < read_num)
+        {
+            // fprintf(fp,"%f\n",queue_data[j]/32.768-1000);
+            fprintf(fp, "%d\n", fifoData[j]);
+            j++;
+        }
+        fclose(fp);
+    }
+    return true;
+}
+
+bool FEEControl::lg_fifo_read(int read_num, int loop_times, const char *lg_file_name)
+{
+    read_num = read_num > MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH ? MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH : read_num;
+    int i, j, queue_num, fifo_num;
+    for (i = 0; i < loop_times; i++)
+    {
+        if (!lg_queue_length_read(queue_num))
+        {
+            cout << "lg queue length read failed." << endl;
+            return false;
+        }
+        while (queue_num < read_num)
+        {
+            if (!lg_queue_length_read(queue_num))
+            {
+                cout << "lg queue length read failed." << endl;
+                return false;
+            }
+            if (!lg_fifo_length_read(fifo_num))
+            {
+                cout << "lg fifo length read failed." << endl;
+                return false;
+            }
+            printf("lg_queue_num:%5d, lg_fifo_num:%3d, loop times:%3d\n", queue_num, fifo_num, i);
+        }
+
+        if (!lg_data_read(read_num, fifoData))
+        {
+            cout << "lg data read failed." << endl;
+            return false;
+        }
+
+        FILE *fp;
+        j = 0;
+        if (!i)
+        {
+            if ((fp = fopen(lg_file_name, "w")) == NULL)
+            {
+                printf("cannot open lg_data.dat");
+                return false;
+            }
+        }
+        else
+        {
+            if ((fp = fopen(lg_file_name, "a")) == NULL)
+            {
+                printf("cannot open this lg_data.dat");
+                return false;
+            }
+        }
+        while (j < read_num)
+        {
+            // fprintf(fp,"%f\n",queue_data[j]/32.768-1000);
+            fprintf(fp, "%d\n", fifoData[j]);
+            j++;
+        }
+        fclose(fp);
+    }
+    return true;
+}
+
+bool FEEControl::test_fifo_read(int read_num, int loop_times, const char *test_file_name)
+{
+    read_num = read_num > MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH ? MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH : read_num;
+    int i, j, queue_num, fifo_num;
+    for (i = 0; i < loop_times; i++)
+    {
+        if (!test_queue_length_read(queue_num))
+        {
+            cout << "test queue length read failed." << endl;
+            return false;
+        }
+        while (queue_num < read_num)
+        {
+            if (!test_queue_length_read(queue_num))
+            {
+                cout << "test queue length read failed." << endl;
+                return false;
+            }
+            if (!test_fifo_length_read(fifo_num))
+            {
+                cout << "test fifo length read failed." << endl;
+                return false;
+            }
+            printf("test_queue_num:%5d, test_fifo_num:%3d, loop times:%3d\n", queue_num, fifo_num, i);
+        }
+
+        if (!test_data_read(read_num, fifoData))
+        {
+            cout << "test data read failed." << endl;
+            return false;
+        }
+
+        FILE *fp;
+        j = 0;
+        if (!i)
+        {
+            if ((fp = fopen(test_file_name, "w")) == NULL)
+            {
+                printf("cannot open test_data.dat");
+                return false;
+            }
+        }
+        else
+        {
+            if ((fp = fopen(test_file_name, "a")) == NULL)
+            {
+                printf("cannot open this test_data.dat");
+                return false;
+            }
+        }
+        while (j < read_num)
+        {
+            // fprintf(fp,"%f\n",queue_data[j]/32.768-1000);
+            fprintf(fp, "%d\n", fifoData[j]);
+            j++;
+        }
+        fclose(fp);
+    }
+    return true;
+}
+
+bool FEEControl::tdc_fifo_read(int read_num, int loop_times, const char *tdc_file_name)
+{
+    read_num = read_num > MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH ? MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH : read_num;
+    int i, j, queue_num, fifo_num;
+    for (i = 0; i < loop_times; i++)
+    {
+        if (!tdc_queue_length_read(queue_num))
+        {
+            cout << "tdc queue length read failed." << endl;
+            return false;
+        }
+        while (queue_num < read_num)
+        {
+            if (!tdc_queue_length_read(queue_num))
+            {
+                cout << "tdc queue length read failed." << endl;
+                return false;
+            }
+            if (!tdc_fifo_length_read(fifo_num))
+            {
+                cout << "tdc fifo length read failed." << endl;
+                return false;
+            }
+            printf("tdc_queue_num:%5d, tdc_fifo_num:%3d, loop times:%3d\n", queue_num, fifo_num, i);
+        }
+
+        if (!tdc_data_read(read_num, fifoData))
+        {
+            cout << "tdc data read failed." << endl;
+            return false;
+        }
+
+        FILE *fp;
+        j = 0;
+        if (!i)
+        {
+            if ((fp = fopen(tdc_file_name, "w")) == NULL)
+            {
+                printf("cannot open tdc_data.dat");
+                return false;
+            }
+        }
+        else
+        {
+            if ((fp = fopen(tdc_file_name, "a")) == NULL)
+            {
+                printf("cannot open this tdc_data.dat");
+                return false;
+            }
+        }
+        while (j < read_num)
+        {
+            // fprintf(fp,"%f\n",queue_data[j]/32.768-1000);
+            fprintf(fp, "%d\n", fifoData[j]);
+            j++;
+        }
+        fclose(fp);
+    }
+    return true;
+}
+
+// FEEControl *gBoard = new FEEControl;
 
 HVStatus::HVStatus(string s)
 {
@@ -966,9 +1167,9 @@ HVStatus::HVStatus(string s)
     char OC_monitor[5] = {0};
     strncpy(OC_monitor, s.data() + 8, 4);
 
-    OV_set = (double)hexToDec(OV_setting) * 1.812 / 1000;
-    OV_moni = (double)hexToDec(OV_monitor) * 1.812 / 1000;
-    OC_moni = (double)hexToDec(OC_monitor) * 4.98 / 1000;
+    OV_set = (double)FEEControl::hexToDec(OV_setting) * 1.812 / 1000;
+    OV_moni = (double)FEEControl::hexToDec(OV_monitor) * 1.812 / 1000;
+    OC_moni = (double)FEEControl::hexToDec(OC_monitor) * 4.98 / 1000;
 }
 
 void HVStatus::Print()
@@ -976,77 +1177,4 @@ void HVStatus::Print()
     printf("output voltage setting: %f\n", OV_set);
     printf("output voltage monitor: %f\n", OV_moni);
     printf("output current monitor: %f\n\n", OC_moni);
-}
-
-static void str_process(char *in_str, char *out_str)
-{
-    int i = 0, j = 0;
-    while (*(in_str + i) != '%')
-    {
-        if (*(in_str + i) != ' ')
-        {
-            *(out_str + j) = *(in_str + i);
-            j++;
-        }
-        i++;
-    }
-    *(out_str + j) = '\0';
-}
-
-static bool SendAll(SOCKET sock, char *buffer, int size)
-{
-    while (size > 0)
-    {
-        int SendSize = send(sock, buffer, size, 0);
-        if (SendSize == SOCKET_ERROR)
-            return false;
-        size = size - SendSize;
-        buffer += SendSize;
-    }
-    return true;
-}
-
-static bool RecvAll(SOCKET sock, char *buffer, int size)
-{
-    while (size > 0)
-    {
-        int RecvSize = recv(sock, buffer, size, 0);
-        if (RecvSize == SOCKET_ERROR)
-            return false;
-        size = size - RecvSize;
-        buffer += RecvSize;
-    }
-    return true;
-}
-
-static int hexToDec(char *source)
-{
-    int sum = 0;
-    int t = 1;
-    size_t len;
-
-    len = strlen(source);
-    for (int i = (int)len - 1; i >= 0; i--)
-    {
-        sum += t * getIndexOfSigns(*(source + i));
-        t *= 16;
-    }
-    return sum;
-}
-
-static int getIndexOfSigns(char ch)
-{
-    if (ch >= '0' && ch <= '9')
-    {
-        return ch - '0';
-    }
-    if (ch >= 'A' && ch <= 'F')
-    {
-        return ch - 'A' + 10;
-    }
-    if (ch >= 'a' && ch <= 'f')
-    {
-        return ch - 'a' + 10;
-    }
-    return -1;
 }

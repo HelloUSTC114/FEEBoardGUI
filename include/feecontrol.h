@@ -1,3 +1,64 @@
+#ifndef CMDS_H
+#define CMDS_H
+
+// commands table
+typedef enum
+{
+
+    up_exit = 0,
+
+    up_getSimpTemp,
+
+    up_getHgFifoLen,
+
+    up_getHgQueueLen,
+
+    up_getHgData,
+
+    up_getLgFifoLen,
+
+    up_getLgQueueLen,
+
+    up_getLgData,
+
+    up_getTestFifoLen,
+
+    up_getTestQueueLen,
+
+    up_getTestData,
+
+    up_getTdcFifoLen,
+
+    up_getTdcQueueLen,
+
+    up_getTdcData,
+
+    up_getSi570Freq,
+
+    up_setSi570Freq,
+
+    up_writeAD9645,
+
+    up_readAD9645,
+
+    up_logicSelect,
+
+    up_channelMask,
+
+    up_writeRegTest,
+
+    up_readRegTest,
+
+    up_configCitiroc,
+
+    up_configC11204,
+
+    up_cleanQueue
+
+} cmd_up;
+
+#endif
+
 #ifndef FEECONTROL_H
 #define FEECONTROL_H
 
@@ -23,50 +84,79 @@ struct HVStatus
     double OC_moni = 0;
 };
 
+#define gBoard (FEEControl::Instance())
 class FEEControl
 {
     friend class DataManager;
 
 public:
     FEEControl(std::string ip = "192.168.1.115", int port = 1306);
+    FEEControl(int boardNo);
     ~FEEControl();
     void InitPort(std::string ip = "192.168.1.115", int port = 1306);
+    void InitPort(uint8_t boardNo);
+    static FEEControl *&Instance();
 
-    int server_exit();
+    bool server_exit();
 
-    int citiroc1a_configure(std::string sc_file_name, std::string probe_file_name);
+    bool citiroc1a_configure(const char *sc_file_name, const char *probe_file_name);
 
-    int ad9635_reg_write(const int dev_addr, int wr_data);
+    bool ad9645_reg_write(int addr, int wr_data);
 
-    int ad9635_reg_read(const int dev_addr);
+    bool ad9645_reg_read(int addr, int &reg);
 
-    int si570_set(double freq);
+    bool si570_set(double freq);
 
-    double si570_get();
+    bool si570_get(double &freq);
 
-    int lg_fifo_length_read();
+    bool hg_fifo_length_read(int &len);
 
-    int lg_fifo_read(int data_num, uint32_t *data_addr);
+    bool hg_queue_length_read(int &len);
 
-    int hg_fifo_length_read();
+    bool hg_data_read(int data_num, uint32_t *data_addr);
 
-    int hg_fifo_read(int data_num, uint32_t *data_addr);
+    bool lg_fifo_length_read(int &len);
 
-    int test_fifo_length_read();
+    bool lg_queue_length_read(int &len);
 
-    int test_fifo_read(int data_num, uint32_t *data_addr);
+    bool lg_data_read(int data_num, uint32_t *data_addr);
 
-    int sipm_temp_read(double *temp);
+    bool test_fifo_length_read(int &len);
 
-    int logic_select(int select_data);
+    bool test_queue_length_read(int &len);
 
-    int send_ch_masks(uint32_t mask);
+    bool test_data_read(int data_num, uint32_t *data_addr);
 
-    int read_reg_test(int reg_num);
+    bool tdc_fifo_length_read(int &len);
 
-    int write_reg_test(int reg_num, int wr_data);
+    bool tdc_queue_length_read(int &len);
 
-    int HV_config(void);            // HV configuration through command line
+    bool tdc_data_read(int data_num, uint32_t *data_addr);
+
+    bool sipm_temp_read(double *temp);
+
+    bool logic_select(int select_data);
+
+    bool set_channel_mask(uint32_t mask_num);
+
+    bool write_reg_test(int addr, int wr_data);
+
+    /// @brief Read test register value
+    /// @param addr Register number
+    /// @param reg Output value
+    /// @return whether is successful
+    bool read_reg_test(int addr, int &reg);
+
+    bool clean_queue(int queue_id);
+
+    // Queue Read functions
+    bool hg_fifo_read(int read_num, int loop_times, const char *hg_file_name);
+    bool lg_fifo_read(int read_num, int loop_times, const char *lg_file_name);
+    bool tdc_fifo_read(int read_num, int loop_times, const char *tdc_file_name);
+    bool test_fifo_read(int read_num, int loop_times, const char *test_file_name);
+
+
+    bool HV_config(void);           // HV configuration through command line
     int HVSend(std::string scmd);   // HV configuration through string scmd
     int HVOFF();                    // Turn HV OFF
     int HVON();                     // Turn HV ON
@@ -90,9 +180,7 @@ public:
     void GetTemp(double *tempArray) { memcpy(tempArray, fTemp, 4 * sizeof(double)); }; // Get temperature in tempArray[out], no responsibility to check length of tempArray
 
     inline std::string GetIP() { return ip_address; };
-    inline void SetIP(std::string ip) { ip_address = ip; };
     inline int GetPort() { return fPort; };
-    inline void SetFEEPort(int port) { fPort = port; };
     inline unsigned __int64 GetSock() { return fSock; };
 
     // Configuration File Parser:
@@ -107,18 +195,25 @@ public:
     /// @param flag 0 or 1
     /// @param reg value of mask
     /// @return changed mask
-    static uint32_t &SetChannelMask(int ch, bool flag, uint32_t &reg);
-    static uint32_t SetMasks(bool *flag);
+    static uint32_t &GenerateChMask(int ch, bool flag, uint32_t &reg);
+    static uint32_t GenerateMasks(bool *flag);
     static bool GetMask(int ch, uint32_t reg);
+
+    static void GenerateIP(int boardNo, std::string &ip, int &port);
+    static int GetPortBase() { return fPortBase; };
 
 private:
     std::string ip_address;
+    static const int fPortBase;
     int fPort;
+    int fBoardNum = 0;
 
     unsigned __int64 fSock; // SOCKET fSock, only not include <winsock2.h> in this file
-    int InitSock();
-    void CloseSock();
-    int fSockInitFlag;
+    // int InitSock();
+    // void CloseSock();
+    bool start_socket();
+    void close_socket();
+    bool fSockInitFlag = 0;
 
     char cmd[MUON_TEST_CONTROL_SOCKET_MAX_LOAD_LENGTH];
     char reply[MUON_TEST_CONTROL_SOCKET_MAX_LOAD_LENGTH];
@@ -135,9 +230,25 @@ private:
     volatile bool fBreakFlag = 0; // fifo read break flag
 
 public:
+    static void str_process(char *in_str, char *out_str);
+    static int hexToDec(char *source);
+    static int getIndexOfSigns(char ch);
+
+private:
+    bool length_read(cmd_up cmd, int &len);
+    bool data_read(cmd_up cmd, int data_num, uint32_t *data_addr);
+    bool reg_write(cmd_up cmd, int addr, int wr_data);
+    bool reg_read(cmd_up cmd, int addr, int &reg);
+    bool send_cmd(cmd_up cmd, char *arg, int size);
+    bool recv_data(char *buffer, int size);
+    bool SendAll(char *buffer, int size);
+    bool RecvAll(char *buffer, int size);
+
+    // static bool SendAll(unsigned __int64 sock, char *buffer, int size);
+    // static bool RecvAll(unsigned __int64 sock, char *buffer, int size);
 };
 
-extern FEEControl *gBoard;
+// extern FEEControl *gBoard;
 
 class CITIROC_Config_Parse
 {
@@ -154,50 +265,4 @@ private:
 };
 
 #endif
-
-#ifndef CMDS_H
-#define CMDS_H
-
-// commands table
-typedef enum
-{
-
-    cmd_exit = 0,
-
-    cmd_getSimpTemp,
-
-    cmd_getLgFifoLen,
-
-    cmd_getLgFifoData,
-
-    cmd_getHgFifoLen,
-
-    cmd_getHgFifoData,
-
-    cmd_getTestFifoLen,
-
-    cmd_getTestFifoData,
-
-    cmd_getSi570Freq,
-
-    cmd_setSi570Freq,
-
-    cmd_writeAD9635,
-
-    cmd_readAD9635,
-
-    cmd_logicSelect,
-
-    cmd_channelMask,
-
-    cmd_writeRegTest,
-
-    cmd_readRegTest,
-
-    cmd_configCitiroc,
-
-    cmd_configC11204
-
-} cmd_t;
-
-#endif // FEECONTROL_H
+// FEECONTROL_H

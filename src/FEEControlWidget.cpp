@@ -26,7 +26,6 @@ using namespace std;
 
 QColor redColor(255, 0, 0), blackColor(0, 0, 0), greenColor(0, 255, 0);
 
-
 FEEControlWin::FEEControlWin(QWidget *parent)
     : QWidget(parent), ui(new Ui::FEEControlWin)
 {
@@ -129,7 +128,7 @@ FEEControlWin::FEEControlWin(QWidget *parent)
         fcbChannelMask[i]->setChecked(false);
         ui->gridChs->addWidget(fcbChannelMask[i], i + 1, 6, 1, 1);
         ui->gridChs->setAlignment(fcbChannelMask[i], Qt::AlignHCenter);
-        gBoard->SetChannelMask(i, 0, fChannelMasks);
+        gBoard->GenerateChMask(i, 0, fChannelMasks);
     }
 
     // End
@@ -234,7 +233,6 @@ void FEEControlWin::ProcessConnect()
     // other tabs
     ui->tabCITIROC->setEnabled(true);
 
-
     // Logic module
     ui->btnSendLogic->setEnabled(true);
 
@@ -280,8 +278,7 @@ void FEEControlWin::on_btnConnect_clicked()
     ui->brsMessage->setFontWeight(QFont::Normal);
     ui->brsMessage->append(QString::fromStdString(gBoard->GetIP()) + ":" + QString::number(gBoard->GetPort()));
 
-    gBoard->SetIP(ip);
-    gBoard->SetFEEPort(port);
+    gBoard->InitPort(ip, port);
 
     fConnected = gBoard->TestConnect();
     PrintConnection(fConnected);
@@ -290,7 +287,6 @@ void FEEControlWin::on_btnConnect_clicked()
         ProcessConnect();
     }
 }
-
 
 void FEEControlWin::on_btnHVON_clicked()
 {
@@ -465,7 +461,7 @@ bool FEEControlWin::ScanFromScreen()
         gParser->Set_AMP_LG_DAC(ch, fspinsLGAmp[ch]->value());
         gParser->DisablePA(ch, fcbDisablePA[ch]->isChecked());
 
-        gBoard->SetChannelMask(ch, fcbChannelMask[ch]->isChecked(), fChannelMasks);
+        gBoard->GenerateChMask(ch, fcbChannelMask[ch]->isChecked(), fChannelMasks);
     }
     gParser->SetDiscDAC1(ui->boxDiscDAC1->value());
     gParser->SetDiscDAC2(ui->boxDiscDAC2->value());
@@ -548,14 +544,12 @@ void FEEControlWin::on_btnSaveCITIROC_clicked()
 }
 // CITIROC Configuration control End
 
-
 void FEEControlWin::on_btnMask_clicked()
 {
     ScanFromScreen();
-    gBoard->send_ch_masks(fChannelMasks);
+    gBoard->set_channel_mask(fChannelMasks);
 
     ui->brsMessage->setTextColor(QColor(0, 255, 0));
     ui->brsMessage->setFontWeight(QFont::Bold);
-    ui->brsMessage->append("Sent Masks: "+QString::number(fChannelMasks));
+    ui->brsMessage->append("Sent Masks: " + QString::number(fChannelMasks));
 }
-
