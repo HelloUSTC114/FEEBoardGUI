@@ -2,11 +2,12 @@
 #define DATAMANAGER_H
 
 #define N_BOARD_CHANNELS 32
-#define N_SAMPLE_POINTS 50
+#define N_SAMPLE_POINTS 40
 
 #include <string>
 
 class TTree;
+class TBranch;
 class TFile;
 class FEEControl;
 class TH1S;
@@ -26,40 +27,106 @@ public:
     /// @param fee to be processed board
     /// @return how many events has been processed in this function
     int ProcessFEEData(FEEControl *fee);
+
     inline int GetTotalCount() { return fEventCount; };
 
-    bool IsOpen();       //
-    bool DrawHG(int ch); // HG Draw
-    bool DrawLG(int ch); // LG Draw
+    bool IsOpen();        //
+    bool DrawHG(int ch);  // HG Draw
+    bool DrawLG(int ch);  // LG Draw
     bool DrawTDC(int ch); // TDC Draw
     inline TFile *GetTFile() { return fFile; };
     inline std::string GetFileName() { return sFileName; }
 
-    static double ConvertADC2Amp(uint32_t adc) { return (double)adc / 32.768 - 1000; }; // in unit of mV
+    static double GetFreq() { return fgFreq; };
+    static double ConvertADC2Amp(uint32_t adc) { return (double)adc / 32.768 - 1000; };         // in unit of mV
+    static double ConvertTDC2Time(uint32_t tdc) { return (double)tdc / 65536 / fgFreq * 1e3; }; // in unit of ns
 
 private:
     TFile *fFile = NULL;
     TTree *fTree = NULL;
+    TTree *fTrees[3]{NULL, NULL, NULL};
+    TTree *&fHGTree = fTrees[0];
+    TTree *&fLGTree = fTrees[1];
+    TTree *&fTDCTree = fTrees[2];
+
     std::string sFileName;
 
-    uint32_t *fHGData = NULL;  // original HG Data[32*50] for one event, this branch can be delete after check out point processor. Only initiate once while constuction, Init() and Close() will not delete memory
-    uint32_t *fLGData = NULL;  // original LG Data[32*50] for one event, this branch can be delete after check out point processor. Only initiate once while constuction, Init() and Close() will not delete memory
-    uint32_t *fTDCData = NULL; // original TDC Data[32*50] for one event, this branch can be delete after check out point processor. Only initiate once while constuction, Init() and Close() will not delete memory
+    uint32_t *fPreviousData = NULL; // original HG Data[32*50] for one event, this branch can be delete after check out point processor. Only initiate once while constuction, Init() and Close() will not delete memory
 
-    double fHGamp[N_BOARD_CHANNELS];         // processed HG data[32] for one event
-    double fLGamp[N_BOARD_CHANNELS];         // processed LG data[32] for one event
-    uint32_t fTDCdata[N_BOARD_CHANNELS + 1]; // processed tdc data[32] + 1 time stamp for one event
+    // Save variables
+    uint32_t fADCid[2]{0, 0};
+    uint32_t &fHGid = fADCid[0], &fLGid = fADCid[1], fTDCid = 0;
+    double fHGamp[N_BOARD_CHANNELS];          // processed HG data[32] for one event
+    double fLGamp[N_BOARD_CHANNELS];          // processed LG data[32] for one event
+    double *const fADCamp[2]{fHGamp, fLGamp}; // Merge ADC data
+    uint64_t fTDCtime[N_BOARD_CHANNELS + 1];  // processed tdc data[32] + 1 time stamp for one event
 
-    TH1S *fHGHist[N_BOARD_CHANNELS];      // All HG Histograms
-    TH1S *fLGHist[N_BOARD_CHANNELS];      // All LG Histograms
-    TH1I *fTDCHist[N_BOARD_CHANNELS + 1]; // All TDC Histograms
+    TH1S *fHGHist[N_BOARD_CHANNELS]{NULL};      // All HG Histograms
+    TH1S *fLGHist[N_BOARD_CHANNELS]{NULL};      // All LG Histograms
+    TH1S **const fADCHist[2]{fHGHist, fLGHist}; // ADC Histograms
+    TH1I *fTDCHist[N_BOARD_CHANNELS + 1];       // All TDC Histograms
 
-    int fEventCount = 0; // Count how many events is saved
+    int fEventCount = 0; // Count how many events has processed
+    int fADCEventCount[2]{0, 0};
+    int &fHGEventCount = fADCEventCount[0]; // Count how many events has processed
+    int &fLGEventCount = fADCEventCount[1]; // Count how many events has processed
+    int fTDCEventCount = 0;                  // Count how many events has processed
 
+    // Buffer declaration
+    int fADCBufCount[2]{0, 0};
+    int &fHGBufCount = fADCBufCount[0];
+    int &fLGBufCount = fADCBufCount[1];
+    int fTDCBufCount = 0; // Left point in Buffer
+    uint32_t *fADCBuffer[2]{NULL, NULL};
+    uint32_t *&fHGBuffer = fADCBuffer[0]; // HG Data buffer for unprocessed data. Only initiate once while constuction, Init() and Close() will not delete memory
+    uint32_t *&fLGBuffer = fADCBuffer[1]; // LG Data buffer for unprocessed data. Only initiate once while constuction, Init() and Close() will not delete memory
+    uint32_t *fTDCBuffer = NULL;          // TDC Data buffer for unprocessed data. Only initiate once while constuction, Init() and Close() will not delete memory
+    void ClearBuffer();                   // Only set counter to zero, no need to absolute set to zero
+
+    // Start Processing
+    FEEControl *fFEECurrentProcessing;    // Processing Board pointer
+    int fADCHeadIndex[2]{0, 0};           // Head indexs for adc
+    int &fHGHeadIndex = fADCHeadIndex[0]; // Head index
+    int &fLGHeadIndex = fADCHeadIndex[1]; // Head index
+    int fTDCHeadIndex = 0;                // Head index for tdc
+
+    int ProcessADCEvents(int adcNo); // Process HG&LG adc data for one event, 0 for HG, 1 for LG
+    int ProcessTDCEvents();
+
+    void FillADCData(int adcNo);
+    void FillHGData();
+    void FillLGData();
+    void FillTDCData();
+
+    /// @brief Process data from HG, LG adc in one event. First judge pedestal value, then give front-edge threshold.
+    // Meanwhile, judge whether data is valid, through:
+    //  -- whether channel mean value is under threshold
+    //  -- whether find invalid data 65535
+    //  -- signal time should be
+    /// @param iter_first  [in] start iterator, must be first head
+    /// @param iter_end [in] end iterator, at least large than point factor, usually is set as last data in fifo, ptr_data + data_length - 1
+    /// @param id   [out] trigger id
+    /// @param chArray   [out] calculated amp value save array
+    /// @param dataLength   [out] length from head to data end, useful for next head searching
+    /// @return whether this data is valid
+    bool ProcessOneADCEvent(const uint32_t *const iter_first, const uint32_t *const iter_end, uint32_t &id, double *chArray, int &dataLength);
+
+    /// @brief Process data from TDC
+    /// @param iter_first
+    /// @param iter_end
+    /// @param dataLength [out] data[head+dataLength] is another head. if datalength is 0, means cannot find the next header, error
+    /// @return
+    bool ProcessOneTDCEvent(const uint32_t *const iter_first, const uint32_t *const iter_end, int &dataLength);
+
+    // will be deleted later
     bool ProcessOneEvent(FEEControl *fee, int &currentIndex); // Process one event in data
 
+    // public variables
     static const int fcgNChannels;     // N channels for one board
     static const int fcgNSamplePoints; // N sample points for one channel in hg/lg
+    static int fgFreq;                 // frequency MHz
+    static int fADCPointFactor;        // adc Point Factor
+    static int fTDCPointFactor;        // tdc Point Factor
 };
 
 extern DataManager *gDataManager;
@@ -86,10 +153,14 @@ public:
 private:
     TFile *fFile = NULL;
     TTree *fTree = NULL;
+    TTree *fHGTree = NULL;
+    TTree *fLGTree = NULL;
+    TTree *fTDCTree = NULL;
+
     std::string sFileName = "";
     double fHGamp[N_BOARD_CHANNELS];
     double fLGamp[N_BOARD_CHANNELS];
-    uint32_t fTDCdata[N_BOARD_CHANNELS + 1];
+    uint64_t fTDCtime[N_BOARD_CHANNELS + 1];
 
     TF1 *fGaus = NULL;
     bool fChFlag = 0;

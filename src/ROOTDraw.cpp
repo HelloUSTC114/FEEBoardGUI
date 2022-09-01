@@ -464,6 +464,7 @@ QGroupBox *PlotWindow::createPlotBox()
     }
     // histogram->Draw("hist");
     histogram->Draw("");
+    std::cout <<"Drawing: " <<std::endl;
     return gbox;
 }
 

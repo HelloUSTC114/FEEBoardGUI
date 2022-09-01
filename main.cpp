@@ -5,6 +5,7 @@
 // This three headers are conflicted with each other, should arrage like: ROOT, ZML, winsock
 // #include "feecontrol.h"
 #include "configfileparser.h"
+#include "ROOTDraw.h"
 
 #include <QDateTime>
 
@@ -13,11 +14,13 @@
 
 #include <fstream>
 
-
+// ROOT
+#include <TApplication.h>
 
 int main(int argc, char *argv[])
 {
     QApplication qapp(argc, argv);
+    new TApplication("QTCanvas Demo", &argc, argv);
 
     //    std::vector<Device> deviceList;
 
@@ -75,20 +78,22 @@ int main(int argc, char *argv[])
     //     return 1;
     // }
 
-    // {
-    //     ROOTDraw canvas;
-    //     canvas.show();
-    //     auto h = new TH1D("h", "h", 100, -1, 1);
-    //     h->FillRandom("gaus");
-    //     h->Draw("hist");
-    //     return qapp.exec();
-    // }
+//     {
+//         ROOTDraw canvas;
+//         canvas.show();
+//         auto h = new TH1D("h", "h", 100, -1, 1);
+//         h->FillRandom("gaus");
+//         h->Draw("hist");
+//         return qapp.exec();
+//     }
 
-    // {
-    //     PlotWindow win(0);
-    //     win.show();
-    //     return qapp.exec();
-    // }
+//     {
+////         PlotWindow win(0);
+////         win.show();
+//         ROOTWidget a;
+//         a.show();
+//         return qapp.exec();
+//     }
 
     // {
     //     FTFolderParser ftParser;

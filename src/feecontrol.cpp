@@ -16,10 +16,10 @@ WSADATA fWsaData; // Unused unimportant data, used to put inside class FEEContro
 const int FEEControl::fPortBase = 1306; // Port Base for all fee
 const int FEEControl::fIPBase = 101;    // IP Base for all fee
 
-const int FEEControl::fMaxSaveEvents = 50;   // How many Events can be saved in one time
-const int FEEControl::fHGPointFactor = 1378; // How many HG points in one event, not so accurate
-const int FEEControl::fLGPointFactor = 1378; // How many LG points in one event, not so accurate
-const int FEEControl::fTDCPointFactor = 136; // How many TDC points in one event, not so accurate
+const int FEEControl::fMaxSaveEvents = 50;                         // How many Events can be saved in one time
+const int FEEControl::fHGPointFactor = 1378;                       // How many HG points in one event, not so accurate
+const int FEEControl::fLGPointFactor = FEEControl::fLGPointFactor; // How many LG points in one event, not so accurate
+const int FEEControl::fTDCPointFactor = 136;                       // How many TDC points in one event, not so accurate
 
 using namespace std;
 

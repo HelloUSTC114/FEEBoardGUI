@@ -169,10 +169,10 @@ public:
     void SetFifoReadBreak() { fBreakFlag = 1; }     // Set Read stop status
     bool GetDataValidation() { return fDataFlag; }; // Validate fifo data
 
-    int GetDataLength() { return fTestDataLength; };   // Get Data length;
-    int GetHGDataLength() { return fHGDataLength; };   // Get HG Data length;
-    int GetLGDataLength() { return fLGDataLength; };   // Get LG Data length;
-    int GetTDCDataLength() { return fTDCDataLength; }; // Get TDC Data length;
+    int GetTestDataLength() { return fTestDataLength; }; // Get Data length;
+    int GetHGDataLength() { return fHGDataLength; };     // Get HG Data length;
+    int GetLGDataLength() { return fLGDataLength; };     // Get LG Data length;
+    int GetTDCDataLength() { return fTDCDataLength; };   // Get TDC Data length;
 
     const uint32_t *GetTestFIFOData() { return fTestQueueData; }; // Get fifodata pointer
     const uint32_t *GetTDCFIFOData() { return fTDCQueueData; };   // Get fifodata pointer
@@ -207,7 +207,7 @@ private:
     uint32_t *fHGQueueData;   // HG fifo data
     uint32_t *fLGQueueData;   // LG fifo data
     uint32_t *fTDCQueueData;  // TDC fifo data
-    bool fDataFlag = 0;      // fifo data validation
+    bool fDataFlag = 0;       // fifo data validation
 
     int fHGDataLength = 0;   // Read HG fifo data length
     int fLGDataLength = 0;   // Read LG fifo data length
@@ -216,7 +216,8 @@ private:
 
     int fifoReadCount = 0;        // fifo read counter
     volatile bool fBreakFlag = 0; // fifo read break flag
-
+    
+public:
     static const int fMaxSaveEvents;  // Limit of save events
     static const int fHGPointFactor;  // How many HG points in one event, not so accurate
     static const int fLGPointFactor;  // How many LG points in one event, not so accurate
