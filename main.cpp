@@ -114,32 +114,10 @@ int main(int argc, char *argv[])
      *
      */
 
-    // {
-    //     auto datm = new DataManager("test.root");
-    //     // std::ifstream fin("hg_data.dat");
-    //     std::ifstream fin("tdc_data.dat");
-    //     const int readnum = 500;
-    //     uint32_t readdata[readnum];
-
-    //     for (int readtime = 0; readtime < 10; readtime++)
-    //     {
-    //         for (int i = 0; i < readnum; i++)
-    //         {
-    //             fin >> readdata[i];
-    //             // std::cout << readdata[i] << std::endl;
-    //         }
-    //         datm->ProcessTDCEvents(readdata, readnum);
-    //         datm->PrintTDCBuffer();
-    //     }
-
-    //     datm->Close();
-    //     return 1;
-    // }
-
     {
-        auto datm = new DataManager("test.root");
-        std::ifstream fin("hg_data.dat");
-        const int readnum = 5000;
+        auto datm = new DataManager("testtdc.root");
+        std::ifstream fin("tdc_data.dat");
+        const int readnum = 500;
         uint32_t readdata[readnum];
 
         // for (int i = 0; i < readnum; i++)
@@ -147,7 +125,9 @@ int main(int argc, char *argv[])
         //     fin >> readdata[i];
         //     // std::cout << readdata[i] << std::endl;
         // }
+        int eventCounts = 0;
         for (int readtime = 0; fin.good() && fin.is_open(); readtime++)
+        // for (int readtime = 0; readtime < 10; readtime++)
         {
             std::cout << "ReadTime: " << readtime << '\t' << "Read Points: " << readtime * readnum << std::endl;
             for (int i = 0; i < readnum; i++)
@@ -155,15 +135,45 @@ int main(int argc, char *argv[])
                 fin >> readdata[i];
                 // std::cout << readdata[i] << std::endl;
             }
-            int rtn = datm->ProcessADCEvents(0, readdata, readnum);
-            std::cout << "Processed Event: " << rtn << std::endl;
-            // datm->PrintHGBuffer();
+            int rtn = datm->ProcessTDCEvents(readdata, readnum);
+            eventCounts += rtn;
+            std::cout << "Processed Event: " << rtn << " Total: " << eventCounts << std::endl;
+            // datm->PrintTDCBuffer();
         }
 
         datm->Close();
         fin.close();
         return 1;
     }
+
+    // {
+    //     auto datm = new DataManager("test.root");
+    //     std::ifstream fin("hg_data.dat");
+    //     const int readnum = 5000;
+    //     uint32_t readdata[readnum];
+
+    //     // for (int i = 0; i < readnum; i++)
+    //     // {
+    //     //     fin >> readdata[i];
+    //     //     // std::cout << readdata[i] << std::endl;
+    //     // }
+    //     for (int readtime = 0; fin.good() && fin.is_open(); readtime++)
+    //     {
+    //         std::cout << "ReadTime: " << readtime << '\t' << "Read Points: " << readtime * readnum << std::endl;
+    //         for (int i = 0; i < readnum; i++)
+    //         {
+    //             fin >> readdata[i];
+    //             // std::cout << readdata[i] << std::endl;
+    //         }
+    //         int rtn = datm->ProcessADCEvents(0, readdata, readnum);
+    //         std::cout << "Processed Event: " << rtn << std::endl;
+    //         // datm->PrintHGBuffer();
+    //     }
+
+    //     datm->Close();
+    //     fin.close();
+    //     return 1;
+    // }
 
     return qapp.exec();
     // return 1;

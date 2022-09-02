@@ -38,8 +38,9 @@ public:
     inline std::string GetFileName() { return sFileName; }
 
     static double GetFreq() { return fgFreq; };
-    static double ConvertADC2Amp(uint32_t adc) { return (double)adc / 32.768 - 1000; };         // in unit of mV
-    static double ConvertTDC2Time(uint32_t tdc) { return (double)tdc / 65536 / fgFreq * 1e3; }; // in unit of ns
+    static double ConvertADC2Amp(uint32_t adc) { return (double)adc / 32.768 - 1000; };            // in unit of mV
+    static double ConvertTDC2Time(uint64_t tdc) { return (tdc >> 16) - (tdc & 0xffff) / 65536.0; } // in unit of ns
+    static double ConvertTDC2Time(uint64_t tdc, uint64_t &coarseTime, double &fineTime);           // in unit of ns
 
 private:
 public:
@@ -60,7 +61,7 @@ public:
     double fHGamp[N_BOARD_CHANNELS];          // processed HG data[32] for one event
     double fLGamp[N_BOARD_CHANNELS];          // processed LG data[32] for one event
     double *const fADCamp[2]{fHGamp, fLGamp}; // Merge ADC data
-    uint64_t fTDCtime[N_BOARD_CHANNELS + 1];  // processed tdc data[32] + 1 time stamp for one event
+    uint64_t fTDCTime[N_BOARD_CHANNELS + 1];  // processed tdc data[32] + 1 time stamp for one event
 
     TH1S *fHGHist[N_BOARD_CHANNELS]{NULL};      // All HG Histograms
     TH1S *fLGHist[N_BOARD_CHANNELS]{NULL};      // All LG Histograms
@@ -168,7 +169,7 @@ private:
     std::string sFileName = "";
     double fHGamp[N_BOARD_CHANNELS];
     double fLGamp[N_BOARD_CHANNELS];
-    uint64_t fTDCtime[N_BOARD_CHANNELS + 1];
+    uint64_t fTDCTime[N_BOARD_CHANNELS + 1];
 
     TF1 *fGaus = NULL;
     bool fChFlag = 0;

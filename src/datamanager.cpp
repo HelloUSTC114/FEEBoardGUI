@@ -5,6 +5,7 @@
 #include <TFile.h>
 #include <TH1S.h>
 #include <TH1I.h>
+#include <TMath.h>
 #include <iostream>
 
 using namespace std;
@@ -16,6 +17,13 @@ double gEventADCThreshold = CONVERT_AMP_2_ADC(100);
 int DataManager::fgFreq = 1; // in unit of MHz
 int DataManager::fADCPointFactor = FEEControl::fHGPointFactor;
 int DataManager::fTDCPointFactor = FEEControl::fTDCPointFactor;
+
+double DataManager::ConvertTDC2Time(uint64_t tdc, uint64_t &coarseTime, double &fineTime)
+{
+    coarseTime = tdc >> 16;
+    fineTime = (tdc & 0xffff) / 65536.0;
+    return coarseTime - fineTime;
+}
 
 DataManager *gDataManager = new DataManager();
 
@@ -84,11 +92,11 @@ bool DataManager::Init(string sInput)
 
     // fTree->Branch("data", fPreviousData, "data[1600]/i");
     fHGTree->Branch("chHG", fHGamp, "chHG[32]/D");
-    fHGTree->Branch("chHGid", &fHGid, "chHGid/l");
+    fHGTree->Branch("chHGid", &fHGid, "chHGid/i");
     fLGTree->Branch("chLG", fLGamp, "chLG[32]/D");
-    fLGTree->Branch("chLGid", &fLGid, "chLGid/l");
-    fTDCTree->Branch("chTDC", fTDCtime, "chLG[33]/l");
-    fTDCTree->Branch("chTDCid", &fTDCid, "chTDCid/l");
+    fLGTree->Branch("chLGid", &fLGid, "chLGid/i");
+    fTDCTree->Branch("chTDCid", &fTDCid, "chTDCid/i");
+    fTDCTree->Branch("chTDCCoarse", fTDCTime, "chLG[33]/l");
 
     // fTree->AutoSave();
     fHGTree->AutoSave();
@@ -248,237 +256,13 @@ bool DataManager::ProcessOneEvent(FEEControl *fee, int &currentIndex)
     return true;
 }
 
-int DataManager::ProcessADCEvents(int adcNo)
-{
-    if (adcNo != 0 && adcNo != 1)
-        return -1;
-
-    const uint32_t *adcdata = NULL;
-    int adcdatalength = 0;
-    if (adcNo == 0)
-    {
-        adcdata = fFEECurrentProcessing->GetHGFIFOData();
-        adcdatalength = fFEECurrentProcessing->GetHGDataLength();
-    }
-    else if (adcNo == 1)
-    {
-        adcdata = fFEECurrentProcessing->GetLGFIFOData();
-        adcdatalength = fFEECurrentProcessing->GetLGDataLength();
-    }
-    return ProcessADCEvents(adcNo, adcdata, adcdatalength);
-}
-
-int DataManager::ProcessADCEvents(int adcNo, const uint32_t *src_data, int dataLength)
-{
-    if (adcNo != 0 && adcNo != 1)
-        return -1;
-
-    const uint32_t *adcdata = src_data;
-    int adcdatalength = dataLength;
-
-    int headFirst = 0, headLast = 0, totalEventCounter = 0;
-    // std::cout << "Test: ----------------------" << std::endl;
-
-    // if there're points left in buffer, concatenate this new data with buffer inside
-    if (fADCBufCount[adcNo] > 0)
-    {
-        // std::cout << "Test: Processing Buffer: " << std::endl;
-        // Copy the first left event into buffer
-        // -- search first head
-        for (int idx_search = 0; idx_search < fADCPointFactor; idx_search++)
-        {
-            if (adcdata[idx_search] == 65535 && adcdata[idx_search + 1] == 65535)
-            {
-                headFirst = idx_search;
-                break;
-            }
-        }
-        memcpy(fADCBuffer[adcNo] + fADCBufCount[adcNo], adcdata, headFirst * sizeof(uint32_t));
-        fADCBufCount[adcNo] += headFirst;
-
-        int idx_processed = 0;
-        bool dataflag = ProcessOneADCEvent(fADCBuffer[adcNo], fADCBuffer[adcNo] + fADCBufCount[adcNo], fADCid[adcNo], fADCamp[adcNo], idx_processed);
-        if (dataflag)
-        {
-            // Fill Data
-            FillADCData(adcNo);
-            totalEventCounter++;
-            fADCEventCount[adcNo]++;
-        }
-
-        // Judge whether contains 2 heads
-        int headInside = 0;
-        for (int idx_search = idx_processed > 2 ? idx_processed : 2; idx_search < fADCBufCount[adcNo] - 1; idx_search++)
-        {
-            if (fADCBuffer[adcNo][idx_search] == 65535 && fADCBuffer[adcNo][idx_search + 1] == 65535)
-            {
-                std::cout << idx_processed << '\t' << std::endl;
-                headInside = idx_search;
-                std::cout << "Test: searching Head inside buffer. " << headInside << '\t' << fADCBuffer[adcNo][idx_search] << '\t' << fADCBuffer[adcNo][idx_search + 1] << std::endl;
-                std::cout << "Test: Buffer Length: " << fADCBufCount[0] << std::endl;
-                break;
-            }
-        }
-        if (headInside > 0)
-        {
-            idx_processed = 0;
-            bool dataflag = ProcessOneADCEvent(fADCBuffer[adcNo], fADCBuffer[adcNo] + fADCBufCount[adcNo], fADCid[adcNo], fADCamp[adcNo], idx_processed);
-            if (dataflag)
-            {
-                std::cout << "Warning: double data in ADC buffer " << adcNo << std::endl;
-                // PrintHGBuffer();
-                // Fill Data
-                FillADCData(adcNo);
-                totalEventCounter++;
-                fADCEventCount[adcNo]++;
-            }
-        }
-        fADCBufCount[adcNo] = 0;
-    }
-
-    // Watch out, here, if (head1, head2, id1, id2) is (65535, 65535,65535, 65535), the first head1, head2 will be recongnized normally
-    for (int idx_search = headFirst; idx_search < adcdatalength - 1; idx_search++)
-    {
-        bool flagHead = adcdata[idx_search] == 65535 && adcdata[idx_search + 1] == 65535;
-        if (!flagHead)
-            continue;
-
-        int head = idx_search;
-        // std::cout << "Test: Head found in source: " << head << std::endl;
-
-        // if this event is the last, copy memory to buffer, and record buffer length, then break this process loop
-        if (head + fADCPointFactor > adcdatalength - 10)
-        {
-            fADCBufCount[adcNo] = adcdatalength - head;
-            memcpy(fADCBuffer[adcNo], adcdata + head, (adcdatalength - head) * sizeof(uint32_t));
-            break;
-        }
-
-        int idx_processed = 0;
-        bool dataflag = ProcessOneADCEvent(adcdata + head, adcdata + adcdatalength, fADCid[adcNo], fADCamp[adcNo], idx_processed);
-
-        if (!dataflag)
-        {
-            if (idx_processed == 0)
-                return totalEventCounter;
-            else
-            {
-                idx_search += idx_processed;
-                continue;
-            }
-        }
-
-        // Fill Data
-        FillADCData(adcNo);
-        totalEventCounter++;
-        fADCEventCount[adcNo]++;
-
-        idx_search += idx_processed - 10; // skip data points, so as to save plenty of searching time
-    }
-
-    return totalEventCounter;
-}
-
-int DataManager::ProcessTDCEvents()
-{
-    const uint32_t *tdcdata = fFEECurrentProcessing->GetTDCFIFOData();
-    int tdcdatalength = fFEECurrentProcessing->GetTDCDataLength();
-    return ProcessTDCEvents(tdcdata, tdcdatalength);
-}
-
-int DataManager::ProcessTDCEvents(const uint32_t *src_data, int dataLength)
-{
-    const uint32_t *tdcdata = src_data;
-    int tdcdatalength = dataLength;
-
-    int headFirst = 0, headLast = 0, totalEventCounter = 0;
-
-    // if there're points left in buffer, concatenate this new data with buffer inside
-    if (fTDCBufCount > 0)
-    {
-        // Copy the first left event into buffer
-        // -- search first head
-        for (int idx_search = 0; idx_search < fTDCPointFactor; idx_search++)
-        {
-            if (tdcdata[idx_search] == 65535 && tdcdata[idx_search + 1] == 65535)
-            {
-                headFirst = idx_search;
-                break;
-            }
-        }
-        memcpy(fTDCBuffer, tdcdata, headFirst * sizeof(uint32_t));
-        fTDCBufCount += headFirst;
-
-        int idx_processed = 0;
-        bool dataflag = ProcessOneTDCEvent(fTDCBuffer, fTDCBuffer + fTDCBufCount, idx_processed);
-        if (dataflag)
-        {
-            // Fill Data
-            // std::cout << "Test: Fill Data in buffer: " << fTDCEventCount << std::endl;
-            FillTDCData();
-            totalEventCounter++;
-            fTDCEventCount++;
-        }
-        fTDCBufCount = 0;
-    }
-
-    // Watch out, here, if (head1, head2, id1, id2) is (65535, 65535,65535, 65535), the first head1, head2 will be recongnized normally
-    for (int idx_search = headFirst; idx_search < tdcdatalength - 1; idx_search++)
-    {
-        bool flagHead = tdcdata[idx_search] == 65535 && tdcdata[idx_search + 1] == 65535;
-        if (!flagHead)
-            continue;
-
-        int head = idx_search;
-        // std::cout << "Test: found Head in source: " << head << '\t' << tdcdata[idx_search] << std::endl;
-
-        // if this event is the last, copy memory to buffer, and record buffer length, then break this process loop
-        if (head + fTDCPointFactor > tdcdatalength)
-        {
-            fTDCBufCount = tdcdatalength - head;
-            memcpy(fTDCBuffer, tdcdata + head, (tdcdatalength - head) * sizeof(uint32_t));
-            break;
-        }
-
-        int idx_processed = 0;
-        bool dataflag = ProcessOneTDCEvent(tdcdata + head, tdcdata + tdcdatalength, idx_processed);
-
-        if (!dataflag)
-        {
-            if (idx_processed == 0)
-                return totalEventCounter;
-            else
-            {
-                idx_search += idx_processed;
-                continue;
-            }
-        }
-
-        // Fill Data
-        // std::cout << "Test: Fill Data: " << fTDCEventCount << std::endl;
-        FillTDCData();
-        totalEventCounter++;
-        fTDCEventCount++;
-
-        idx_search += idx_processed - 1; // skip data points, so as to save plenty of searching time
-    }
-
-    // The TDC unique situation: (no check for double heads inside buffer)
-    if (tdcdata[tdcdatalength - 1] == 65535 && fTDCBufCount == 0)
-    {
-        fTDCBufCount = 1;
-        fTDCBuffer[0] = 65535;
-    }
-
-    return totalEventCounter;
-}
-
 void DataManager::FillTDCData()
 {
     fTDCTree->Fill();
     for (int ch = 0; ch < 33; ch++)
     {
-        fTDCHist[ch]->Fill(fTDCtime[ch]);
+        // fTDCHist[ch]->Fill(fTDCTime[ch] - fTDCFineTime[ch] / 65536.0);
+        fTDCHist[ch]->Fill(ConvertTDC2Time(fTDCTime[ch]));
     }
 }
 
@@ -553,7 +337,137 @@ void DataManager::PrintTDCBuffer()
     std::cout << "TDC buffer inside DataManager print done." << std::endl;
 }
 
-#include <TMath.h>
+int DataManager::ProcessADCEvents(int adcNo)
+{
+    if (adcNo != 0 && adcNo != 1)
+        return -1;
+
+    const uint32_t *adcdata = NULL;
+    int adcdatalength = 0;
+    if (adcNo == 0)
+    {
+        adcdata = fFEECurrentProcessing->GetHGFIFOData();
+        adcdatalength = fFEECurrentProcessing->GetHGDataLength();
+    }
+    else if (adcNo == 1)
+    {
+        adcdata = fFEECurrentProcessing->GetLGFIFOData();
+        adcdatalength = fFEECurrentProcessing->GetLGDataLength();
+    }
+    return ProcessADCEvents(adcNo, adcdata, adcdatalength);
+}
+
+int DataManager::ProcessADCEvents(int adcNo, const uint32_t *src_data, int dataLength)
+{
+    if (adcNo != 0 && adcNo != 1)
+        return -1;
+
+    const uint32_t *adcdata = src_data;
+    int adcdatalength = dataLength;
+
+    int headFirst = 0, headLast = 0, totalEventCounter = 0;
+    // std::cout << "Test: ----------------------" << std::endl;
+
+    // if there're points left in buffer, concatenate this new data with buffer inside
+    if (fADCBufCount[adcNo] > 0)
+    {
+        // std::cout << "Test: Processing Buffer: " << std::endl;
+        // Copy the first left event into buffer
+        // -- search first head
+        for (int idx_search = 0; idx_search < fADCPointFactor; idx_search++)
+        {
+            if (adcdata[idx_search] == 65535 && adcdata[idx_search + 1] == 65535)
+            {
+                headFirst = idx_search;
+                break;
+            }
+        }
+        memcpy(fADCBuffer[adcNo] + fADCBufCount[adcNo], adcdata, headFirst * sizeof(uint32_t));
+        fADCBufCount[adcNo] += headFirst;
+
+        int idx_processed = 0;
+        bool dataflag = ProcessOneADCEvent(fADCBuffer[adcNo], fADCBuffer[adcNo] + fADCBufCount[adcNo], fADCid[adcNo], fADCamp[adcNo], idx_processed);
+        if (dataflag)
+        {
+            // Fill Data
+            FillADCData(adcNo);
+            totalEventCounter++;
+            fADCEventCount[adcNo]++;
+        }
+
+        // Judge whether contains 2 heads
+        int headInside = 0;
+        for (int idx_search = idx_processed > 2 ? idx_processed : 2; idx_search < fADCBufCount[adcNo] - 1; idx_search++)
+        {
+            if (fADCBuffer[adcNo][idx_search] == 65535 && fADCBuffer[adcNo][idx_search + 1] == 65535)
+            {
+                // std::cout << idx_processed << '\t' << std::endl;
+                // std::cout << "Test: searching Head inside buffer. " << headInside << '\t' << fADCBuffer[adcNo][idx_search] << '\t' << fADCBuffer[adcNo][idx_search + 1] << std::endl;
+                // std::cout << "Test: Buffer Length: " << fADCBufCount[0] << std::endl;
+                headInside = idx_search;
+                break;
+            }
+        }
+        if (headInside > 0)
+        {
+            idx_processed = 0;
+            bool dataflag = ProcessOneADCEvent(fADCBuffer[adcNo], fADCBuffer[adcNo] + fADCBufCount[adcNo], fADCid[adcNo], fADCamp[adcNo], idx_processed);
+            if (dataflag)
+            {
+                std::cout << "Warning: double data in ADC buffer " << adcNo << std::endl;
+                // PrintHGBuffer();
+                // Fill Data
+                FillADCData(adcNo);
+                totalEventCounter++;
+                fADCEventCount[adcNo]++;
+            }
+        }
+        fADCBufCount[adcNo] = 0;
+    }
+
+    // Watch out, here, if (head1, head2, id1, id2) is (65535, 65535,65535, 65535), the first head1, head2 will be recongnized normally
+    for (int idx_search = headFirst; idx_search < adcdatalength - 1; idx_search++)
+    {
+        bool flagHead = adcdata[idx_search] == 65535 && adcdata[idx_search + 1] == 65535;
+        if (!flagHead)
+            continue;
+
+        int head = idx_search;
+        // std::cout << "Test: Head found in source: " << head << std::endl;
+
+        // if this event is the last, copy memory to buffer, and record buffer length, then break this process loop
+        if (head + fADCPointFactor > adcdatalength - 10)
+        {
+            fADCBufCount[adcNo] = adcdatalength - head;
+            memcpy(fADCBuffer[adcNo], adcdata + head, (adcdatalength - head) * sizeof(uint32_t));
+            break;
+        }
+
+        int idx_processed = 0;
+        bool dataflag = ProcessOneADCEvent(adcdata + head, adcdata + adcdatalength, fADCid[adcNo], fADCamp[adcNo], idx_processed);
+
+        if (!dataflag)
+        {
+            if (idx_processed == 0)
+                return totalEventCounter;
+            else
+            {
+                idx_search += idx_processed;
+                continue;
+            }
+        }
+
+        // Fill Data
+        FillADCData(adcNo);
+        totalEventCounter++;
+        fADCEventCount[adcNo]++;
+
+        idx_search += idx_processed - 10; // skip data points, so as to save plenty of searching time
+    }
+
+    return totalEventCounter;
+}
+
 bool DataManager::ProcessOneADCEvent(const uint32_t *const iter_first, const uint32_t *const iter_end, uint32_t &id, double *chArray, int &idx_processed)
 {
     // Process trigger id
@@ -639,6 +553,100 @@ bool DataManager::ProcessOneADCEvent(const uint32_t *const iter_first, const uin
     return true;
 }
 
+int DataManager::ProcessTDCEvents()
+{
+    const uint32_t *tdcdata = fFEECurrentProcessing->GetTDCFIFOData();
+    int tdcdatalength = fFEECurrentProcessing->GetTDCDataLength();
+    return ProcessTDCEvents(tdcdata, tdcdatalength);
+}
+
+int DataManager::ProcessTDCEvents(const uint32_t *src_data, int dataLength)
+{
+    const uint32_t *tdcdata = src_data;
+    int tdcdatalength = dataLength;
+
+    int headFirst = 0, headLast = 0, totalEventCounter = 0;
+
+    // if there're points left in buffer, concatenate this new data with buffer inside
+    if (fTDCBufCount > 0)
+    {
+        // Copy the first left event into buffer
+        // -- search first head
+        for (int idx_search = 0; idx_search < fTDCPointFactor; idx_search++)
+        {
+            if (tdcdata[idx_search] == 65535 && tdcdata[idx_search + 1] == 65535)
+            {
+                headFirst = idx_search;
+                break;
+            }
+        }
+        memcpy(fTDCBuffer + fTDCBufCount, tdcdata, headFirst * sizeof(uint32_t));
+        fTDCBufCount += headFirst;
+
+        int idx_processed = 0;
+        bool dataflag = ProcessOneTDCEvent(fTDCBuffer, fTDCBuffer + fTDCBufCount, idx_processed);
+        if (dataflag)
+        {
+            // Fill Data
+            // std::cout << "Test: Fill Data in buffer: " << fTDCEventCount << std::endl;
+            FillTDCData();
+            totalEventCounter++;
+            fTDCEventCount++;
+        }
+        fTDCBufCount = 0;
+    }
+
+    // Watch out, here, if (head1, head2, id1, id2) is (65535, 65535,65535, 65535), the first head1, head2 will be recongnized normally
+    for (int idx_search = headFirst; idx_search < tdcdatalength - 1; idx_search++)
+    {
+        bool flagHead = tdcdata[idx_search] == 65535 && tdcdata[idx_search + 1] == 65535;
+        if (!flagHead)
+            continue;
+
+        int head = idx_search;
+        // std::cout << "Test: found Head in source: " << head << '\t' << tdcdata[idx_search] << std::endl;
+
+        // if this event is the last, copy memory to buffer, and record buffer length, then break this process loop
+        if (head + fTDCPointFactor > tdcdatalength)
+        {
+            fTDCBufCount = tdcdatalength - head;
+            memcpy(fTDCBuffer, tdcdata + head, (tdcdatalength - head) * sizeof(uint32_t));
+            break;
+        }
+
+        int idx_processed = 0;
+        bool dataflag = ProcessOneTDCEvent(tdcdata + head, tdcdata + tdcdatalength, idx_processed);
+
+        if (!dataflag)
+        {
+            if (idx_processed == 0)
+                return totalEventCounter;
+            else
+            {
+                idx_search += idx_processed;
+                continue;
+            }
+        }
+
+        // Fill Data
+        // std::cout << "Test: Fill Data: " << fTDCEventCount << std::endl;
+        FillTDCData();
+        totalEventCounter++;
+        fTDCEventCount++;
+
+        idx_search += idx_processed - 1; // skip data points, so as to save plenty of searching time
+    }
+
+    // The TDC unique situation: (no check for double heads inside buffer)
+    if (tdcdata[tdcdatalength - 1] == 65535 && fTDCBufCount == 0)
+    {
+        fTDCBufCount = 1;
+        fTDCBuffer[0] = 65535;
+    }
+
+    return totalEventCounter;
+}
+
 bool DataManager::ProcessOneTDCEvent(const uint32_t *const iter_first, const uint32_t *const iter_end, int &dataLength)
 {
     // std::cout << "Test: Processing a tdc data: " << std::endl;
@@ -670,16 +678,17 @@ bool DataManager::ProcessOneTDCEvent(const uint32_t *const iter_first, const uin
     // Process trigger id
     // std::cout << "Test: Successfully varified this tdc data" << std::endl;
     fTDCid = (*(iter_first + 2) << 16) + (*(iter_first + 3) & 0xffff);
+    // std::cout << "Test: TDC TriggerID: " << fTDCid << std::endl;
     // Process time stamp
     for (int ch = 0; ch < N_BOARD_CHANNELS + 1; ch++)
     {
         auto start_iter = iter_first + 4 + 4 * ch;
-        uint64_t temp = *(start_iter);
-        fTDCtime[N_BOARD_CHANNELS - ch] = (temp & 0xffff) << 32;
-        temp = *(start_iter + 1);
-        fTDCtime[N_BOARD_CHANNELS - ch] += (temp & 0xffff) << 16;
-        fTDCtime[N_BOARD_CHANNELS - ch] += *(start_iter + 2); // Coarse time
-        fTDCtime[N_BOARD_CHANNELS - ch] -= *(start_iter + 3); // fine time
+        fTDCTime[N_BOARD_CHANNELS - ch] = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            uint64_t temp = (*(start_iter + i)) & 0xffff;
+            fTDCTime[N_BOARD_CHANNELS - ch] += temp << ((4 - i) * 16);
+        }
     }
     dataLength = fTDCPointFactor;
     return true;
@@ -746,7 +755,8 @@ bool ReadManager::Init(string sInput)
     // fTree->SetBranchAddress("ch", fHGamp);
     fHGTree->SetBranchAddress("chHG", fHGamp);
     fLGTree->SetBranchAddress("chLG", fLGamp);
-    fTDCTree->SetBranchAddress("chTDC", fTDCtime);
+    fTDCTree->SetBranchAddress("chTDC", fTDCTime);
+    // fTDCTree->SetBranchAddress("chTDC", fTDCFineTime);
     return true;
 }
 
