@@ -1,21 +1,22 @@
-//#include "datamanager.h"
-#include "FEEControlWidget.h"
+// Qt
 #include <QApplication>
-
-// This three headers are conflicted with each other, should arrage like: ROOT, ZML, winsock
-// #include "feecontrol.h"
-#include "configfileparser.h"
-#include "ROOTDraw.h"
-
 #include <QDateTime>
-
 #include <QDir>
 #include <QTime>
 
+// C++ STL
 #include <fstream>
+#include <iostream>
 
 // ROOT
 #include <TApplication.h>
+
+// User include
+#include "datamanager.h"
+#include "FEEControlWidget.h"
+// #include "feecontrol.h"
+#include "configfileparser.h"
+#include "ROOTDraw.h"
 
 int main(int argc, char *argv[])
 {
@@ -50,12 +51,12 @@ int main(int argc, char *argv[])
     //    DataManager data;
     //    data.ProcessFEEData(&board);
 
-    {
-        // FEEControlWin w;
-        // w.show();
-        gFEEControlWin->show();
-        return qapp.exec();
-    }
+    //    {
+    //        // FEEControlWin w;
+    //        // w.show();
+    //        gFEEControlWin->show();
+    //        return qapp.exec();
+    //    }
 
     // {
     //     ZaberFunctionTestClass test;
@@ -78,22 +79,22 @@ int main(int argc, char *argv[])
     //     return 1;
     // }
 
-//     {
-//         ROOTDraw canvas;
-//         canvas.show();
-//         auto h = new TH1D("h", "h", 100, -1, 1);
-//         h->FillRandom("gaus");
-//         h->Draw("hist");
-//         return qapp.exec();
-//     }
+    //     {
+    //         ROOTDraw canvas;
+    //         canvas.show();
+    //         auto h = new TH1D("h", "h", 100, -1, 1);
+    //         h->FillRandom("gaus");
+    //         h->Draw("hist");
+    //         return qapp.exec();
+    //     }
 
-//     {
-////         PlotWindow win(0);
-////         win.show();
-//         ROOTWidget a;
-//         a.show();
-//         return qapp.exec();
-//     }
+    //     {
+    ////         PlotWindow win(0);
+    ////         win.show();
+    //         ROOTWidget a;
+    //         a.show();
+    //         return qapp.exec();
+    //     }
 
     // {
     //     FTFolderParser ftParser;
@@ -108,6 +109,53 @@ int main(int argc, char *argv[])
     //     win.show();
     //     return qapp.exec();
     // }
+
+    /*! \class dataManager test
+     *
+     */
+
+    // {
+    //     auto datm = new DataManager("test.root");
+    //     // std::ifstream fin("hg_data.dat");
+    //     std::ifstream fin("tdc_data.dat");
+    //     const int readnum = 500;
+    //     uint32_t readdata[readnum];
+
+    //     for (int readtime = 0; readtime < 10; readtime++)
+    //     {
+    //         for (int i = 0; i < readnum; i++)
+    //         {
+    //             fin >> readdata[i];
+    //             // std::cout << readdata[i] << std::endl;
+    //         }
+    //         datm->ProcessTDCEvents(readdata, readnum);
+    //         datm->PrintTDCBuffer();
+    //     }
+
+    //     datm->Close();
+    //     return 1;
+    // }
+
+    {
+        auto datm = new DataManager("test.root");
+        std::ifstream fin("hg_data.dat");
+        const int readnum = 5000;
+        uint32_t readdata[readnum];
+
+        for (int readtime = 0; readtime < 10; readtime++)
+        {
+            for (int i = 0; i < readnum; i++)
+            {
+                fin >> readdata[i];
+                // std::cout << readdata[i] << std::endl;
+            }
+            datm->ProcessADCEvents(0, readdata, readnum);
+            // datm->PrintHGBuffer();
+        }
+
+        datm->Close();
+        return 1;
+    }
 
     return qapp.exec();
     // return 1;

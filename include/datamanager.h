@@ -42,6 +42,7 @@ public:
     static double ConvertTDC2Time(uint32_t tdc) { return (double)tdc / 65536 / fgFreq * 1e3; }; // in unit of ns
 
 private:
+public:
     TFile *fFile = NULL;
     TTree *fTree = NULL;
     TTree *fTrees[3]{NULL, NULL, NULL};
@@ -70,7 +71,7 @@ private:
     int fADCEventCount[2]{0, 0};
     int &fHGEventCount = fADCEventCount[0]; // Count how many events has processed
     int &fLGEventCount = fADCEventCount[1]; // Count how many events has processed
-    int fTDCEventCount = 0;                  // Count how many events has processed
+    int fTDCEventCount = 0;                 // Count how many events has processed
 
     // Buffer declaration
     int fADCBufCount[2]{0, 0};
@@ -90,8 +91,10 @@ private:
     int &fLGHeadIndex = fADCHeadIndex[1]; // Head index
     int fTDCHeadIndex = 0;                // Head index for tdc
 
-    int ProcessADCEvents(int adcNo); // Process HG&LG adc data for one event, 0 for HG, 1 for LG
+    int ProcessADCEvents(int adcNo);                                           // Process HG&LG adc data for one event, 0 for HG, 1 for LG
+    int ProcessADCEvents(int adcNo, const uint32_t *src_data, int dataLength); // Process HG&LG adc data, for test
     int ProcessTDCEvents();
+    int ProcessTDCEvents(const uint32_t *src_data, int dataLength);
 
     void FillADCData(int adcNo);
     void FillHGData();
@@ -127,6 +130,11 @@ private:
     static int fgFreq;                 // frequency MHz
     static int fADCPointFactor;        // adc Point Factor
     static int fTDCPointFactor;        // tdc Point Factor
+
+    // Test functions
+    void PrintHGBuffer();
+    void PrintLGBuffer();
+    void PrintTDCBuffer();
 };
 
 extern DataManager *gDataManager;

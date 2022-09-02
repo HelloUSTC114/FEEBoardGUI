@@ -869,7 +869,12 @@ void FEEControlWin::on_btnSaveCITIROC_clicked()
         return;
     auto time = QDateTime::currentDateTime();
     auto path = QDir::currentPath();
-    path += "/../MuonTestControl/Configuration/";
+    path += "/../MuonTestControl/Configuration/SaveConfigs/";
+    QDir dir;
+    if(dir.exists(path))
+    {
+        dir.mkpath(path);
+    }
     auto scFile = "scWrite" + time.toString("-MM-dd-hh-mm-ss") + ".txt";
     auto probeFile = "probeWrite" + time.toString("-MM-dd-hh-mm-ss") + ".txt";
 

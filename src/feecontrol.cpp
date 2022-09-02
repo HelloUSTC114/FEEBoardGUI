@@ -756,7 +756,7 @@ char *FEEControl::InitCMD(int length)
 bool FEEControl::TestConnect()
 {
     // reg test
-    int reg_test, reg_addr_test = 50, wr_data_test = 0xf;
+    int reg_test, reg_addr_test = 59, wr_data_test = 0xf;
     wr_data_test = 0x1;
     if (!write_reg_test(reg_addr_test, wr_data_test))
     {
@@ -776,13 +776,13 @@ double FEEControl::ReadFreq()
     double freq;
     si570_get(freq);
     printf("\nThe output clock frequency of the Si570 is %.4f.\n", freq);
-    if (!si570_set(320))
-    {
-        cout << "Si570 set failed." << endl;
-        return -1;
-    }
-    si570_get(freq);
-    printf("The output clock frequency of the Si570 is %.4f.\n\n", freq);
+    // if (!si570_set(320))
+    // {
+    //     cout << "Si570 set failed." << endl;
+    //     return -1;
+    // }
+    // si570_get(freq);
+    // printf("The output clock frequency of the Si570 is %.4f.\n\n", freq);
     return freq;
 }
 
@@ -815,7 +815,7 @@ bool FEEControl::ReadTemp()
 int FEEControl::TestReg()
 {
     // reg test
-    int reg_test, reg_addr_test = 50, wr_data_test = 0xf;
+    int reg_test, reg_addr_test = 59, wr_data_test = 0xf;
     read_reg_test(reg_addr_test, reg_test);
     printf("\nThe value of test reg %2d is %02x.\n", reg_addr_test, reg_test);
     if (!write_reg_test(reg_addr_test, wr_data_test))
