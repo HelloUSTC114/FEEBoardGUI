@@ -71,6 +71,10 @@ public:
     /// @brief Set Draw Channel in public method
     /// @param channel selected channel
     void SetDrawChannel(int channel);
+    int GetDrawChannel() { return ui->boxDrawCh->value(); }
+    void SetDrawOption(DrawOption option);
+    //! TODO: Add Draw option in gui, using QButtonGroup
+    void GetDrawOption();
 
     /// @brief FEE Logic Selection
     /// @param logic logic number

@@ -64,7 +64,7 @@ void DAQRuning::startDAQ(FEEControlWin *w)
         if (!rtnRead)
             break;
         nDAQEventCount += gDataManager->ProcessFEEData(gBoard);
-        emit UpdateDAQCount(gDataManager->GetTotalCount());
+        emit UpdateDAQCount(gDataManager->GetHGCount());
 
         loopFlag = JudgeLoopFlag(w, nDAQEventCount);
     }
@@ -522,6 +522,7 @@ void FEEControlWin::on_btnFileClose_clicked()
     ui->btnDAQStop->setEnabled(false);
 }
 
+//! TODO: Add HG, LG, TDC data counter monitor in GUI
 void FEEControlWin::handle_DAQCount(int nCount)
 {
     // Update real count and time monitor first
@@ -554,6 +555,7 @@ void FEEControlWin::handle_DAQCount(int nCount)
 }
 
 // Only used to show rough clock
+//! TODO: Add queue length monitor action in this function
 void FEEControlWin::update_DAQClock()
 {
     int time = fDAQStartTime.msecsTo(QDateTime::currentDateTime());
@@ -871,7 +873,7 @@ void FEEControlWin::on_btnSaveCITIROC_clicked()
     auto path = QDir::currentPath();
     path += "/../MuonTestControl/Configuration/SaveConfigs/";
     QDir dir;
-    if(dir.exists(path))
+    if (dir.exists(path))
     {
         dir.mkpath(path);
     }
@@ -953,7 +955,10 @@ void FEEControlWin::on_btnStopDraw_clicked()
 void FEEControlWin::handle_ContinousDraw()
 {
     static int ch = -1;
-    if (ch != ui->boxDrawCh->value())
+    static DrawOption option = DrawOption::HGDataDraw;
+
+    //! TODO: Add draw option choosen in GUI
+    if (ch != ui->boxDrawCh->value() || option != DrawOption::HGDataDraw)
     {
         ch = ui->boxDrawCh->value();
         gDataManager->DrawHG(ui->boxDrawCh->value());

@@ -169,6 +169,10 @@ public:
     void SetFifoReadBreak() { fBreakFlag = 1; }     // Set Read stop status
     bool GetDataValidation() { return fDataFlag; }; // Validate fifo data
 
+    int GetHGQueueMonitor() { return fHGQueueLengthMonitor; }   // Get HG Queue length monitor
+    int GetLGQueueMonitor() { return fLGQueueLengthMonitor; }   // Get LG Queue length monitor
+    int GetTDCQueueMonitor() { return fTDCQueueLengthMonitor; } // Get TDC Queue length monitor
+
     int GetTestDataLength() { return fTestDataLength; }; // Get Data length;
     int GetHGDataLength() { return fHGDataLength; };     // Get HG Data length;
     int GetLGDataLength() { return fLGDataLength; };     // Get LG Data length;
@@ -214,6 +218,10 @@ private:
     int fTDCDataLength = 0;  // Read TDC fifo data length
     int fTestDataLength = 0; // Read Test fifo data length
 
+    int fHGQueueLengthMonitor = 0;  // Queue length monitor, update while readfifo
+    int fLGQueueLengthMonitor = 0;  // Queue length monitor, update while readfifo
+    int fTDCQueueLengthMonitor = 0; // Queue length monitor, update while readfifo
+
     int fifoReadCount = 0;        // fifo read counter
     volatile bool fBreakFlag = 0; // fifo read break flag
 
@@ -248,7 +256,7 @@ public:
 // extern FEEControl *gBoard;
 bool operator==(const FEEControl &a, const FEEControl &b);
 
-// TODO: add multi board manager
+//! TODO: add multi board manager
 class FEEList
 {
     void ScanBoard();

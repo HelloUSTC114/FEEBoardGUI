@@ -130,6 +130,18 @@ void DataManager::Close()
     ClearBuffer();
 }
 
+bool DataManager::Draw(int ch, DrawOption option)
+{
+    if (option == HGDataDraw)
+        return DrawHG(ch);
+    else if (option == LGDataDraw)
+        return DrawLG(ch);
+    else if (option == TDCDataDraw)
+        return DrawTDC(ch);
+    else
+        return false;
+}
+
 bool DataManager::DrawHG(int ch)
 {
     if (ch < 0 || ch > 31)
@@ -170,19 +182,34 @@ bool DataManager::DrawTDC(int ch)
 
 int DataManager::ProcessFEEData(FEEControl *fee)
 {
+    // Previous processing codes
+    // if (fee == NULL || !fee->GetDataValidation())
+    // {
+    //     return 0;
+    // }
+
+    // int eventCounter = 0;
+    // int currentIndex = 0;
+    // while (ProcessOneEvent(fee, currentIndex))
+    // {
+    //     eventCounter++;
+    // }
+
+    // return eventCounter;
+
     if (fee == NULL || !fee->GetDataValidation())
     {
         return 0;
     }
+    //! TODO: add board change validation;
+    // bool flagBoardChange
 
-    int eventCounter = 0;
-    int currentIndex = 0;
-    while (ProcessOneEvent(fee, currentIndex))
-    {
-        eventCounter++;
-    }
+    fFEECurrentProcessing = fee;
+    fHGLastLoopEventCount = ProcessADCEvents(0);
+    fLGLastLoopEventCount = ProcessADCEvents(1);
+    fTDCLastLoopEventCount = ProcessTDCEvents();
 
-    return eventCounter;
+    return fHGLastLoopEventCount;
 }
 
 void DataManager::ClearBuffer()
@@ -764,6 +791,18 @@ ReadManager *&ReadManager::Instance()
 {
     static ReadManager *fInstance = new ReadManager();
     return fInstance;
+}
+
+bool ReadManager::Draw(int ch, DrawOption option)
+{
+    if (option == HGDataDraw)
+        return DrawHG(ch);
+    else if (option == LGDataDraw)
+        return DrawLG(ch);
+    else if (option == TDCDataDraw)
+        return DrawTDC(ch);
+    else
+        return false;
 }
 
 bool ReadManager::DrawHG(int ch)

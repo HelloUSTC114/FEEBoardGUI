@@ -13,6 +13,14 @@ class FEEControl;
 class TH1S;
 class TH1I;
 
+//! \enum define which data should be drawn, usful only in class DataManager Draw function, and class ReadManager Draw function
+enum DrawOption
+{
+    HGDataDraw = 0,
+    LGDataDraw,
+    TDCDataDraw
+};
+
 class DataManager
 {
 public:
@@ -25,15 +33,20 @@ public:
 
     /// @brief Process fifo data form FEE board
     /// @param fee to be processed board
-    /// @return how many events has been processed in this function
+    /// @return how many events has been processed in this function, only return HG data count
     int ProcessFEEData(FEEControl *fee);
 
     inline int GetTotalCount() { return fEventCount; };
+    inline int GetHGTotalCount() { return fHGEventCount; };
+    inline int GetLGTotalCount() { return fLGEventCount; };
+    inline int GetTDCTotalCount() { return fTDCEventCount; };
 
-    bool IsOpen();        //
-    bool DrawHG(int ch);  // HG Draw
-    bool DrawLG(int ch);  // LG Draw
-    bool DrawTDC(int ch); // TDC Draw
+    bool IsOpen(); //
+
+    bool Draw(int ch, DrawOption option); // control draw through drawOption
+    bool DrawHG(int ch);                  // HG Draw
+    bool DrawLG(int ch);                  // LG Draw
+    bool DrawTDC(int ch);                 // TDC Draw
     inline TFile *GetTFile() { return fFile; };
     inline std::string GetFileName() { return sFileName; }
 
@@ -73,6 +86,11 @@ public:
     int &fHGEventCount = fADCEventCount[0]; // Count how many events has processed
     int &fLGEventCount = fADCEventCount[1]; // Count how many events has processed
     int fTDCEventCount = 0;                 // Count how many events has processed
+
+    int fADCLastLoopEventCount[2]{0, 0};
+    int &fHGLastLoopEventCount = fADCLastLoopEventCount[0]; // Monitor how many events has processed in last events processing function
+    int &fLGLastLoopEventCount = fADCLastLoopEventCount[1]; // Monitor how many events has processed in last events processing function
+    int fTDCLastLoopEventCount = 0;                         // Monitor how many events has processed in last events processing function
 
     // Buffer declaration
     int fADCBufCount[2]{0, 0};
@@ -153,6 +171,7 @@ public:
     void Close();
 
     bool IsOpen();
+    bool Draw(int ch, DrawOption option);
     bool DrawHG(int ch);
     bool DrawLG(int ch);
     bool DrawTDC(int ch);

@@ -1,13 +1,16 @@
-#include "../include/feecontrol.h"
+// QT
+#include <QMutex>
+
+// C++ STL
 #include <WinSock2.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
 
+// User define
+#include "../include/feecontrol.h"
 #include "configfileparser.h"
-
-WSADATA fWsaData; // Unused unimportant data, used to put inside class FEEControl, but win sock2.h is like a piece of shit, which is conflict with <TTree.h>, <zaber>
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -21,13 +24,15 @@ const int FEEControl::fHGPointFactor = 1378;                       // How many H
 const int FEEControl::fLGPointFactor = FEEControl::fLGPointFactor; // How many LG points in one event, not so accurate
 const int FEEControl::fTDCPointFactor = 136;                       // How many TDC points in one event, not so accurate
 
+WSADATA fWsaData; // Unused unimportant data, used to put inside class FEEControl, but win sock2.h is like a piece of shit, which is conflict with <TTree.h>, <zaber>
 using namespace std;
+QMutex mutex;
 
 bool operator==(const FEEControl &a, const FEEControl &b)
 {
     bool flag1 = a.GetIP() == b.GetIP();
     bool flag2 = a.GetPort() == b.GetPort();
-    return flag1&&flag2;
+    return flag1 && flag2;
 }
 
 FEEControl::FEEControl(std::string ip, int port) : ip_address(ip), fPort(port)
@@ -469,7 +474,7 @@ bool FEEControl::send_cmd(cmd_up input_cmd, char *arg, int size)
         //     *(cmd + i) = *(arg + i - 1);
         // }
 
-        // ! TODO: Test this block
+        //! TODO: Test this block
 
         memcpy(cmd + 1, arg, size - 1);
     }
@@ -521,7 +526,7 @@ bool FEEControl::RecvAll(char *buffer, int size)
 
 bool FEEControl::start_socket()
 {
-
+    mutex.lock();
     if (WSAStartup(MAKEWORD(2, 2), &fWsaData) != 0)
     {
         fSockInitFlag = false;
@@ -548,7 +553,7 @@ bool FEEControl::start_socket()
     {
         cout << "Connect error." << endl;
         fSockInitFlag = 0;
-        closesocket(fSock);
+        close_socket();
         return false;
     }
     fSockInitFlag = true;
@@ -559,6 +564,7 @@ void FEEControl::close_socket()
 {
     closesocket(fSock);
     WSACleanup();
+    mutex.unlock();
 }
 
 void FEEControl::str_process(char *in_str, char *out_str)
@@ -649,14 +655,14 @@ int FEEControl::HVSend(string scmd)
     if (send(fSock, cmd, byte_num, 0) <= 0)
     {
         cout << "send error." << endl;
-        closesocket(fSock);
+        close_socket();
         return EXIT_FAILURE;
     }
 
     if (recv(fSock, reply, 50, 0) <= 0)
     {
         cout << "receive error." << endl;
-        closesocket(fSock);
+        close_socket();
         return EXIT_FAILURE;
     }
 
@@ -746,7 +752,7 @@ char *FEEControl::InitCMD(int length)
 //     {
 //         cout << "Connect error." << endl;
 //         fSockInitFlag = 0;
-//         closesocket(fSock);
+//         close_socket();
 //         return EXIT_FAILURE;
 //     }
 //     fSockInitFlag = EXIT_SUCCESS;
@@ -851,28 +857,28 @@ bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
     int maxEvents = (int)(0.9 * fMaxSaveEvents);
     int nEvents = leastNEvents > (maxEvents) ? maxEvents : leastNEvents;
 
-    int hg_queue_length = 0;
-    int lg_queue_length = 0;
-    int tdc_queue_length = 0;
+    fHGQueueLengthMonitor = 0;
+    fLGQueueLengthMonitor = 0;
+    fTDCQueueLengthMonitor = 0;
 
     // Deside when to start read queue, break flag means force to read
-    while (hg_queue_length_read(hg_queue_length) && !fBreakFlag)
+    while (hg_queue_length_read(fHGQueueLengthMonitor) && !fBreakFlag)
     {
-        if (hg_queue_length > nEvents * fHGPointFactor)
+        if (fHGQueueLengthMonitor > nEvents * fHGPointFactor)
             break;
         Sleep(sleepms);
     }
     fBreakFlag = 0; // Set break flag to zero, regardless of whether is break.
 
     // Judge read length
-    hg_queue_length_read(hg_queue_length);
-    lg_queue_length_read(lg_queue_length);
-    tdc_queue_length_read(tdc_queue_length);
+    hg_queue_length_read(fHGQueueLengthMonitor);
+    lg_queue_length_read(fLGQueueLengthMonitor);
+    tdc_queue_length_read(fTDCQueueLengthMonitor);
 
     // Compare queue length with save array length, take smaller one as read length
-    fHGDataLength = (hg_queue_length > maxEvents * fHGPointFactor) ? maxEvents * fHGPointFactor : hg_queue_length;
-    fLGDataLength = (lg_queue_length > maxEvents * fLGPointFactor) ? maxEvents * fLGPointFactor : lg_queue_length;
-    fTDCDataLength = (tdc_queue_length > maxEvents * fTDCPointFactor) ? maxEvents * fTDCPointFactor : tdc_queue_length;
+    fHGDataLength = (fHGQueueLengthMonitor > maxEvents * fHGPointFactor) ? maxEvents * fHGPointFactor : fHGQueueLengthMonitor;
+    fLGDataLength = (fLGQueueLengthMonitor > maxEvents * fLGPointFactor) ? maxEvents * fLGPointFactor : fLGQueueLengthMonitor;
+    fTDCDataLength = (fTDCQueueLengthMonitor > maxEvents * fTDCPointFactor) ? maxEvents * fTDCPointFactor : fTDCQueueLengthMonitor;
 
     if (!hg_data_read(fHGDataLength, fHGQueueData))
     {
@@ -920,7 +926,7 @@ int FEEControl::SendConfig(ConfigFileParser *parser)
     if (!SendAll(cmd, byte_num))
     {
         cout << "send error." << endl;
-        closesocket(fSock);
+        close_socket();
         return EXIT_FAILURE;
     }
 

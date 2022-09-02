@@ -464,7 +464,7 @@ QGroupBox *PlotWindow::createPlotBox()
     }
     // histogram->Draw("hist");
     histogram->Draw("");
-    std::cout <<"Drawing: " <<std::endl;
+    std::cout << "Drawing: " << std::endl;
     return gbox;
 }
 
@@ -553,6 +553,7 @@ void ROOTDraw::on_btnFileChoose_clicked()
 #include "FEEControlWidget.h"
 void ROOTDraw::on_btnFileDraw_clicked()
 {
+    //! TODO: add draw option choosen
     if (fCanvasOccupied)
     {
         fFeeW->SetDrawChannel(ui->boxFiberCh_2->value());
@@ -560,6 +561,7 @@ void ROOTDraw::on_btnFileDraw_clicked()
     }
     if (!gReadManager->IsOpen())
         return;
+
     gReadManager->DrawHG(ui->boxFiberCh_2->value());
     Update();
 }
