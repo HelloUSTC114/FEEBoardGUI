@@ -23,6 +23,13 @@ const int FEEControl::fTDCPointFactor = 136;                       // How many T
 
 using namespace std;
 
+bool operator==(const FEEControl &a, const FEEControl &b)
+{
+    bool flag1 = a.GetIP() == b.GetIP();
+    bool flag2 = a.GetPort() == b.GetPort();
+    return flag1&&flag2;
+}
+
 FEEControl::FEEControl(std::string ip, int port) : ip_address(ip), fPort(port)
 {
     fTestQueueData = new uint32_t[5000];

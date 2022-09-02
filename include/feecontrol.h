@@ -138,8 +138,8 @@ public:
     // Board Status Monitor END
 
     // Inside Info
-    inline std::string GetIP() { return ip_address; };
-    inline int GetPort() { return fPort; };
+    inline std::string GetIP() const { return ip_address; };
+    inline int GetPort() const { return fPort; };
     inline unsigned __int64 GetSock() { return fSock; };
     static void GenerateIP(int boardNo, std::string &ip, int &port);
     static int GetPortBase() { return fPortBase; };
@@ -216,7 +216,7 @@ private:
 
     int fifoReadCount = 0;        // fifo read counter
     volatile bool fBreakFlag = 0; // fifo read break flag
-    
+
 public:
     static const int fMaxSaveEvents;  // Limit of save events
     static const int fHGPointFactor;  // How many HG points in one event, not so accurate
@@ -246,6 +246,7 @@ public:
 };
 
 // extern FEEControl *gBoard;
+bool operator==(const FEEControl &a, const FEEControl &b);
 
 // TODO: add multi board manager
 class FEEList

@@ -142,18 +142,26 @@ int main(int argc, char *argv[])
         const int readnum = 5000;
         uint32_t readdata[readnum];
 
-        for (int readtime = 0; readtime < 10; readtime++)
+        // for (int i = 0; i < readnum; i++)
+        // {
+        //     fin >> readdata[i];
+        //     // std::cout << readdata[i] << std::endl;
+        // }
+        for (int readtime = 0; fin.good() && fin.is_open(); readtime++)
         {
+            std::cout << "ReadTime: " << readtime << '\t' << "Read Points: " << readtime * readnum << std::endl;
             for (int i = 0; i < readnum; i++)
             {
                 fin >> readdata[i];
                 // std::cout << readdata[i] << std::endl;
             }
-            datm->ProcessADCEvents(0, readdata, readnum);
+            int rtn = datm->ProcessADCEvents(0, readdata, readnum);
+            std::cout << "Processed Event: " << rtn << std::endl;
             // datm->PrintHGBuffer();
         }
 
         datm->Close();
+        fin.close();
         return 1;
     }
 

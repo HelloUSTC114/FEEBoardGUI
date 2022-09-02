@@ -308,11 +308,14 @@ int DataManager::ProcessADCEvents(int adcNo, const uint32_t *src_data, int dataL
 
         // Judge whether contains 2 heads
         int headInside = 0;
-        for (int idx_search = idx_processed > 2 ? idx_processed : 2; idx_search < fADCBufCount[adcNo]; idx_search++)
+        for (int idx_search = idx_processed > 2 ? idx_processed : 2; idx_search < fADCBufCount[adcNo] - 1; idx_search++)
         {
-            if (adcdata[idx_search] == 65535 && adcdata[idx_search + 1] == 65535)
+            if (fADCBuffer[adcNo][idx_search] == 65535 && fADCBuffer[adcNo][idx_search + 1] == 65535)
             {
+                std::cout << idx_processed << '\t' << std::endl;
                 headInside = idx_search;
+                std::cout << "Test: searching Head inside buffer. " << headInside << '\t' << fADCBuffer[adcNo][idx_search] << '\t' << fADCBuffer[adcNo][idx_search + 1] << std::endl;
+                std::cout << "Test: Buffer Length: " << fADCBufCount[0] << std::endl;
                 break;
             }
         }
@@ -323,6 +326,7 @@ int DataManager::ProcessADCEvents(int adcNo, const uint32_t *src_data, int dataL
             if (dataflag)
             {
                 std::cout << "Warning: double data in ADC buffer " << adcNo << std::endl;
+                // PrintHGBuffer();
                 // Fill Data
                 FillADCData(adcNo);
                 totalEventCounter++;
@@ -507,6 +511,7 @@ void DataManager::FillLGData()
 void DataManager::PrintHGBuffer()
 {
     std::cout << "Only for debug: Print HG buffer inside DataManager:" << std::endl;
+    std::cout << "Buffer Count: " << fHGBufCount << std::endl;
     for (int i = 0; i < fHGBufCount; i++)
     {
         std::cout << fHGBuffer[i];
@@ -521,6 +526,7 @@ void DataManager::PrintHGBuffer()
 void DataManager::PrintLGBuffer()
 {
     std::cout << "Only for debug: Print LG buffer inside DataManager:" << std::endl;
+    std::cout << "Buffer Count: " << fLGBufCount << std::endl;
     for (int i = 0; i < fLGBufCount; i++)
     {
         std::cout << fLGBuffer[i];
@@ -535,6 +541,7 @@ void DataManager::PrintLGBuffer()
 void DataManager::PrintTDCBuffer()
 {
     std::cout << "Only for debug: Print TDC buffer inside DataManager:" << std::endl;
+    std::cout << "Buffer Count: " << fTDCBufCount << std::endl;
     for (int i = 0; i < fTDCBufCount; i++)
     {
         std::cout << fTDCBuffer[i];
@@ -627,7 +634,7 @@ bool DataManager::ProcessOneADCEvent(const uint32_t *const iter_first, const uin
 
     // std::cout << "Test: Process done, idx_processed: " << idx_processed << std::endl;
     // Judge data length, if it's too long, return false data
-    if (idx_processed > N_SAMPLE_POINTS * N_BOARD_CHANNELS + 20)
+    if (idx_processed > N_SAMPLE_POINTS * N_BOARD_CHANNELS + idx_ch0 + 20)
         return false;
     return true;
 }
