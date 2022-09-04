@@ -110,41 +110,50 @@ int main(int argc, char *argv[])
     //     return qapp.exec();
     // }
 
-    /*! \class dataManager test
-     *
-     */
-
     {
-        auto datm = new DataManager("testtdc.root");
-        std::ifstream fin("tdc_data.dat");
-        const int readnum = 500;
-        uint32_t readdata[readnum];
-
-        // for (int i = 0; i < readnum; i++)
-        // {
-        //     fin >> readdata[i];
-        //     // std::cout << readdata[i] << std::endl;
-        // }
-        int eventCounts = 0;
-        for (int readtime = 0; fin.good() && fin.is_open(); readtime++)
-        // for (int readtime = 0; readtime < 10; readtime++)
-        {
-            std::cout << "ReadTime: " << readtime << '\t' << "Read Points: " << readtime * readnum << std::endl;
-            for (int i = 0; i < readnum; i++)
-            {
-                fin >> readdata[i];
-                // std::cout << readdata[i] << std::endl;
-            }
-            int rtn = datm->ProcessTDCEvents(readdata, readnum);
-            eventCounts += rtn;
-            std::cout << "Processed Event: " << rtn << " Total: " << eventCounts << std::endl;
-            // datm->PrintTDCBuffer();
-        }
-
-        datm->Close();
-        fin.close();
+        // gFEEControlWin->Test();
+        gFEEControlWin->show();
+        // ROOTDraw a;
+        // a.show();
+        return qapp.exec();
         return 1;
     }
+
+    // /*! \class dataManager test
+    //  *
+    //  */
+
+    // {
+    //     auto datm = new DataManager("testtdc.root");
+    //     std::ifstream fin("tdc_data.dat");
+    //     const int readnum = 500;
+    //     uint32_t readdata[readnum];
+
+    //     // for (int i = 0; i < readnum; i++)
+    //     // {
+    //     //     fin >> readdata[i];
+    //     //     // std::cout << readdata[i] << std::endl;
+    //     // }
+    //     int eventCounts = 0;
+    //     for (int readtime = 0; fin.good() && fin.is_open(); readtime++)
+    //     // for (int readtime = 0; readtime < 10; readtime++)
+    //     {
+    //         std::cout << "ReadTime: " << readtime << '\t' << "Read Points: " << readtime * readnum << std::endl;
+    //         for (int i = 0; i < readnum; i++)
+    //         {
+    //             fin >> readdata[i];
+    //             // std::cout << readdata[i] << std::endl;
+    //         }
+    //         int rtn = datm->ProcessTDCEvents(readdata, readnum);
+    //         eventCounts += rtn;
+    //         std::cout << "Processed Event: " << rtn << " Total: " << eventCounts << std::endl;
+    //         // datm->PrintTDCBuffer();
+    //     }
+
+    //     datm->Close();
+    //     fin.close();
+    //     return 1;
+    // }
 
     // {
     //     auto datm = new DataManager("test.root");

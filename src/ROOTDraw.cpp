@@ -9,6 +9,7 @@
 #include <QCloseEvent>
 #include <QEvent>
 #include <QGridLayout>
+#include <QButtonGroup>
 
 // std
 #include <iostream>
@@ -40,21 +41,21 @@ ROOTWidget::ROOTWidget(QWidget *parent)
 #include <TList.h>
 #include <TFile.h>
 #include "datamanager.h"
-ROOTWidget::ROOTWidget(ROOTWidget &item)
-    : QWidget{(QWidget *)item.parent()}, canvas(nullptr)
+ROOTWidget::ROOTWidget(ROOTWidget &item) : ROOTWidget((QWidget *)(item.parent()))
+// : QWidget{(QWidget *)item.parent()}, canvas(nullptr)
 {
-    setAttribute(Qt::WA_OpaquePaintEvent, true);
-    setMinimumSize(700, 500);
-    setUpdatesEnabled(kFALSE);
-    setMouseTracking(kTRUE);
-    // Register the QWidget in TVirtualX, giving its native window id
-    int wid = gVirtualX->AddWindow((ULong_t)winId(), width(), height());
+    // setAttribute(Qt::WA_OpaquePaintEvent, true);
+    // setMinimumSize(700, 500);
+    // setUpdatesEnabled(kFALSE);
+    // setMouseTracking(kTRUE);
+    // // Register the QWidget in TVirtualX, giving its native window id
+    // int wid = gVirtualX->AddWindow((ULong_t)winId(), width(), height());
 
-    // Create the ROOT Tcanvas, giving as argument the QWidget registered id
-    canvas = new TCanvas("Root Canvas", width(), height(), wid);
-    canvas->Clear();
-    canvas->SetBorderMode(0);
-    canvas->SetFillColor(0);
+    // // Create the ROOT Tcanvas, giving as argument the QWidget registered id
+    // canvas = new TCanvas("Root Canvas", width(), height(), wid);
+    // canvas->Clear();
+    // canvas->SetBorderMode(0);
+    // canvas->SetFillColor(0);
 
     std::vector<std::string> &list2 = item.fListOfObjName;
 
@@ -464,7 +465,6 @@ QGroupBox *PlotWindow::createPlotBox()
     }
     // histogram->Draw("hist");
     histogram->Draw("");
-    std::cout << "Drawing: " << std::endl;
     return gbox;
 }
 
@@ -502,6 +502,7 @@ ROOTDraw::ROOTDraw(int wid, QWidget *parent) : fWinID(wid), QMainWindow(parent),
     Setup();
 }
 
+#include <QPushButton>
 ROOTDraw::ROOTDraw(ROOTDraw &item) : fWinID(item.fWinID + 1), QMainWindow((QWidget *)item.parent()), ui(new Ui::ROOTDraw)
 {
     fPlotWin = new PlotWindow(*item.fPlotWin);
@@ -517,6 +518,15 @@ void ROOTDraw::Setup()
     // ROOT Canvas FEEControlWin:
     auto grid = new QGridLayout(ui->frmDraw);
     grid->addWidget(fPlotWin, 0, 0, 7, 1);
+
+    // DAQ Draw
+    fpbtngrpDrawOption = new QButtonGroup(this);
+    fpbtngrpDrawOption->addButton(ui->btnHGDraw, 0);
+    fpbtngrpDrawOption->addButton(ui->btnLGDraw, 1);
+    fpbtngrpDrawOption->addButton(ui->btnTDCDraw, 2);
+
+    // Draw control;
+    connect(fpbtngrpDrawOption, SIGNAL(buttonClicked(int)), this, SLOT(on_btnFileDraw_clicked()));
 }
 
 void ROOTDraw::closeEvent(QCloseEvent *event)
@@ -537,6 +547,45 @@ ROOTDraw::~ROOTDraw()
     delete fPlotWin;
 }
 
+void ROOTDraw::SetOccupied(FEEControlWin *feew, bool flag)
+{
+    fCanvasOccupied = flag;
+    if (flag)
+    {
+        fFeeW = feew;
+    }
+    else
+    {
+        fFeeW = NULL;
+    }
+}
+
+bool ROOTDraw::SetDrawOption(int option)
+{
+    if (option < 0 || option > 2)
+        return false;
+    fpbtngrpDrawOption->button(option)->setChecked(1);
+    return true;
+}
+
+int ROOTDraw::GetDrawOption()
+{
+    return fpbtngrpDrawOption->checkedId();
+}
+
+int ROOTDraw::GetDrawChannel()
+{
+    return ui->boxFiberCh_2->value();
+}
+
+bool ROOTDraw::SetDrawChannel(int ch)
+{
+    if (ch < 0 || ch > 32)
+        return false;
+    ui->boxFiberCh_2->setValue(ch);
+    return true;
+}
+
 #include <QFileDialog>
 #include "datamanager.h"
 void ROOTDraw::on_btnFileChoose_clicked()
@@ -553,16 +602,19 @@ void ROOTDraw::on_btnFileChoose_clicked()
 #include "FEEControlWidget.h"
 void ROOTDraw::on_btnFileDraw_clicked()
 {
-    //! TODO: add draw option choosen
     if (fCanvasOccupied)
     {
-        fFeeW->SetDrawChannel(ui->boxFiberCh_2->value());
+        fFeeW->SetDrawChannel(GetDrawChannel());
+        fFeeW->SetDrawOption(GetDrawOption());
         return;
     }
     if (!gReadManager->IsOpen())
         return;
 
-    gReadManager->DrawHG(ui->boxFiberCh_2->value());
+    std::cout << "Test: Drawing: " << std::endl;
+    // gReadManager->DrawHG(GetDrawChannel());
+    gReadManager->Draw(GetDrawChannel(), (DrawOption)GetDrawOption());
+    std::cout << "Drawed" << std::endl;
     Update();
 }
 
@@ -575,17 +627,4 @@ void ROOTDraw::on_btnFileClose_2_clicked()
 void ROOTDraw::on_boxFiberCh_2_textChanged(const QString &arg1)
 {
     on_btnFileDraw_clicked();
-}
-
-void ROOTDraw::SetOccupied(FEEControlWin *feew, bool flag)
-{
-    fCanvasOccupied = flag;
-    if (flag)
-    {
-        fFeeW = feew;
-    }
-    else
-    {
-        fFeeW = NULL;
-    }
 }

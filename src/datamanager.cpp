@@ -84,8 +84,8 @@ bool DataManager::Init(string sInput)
 
     for (int i = 0; i < N_BOARD_CHANNELS; i++)
     {
-        fHGHist[i] = new TH1S(Form("hHG%d", i), Form("High Gain ch%d", i), 2047, 2048, 4095);
-        fLGHist[i] = new TH1S(Form("hLG%d", i), Form("Low Gain ch%d", i), 2047, 2048, 4095);
+        fHGHist[i] = new TH1S(Form("hHG%d", i), Form("High Gain ch%d", i), 65534, 1, 65535);
+        fLGHist[i] = new TH1S(Form("hLG%d", i), Form("Low Gain ch%d", i), 65534, 1, 65535);
         fTDCHist[i] = new TH1I(Form("hTDC%d", i), Form("TDC Value ch%d", i), 2 ^ 16, 0, 2 ^ 32);
     }
     fTDCHist[32] = new TH1I(Form("hTDC%d", 32), Form("TDC Value ch%d", 32), 2 ^ 16, 0, 2 ^ 32);
@@ -96,7 +96,7 @@ bool DataManager::Init(string sInput)
     fLGTree->Branch("chLG", fLGamp, "chLG[32]/D");
     fLGTree->Branch("chLGid", &fLGid, "chLGid/i");
     fTDCTree->Branch("chTDCid", &fTDCid, "chTDCid/i");
-    fTDCTree->Branch("chTDCCoarse", fTDCTime, "chLG[33]/l");
+    fTDCTree->Branch("chTDC", fTDCTime, "chLG[33]/l");
 
     // fTree->AutoSave();
     fHGTree->AutoSave();
@@ -795,6 +795,7 @@ ReadManager *&ReadManager::Instance()
 
 bool ReadManager::Draw(int ch, DrawOption option)
 {
+    std::cout <<"Draw option: " <<option <<std::endl;
     if (option == HGDataDraw)
         return DrawHG(ch);
     else if (option == LGDataDraw)
@@ -815,6 +816,7 @@ bool ReadManager::DrawHG(int ch)
         // Init("F:/Projects/MuonTestControl/Data/Fiber-00.root");
         return false;
     }
+    std::cout <<"Test: Draw HG: " << std::endl;
 
     auto hHG = (TH1F *)fFile->Get(Form("hHG%d", ch));
     if (hHG)
@@ -823,7 +825,7 @@ bool ReadManager::DrawHG(int ch)
         return true;
     }
     fFile->cd();
-    fHGTree->Draw(Form("chHG[%d]>>hHG%d(2047, 2048, 4095)", ch, ch));
+    fHGTree->Draw(Form("chHG[%d]>>hHG%d(65534, 1, 65535)", ch, ch));
     hHG = (TH1F *)fFile->Get(Form("hHG%d", ch));
 
     if (!hHG)
@@ -851,7 +853,7 @@ bool ReadManager::DrawLG(int ch)
         return true;
     }
     fFile->cd();
-    fLGTree->Draw(Form("chLG[%d]>>hLG%d(2047, 2048, 4095)", ch, ch));
+    fLGTree->Draw(Form("chLG[%d]>>hLG%d(65534, 1, 65535)", ch, ch));
     hLG = (TH1F *)fFile->Get(Form("hLG%d", ch));
 
     if (!hLG)
@@ -884,6 +886,6 @@ bool ReadManager::DrawTDC(int ch)
     if (!hTDC)
         return false;
 
-    hTDC->SetTitle(Form("TDC Draw channel:%d;ADC Value; Counts", ch));
+    hTDC->SetTitle(Form("TDC Draw channel:%d;TDC Value; Counts", ch));
     return true;
 }

@@ -13,6 +13,7 @@ class QCloseEvent;
 class QMouseEvent;
 class QPaintEvent;
 class QResizeEvent;
+class QButtonGroup;
 
 class TObject;
 class TCanvas;
@@ -126,6 +127,11 @@ public:
     void Update();
     void SetOccupied(FEEControlWin *feew, bool flag = 1);
 
+    int GetDrawOption();
+    bool SetDrawOption(int option);
+    int GetDrawChannel();
+    bool SetDrawChannel(int ch);
+
 public:
 private:
     void Setup();
@@ -135,9 +141,10 @@ private:
     PlotWindow *fPlotWin;
 
     // Draw Control
-    bool fDrawFlag = 0;  // DAQ runing flag
-    QTimer fDrawerTimer; //
-    QString sReadFile;   //
+    bool fDrawFlag = 0;               // DAQ runing flag
+    QTimer fDrawerTimer;              //
+    QString sReadFile;                //
+    QButtonGroup *fpbtngrpDrawOption; // Draw option button group
 
     bool fCanvasOccupied = 0;    // Whether this Canvas is occupied by a FEEControlWin
     FEEControlWin *fFeeW = NULL; // Used to tell FEE control win to change draw channel

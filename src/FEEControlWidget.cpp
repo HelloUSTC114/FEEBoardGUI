@@ -64,7 +64,7 @@ void DAQRuning::startDAQ(FEEControlWin *w)
         if (!rtnRead)
             break;
         nDAQEventCount += gDataManager->ProcessFEEData(gBoard);
-        emit UpdateDAQCount(gDataManager->GetHGCount());
+        emit UpdateDAQCount(gDataManager->GetHGTotalCount());
 
         loopFlag = JudgeLoopFlag(w, nDAQEventCount);
     }
@@ -201,11 +201,24 @@ FEEControlWin::FEEControlWin(QWidget *parent)
     connect(&fDrawerTimer, SIGNAL(timeout()), this, SLOT(handle_ContinousDraw()));
     connect(fDAQProcessor, &DAQRuning::DAQStopSignal, this, &FEEControlWin::on_btnStopDraw_clicked); // If DAQ stop, than stop Fiber Draw Timer
 
+    // DAQ Draw
+    fpbtngrpDrawOption = new QButtonGroup(this);
+    fpbtngrpDrawOption->addButton(ui->btnHGDraw, 0);
+    fpbtngrpDrawOption->addButton(ui->btnLGDraw, 1);
+    fpbtngrpDrawOption->addButton(ui->btnTDCDraw, 2);
+
     // End
     // show();
     ui->tabTotal->setCurrentIndex(0);
     // fdrawWin->Update();
     // fdrawWin2->Update();
+}
+
+void FEEControlWin::Test()
+{
+    std::cout << "Draw option checked id: " << fpbtngrpDrawOption->checkedId() << std::endl;
+    fpbtngrpDrawOption->button(2)->setChecked(1);
+    std::cout << fpbtngrpDrawOption->checkedButton() << std::endl;
 }
 
 FEEControlWin *FEEControlWin::Instance()
@@ -555,19 +568,28 @@ void FEEControlWin::handle_DAQCount(int nCount)
 }
 
 // Only used to show rough clock
-//! TODO: Add queue length monitor action in this function
 void FEEControlWin::update_DAQClock()
 {
     int time = fDAQStartTime.msecsTo(QDateTime::currentDateTime());
     ui->timerDAQ->setTime(QTime::fromMSecsSinceStartOfDay(time));
+
+    // Get count from DataManager
+    ui->lineHGDAQCount->setText(QString::number(gDataManager->GetHGTotalCount()));
+    ui->lineLGDAQCount->setText(QString::number(gDataManager->GetLGTotalCount()));
+    ui->lineTDCDAQCount->setText(QString::number(gDataManager->GetTDCTotalCount()));
+
+    // Get queue length from FEEControl
+    ui->lineHGQueue->setText(QString::number(gBoard->GetHGQueueMonitor()));
+    ui->lineLGQueue->setText(QString::number(gBoard->GetLGQueueMonitor()));
+    ui->lineTDCQueue->setText(QString::number(gBoard->GetTDCQueueMonitor()));
 }
 
 void FEEControlWin::on_btnDAQStart_clicked()
 {
-    TryStartDAQ(fsFilePath.toStdString(), fsFileName.toStdString(), ui->boxDAQEvent->value(), ui->timeDAQSetting->time(), ui->boxBufferWait->value());
+    TryStartDAQ(fsFilePath.toStdString(), fsFileName.toStdString(), ui->boxDAQEvent->value(), ui->timeDAQSetting->time(), ui->boxBufferWait->value(), ui->boxLeastEvents->value());
 }
 
-bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nDAQCount, QTime DAQTime, int msBufferSleep)
+bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nDAQCount, QTime DAQTime, int msBufferSleep, int leastBufferEvent)
 {
     if (fDAQRuningFlag)
         return false;
@@ -595,26 +617,29 @@ bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nD
         return false;
 
     // Force DAQ start
-    ForceStartDAQ(nDAQCount, DAQTime, msBufferSleep);
+    ForceStartDAQ(nDAQCount, DAQTime, msBufferSleep, leastBufferEvent);
 
     // Draw Start
     on_btnStartDraw_clicked();
-    gDataManager->DrawHG(ui->boxDrawCh->value());
+    // gDataManager->DrawHG(ui->boxDrawCh->value());
+    gDataManager->Draw(ui->boxDrawCh->value(), (DrawOption)GetDrawOption());
     if (fdrawWin)
         fdrawWin->Update();
 
     return true;
 }
 
-void FEEControlWin::ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting)
+void FEEControlWin::ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting, int leastBufferEvent)
 {
     fDAQSettingCount = nCount;
     fDAQSettingTime = daqTime;
     fDAQBufferSleepms = msBufferWaiting;
+    fDAQBufferLeastEvents = leastBufferEvent;
 
     ui->boxDAQEvent->setValue(nCount);
     ui->timeDAQSetting->setTime(daqTime);
     ui->boxBufferWait->setValue(fDAQBufferSleepms);
+    ui->boxLeastEvents->setValue(fDAQBufferLeastEvents);
 
     fDAQRuningFlag = 1;
 
@@ -678,6 +703,7 @@ void FEEControlWin::on_btnDAQStop_clicked()
 // CITIROC Configuration control
 void FEEControlWin::SelectLogic(int logic)
 {
+    fpbtngrpLogic->button(logic)->setChecked(1);
     gBoard->logic_select(logic);
 
     ui->brsMessage->setTextColor(greenColor);
@@ -687,6 +713,11 @@ void FEEControlWin::SelectLogic(int logic)
     ui->brsMessage->setTextColor(blackColor);
     ui->brsMessage->setFontWeight(QFont::Normal);
     ui->brsMessage->append(tr("logic %1").arg(logic));
+}
+
+int FEEControlWin::GetSelectLogic()
+{
+    return fpbtngrpLogic->checkedId();
 }
 
 void FEEControlWin::on_btnToCITIROC_clicked()
@@ -907,6 +938,24 @@ void FEEControlWin::SetDrawChannel(int channel)
     ui->boxDrawCh->setValue(channel);
 }
 
+int FEEControlWin::GetDrawChannel()
+{
+    return ui->boxDrawCh->value();
+}
+
+bool FEEControlWin::SetDrawOption(int option)
+{
+    if (option < 0 || option > 2)
+        return false;
+    fpbtngrpDrawOption->button(option)->setChecked(1);
+    return true;
+}
+
+int FEEControlWin::GetDrawOption()
+{
+    return fpbtngrpDrawOption->checkedId();
+}
+
 void FEEControlWin::on_btnStartDraw_clicked()
 {
     fDrawFlag = 1;
@@ -936,7 +985,8 @@ void FEEControlWin::DrawSingle()
         gReadManager->Init((fsFilePath + "/" + fsFileName).toStdString());
     if (!gReadManager->IsOpen())
         return;
-    gReadManager->DrawHG(ui->boxDrawCh->value());
+    // gReadManager->DrawHG(ui->boxDrawCh->value());
+    gReadManager->Draw(ui->boxDrawCh->value(), (DrawOption)GetDrawOption());
     fdrawWin->Update();
 
     // cout << ui->boxDrawCh->value() << '\t' << i++ << endl;
@@ -957,11 +1007,12 @@ void FEEControlWin::handle_ContinousDraw()
     static int ch = -1;
     static DrawOption option = DrawOption::HGDataDraw;
 
-    //! TODO: Add draw option choosen in GUI
-    if (ch != ui->boxDrawCh->value() || option != DrawOption::HGDataDraw)
+    if (ch != ui->boxDrawCh->value() && (GetDrawOption() != option || GetDrawOption() != -1))
     {
         ch = ui->boxDrawCh->value();
-        gDataManager->DrawHG(ui->boxDrawCh->value());
+        option = (DrawOption)GetDrawOption();
+        // gDataManager->DrawHG(ui->boxDrawCh->value());
+        gDataManager->Draw(ui->boxDrawCh->value(), (DrawOption)GetDrawOption());
     }
     if (!fdrawWin->isHidden())
         fdrawWin->Update();

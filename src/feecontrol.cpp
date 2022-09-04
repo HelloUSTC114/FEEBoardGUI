@@ -861,9 +861,15 @@ bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
     fLGQueueLengthMonitor = 0;
     fTDCQueueLengthMonitor = 0;
 
-    // Deside when to start read queue, break flag means force to read
-    while (hg_queue_length_read(fHGQueueLengthMonitor) && !fBreakFlag)
+    // Deside when to start read queue, break flag means force to stop loop
+    while (!fBreakFlag)
     {
+        if (!hg_queue_length_read(fHGQueueLengthMonitor))
+            break;
+        if (!lg_queue_length_read(fLGQueueLengthMonitor))
+            break;
+        if (!tdc_queue_length_read(fTDCQueueLengthMonitor))
+            break;
         if (fHGQueueLengthMonitor > nEvents * fHGPointFactor)
             break;
         Sleep(sleepms);

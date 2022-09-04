@@ -59,8 +59,7 @@ public:
     /// @param DAQTime DAQ time
     /// @param msBufferSleep FEE board buffer reading waiting time (in ms)
     /// @return whether DAQ start Successfully
-    bool TryStartDAQ(std::string sPath, std::string sFileName, int nDAQCount = -1, QTime DAQTime = {0, 0, 0}, int msBufferSleep = 200);
-    void TryStartStripTestDAQ(int nCount, QTime daqTime, int msBufferWaiting);
+    bool TryStartDAQ(std::string sPath, std::string sFileName, int nDAQCount = -1, QTime DAQTime = {0, 0, 0}, int msBufferSleep = 200, int leastBufferEvent = 30);
 
     QDateTime GetFileTimeStamp() { return fFileTimeStamp; };
 
@@ -71,14 +70,16 @@ public:
     /// @brief Set Draw Channel in public method
     /// @param channel selected channel
     void SetDrawChannel(int channel);
-    int GetDrawChannel() { return ui->boxDrawCh->value(); }
-    void SetDrawOption(DrawOption option);
+    int GetDrawChannel();
+    bool SetDrawOption(int option);
     //! TODO: Add Draw option in gui, using QButtonGroup
-    void GetDrawOption();
+    int GetDrawOption();
+    void Test();
 
     /// @brief FEE Logic Selection
     /// @param logic logic number
     void SelectLogic(int logic);
+    int GetSelectLogic(); // Get selected logic in gui
 
     /// @brief Read, Send, Print to screen , CITIROC configuration file
     /// @param scFile sc configuration file, with path inside
@@ -119,7 +120,7 @@ private:
     /// @param nCount Count number for DAQ, -1 for forever
     /// @param daqTime Count time for DAQ, 00:00:00.000 for forever
     /// @param msBufferWaiting Parameter for Socket communication, if buffer is not long enough, how long (in ms) should be wait.
-    void ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting);
+    void ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting, int leastBufferEvent = 30);
 
     // DAQ File Manager
     bool GenerateROOTFile();  // Generate root file
@@ -138,6 +139,7 @@ private:
     DAQRuning *fDAQProcessor = NULL;   //
     QThread fWorkThread3;              //
     int fDAQBufferSleepms = 200;       // FEE control while DAQ, Wait time of buffer reading
+    int fDAQBufferLeastEvents = 30;    // FEE control while DAQ, Only when buffer length larger than this, Fifo data will be readout
 
     // FEE Logic Selection
     QButtonGroup *fpbtngrpLogic; // Single button group of logical selection
@@ -172,6 +174,7 @@ private:
     volatile bool fDrawFlag = 0;      // DAQ Drawing flag
     QTimer fDrawerTimer;              //
     ROOTDraw *fdrawWin = NULL;        //
+    QButtonGroup *fpbtngrpDrawOption; // Draw option button group
 
 private slots:
     // FEE Board Control

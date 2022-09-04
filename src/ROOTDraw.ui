@@ -18,67 +18,87 @@
     <property name="geometry">
      <rect>
       <x>50</x>
-      <y>50</y>
-      <width>261</width>
-      <height>121</height>
+      <y>30</y>
+      <width>331</width>
+      <height>142</height>
      </rect>
     </property>
     <property name="title">
      <string>Choose Draw File</string>
     </property>
-    <layout class="QVBoxLayout" name="verticalLayout_18">
-     <item>
-      <layout class="QGridLayout" name="gridLayout_29">
-       <item row="2" column="0">
-        <widget class="QPushButton" name="btnFileDraw">
-         <property name="text">
-          <string>Draw  File</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QPushButton" name="btnFileClose_2">
-         <property name="text">
-          <string>Close Save File</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0" colspan="2">
-        <layout class="QGridLayout" name="gridLayout_30">
-         <item row="0" column="1">
-          <widget class="QLineEdit" name="lblReadFileName">
-           <property name="text">
-            <string>Data*.root</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0">
-          <widget class="QPushButton" name="btnFileChoose">
-           <property name="text">
-            <string>Choose File</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label_31">
-         <property name="text">
-          <string>Select Channel:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QSpinBox" name="boxFiberCh_2">
-         <property name="maximum">
-          <number>31</number>
-         </property>
-        </widget>
-       </item>
-      </layout>
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="0" column="0">
+      <widget class="QPushButton" name="btnFileChoose">
+       <property name="text">
+        <string>Choose File</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0" colspan="2">
+      <widget class="QLabel" name="label_31">
+       <property name="text">
+        <string>Select Channel:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0" colspan="2">
+      <widget class="QLabel" name="label_26">
+       <property name="text">
+        <string>Select Queue:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="2">
+      <widget class="QRadioButton" name="btnHGDraw">
+       <property name="text">
+        <string>High Gain</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="3">
+      <widget class="QRadioButton" name="btnLGDraw">
+       <property name="text">
+        <string>Low Gain</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="4">
+      <widget class="QRadioButton" name="btnTDCDraw">
+       <property name="text">
+        <string>TDC</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1" colspan="4">
+      <widget class="QLineEdit" name="lblReadFileName">
+       <property name="text">
+        <string>Data*.root</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="3" colspan="2">
+      <widget class="QPushButton" name="btnFileClose_2">
+       <property name="text">
+        <string>Close Save File</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0" colspan="3">
+      <widget class="QPushButton" name="btnFileDraw">
+       <property name="text">
+        <string>Draw  File</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="2" colspan="2">
+      <widget class="QSpinBox" name="boxFiberCh_2">
+       <property name="maximum">
+        <number>32</number>
+       </property>
+      </widget>
      </item>
     </layout>
    </widget>
