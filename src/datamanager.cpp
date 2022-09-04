@@ -14,15 +14,15 @@ using namespace std;
 #define CONVERT_AMP_2_ADC(amp) (2.048 * amp + 2048)
 
 double gEventADCThreshold = CONVERT_AMP_2_ADC(100);
-int DataManager::fgFreq = 1; // in unit of MHz
+double DataManager::fgFreq = 433.995; // in unit of MHz, board TDC frequency
 int DataManager::fADCPointFactor = FEEControl::fHGPointFactor;
 int DataManager::fTDCPointFactor = FEEControl::fTDCPointFactor;
 
-double DataManager::ConvertTDC2Time(uint64_t tdc, uint64_t &coarseTime, double &fineTime)
+double DataManager::ConvertTDC2Time(uint64_t tdc, double &coarseTime, double &fineTime)
 {
-    coarseTime = tdc >> 16;
-    fineTime = (tdc & 0xffff) / 65536.0;
-    return coarseTime - fineTime;
+    coarseTime = (tdc >> 16) / fgFreq * 1e3;
+    fineTime = (tdc & 0xffff) / 65536.0 / fgFreq * 1e3;
+    return (coarseTime - fineTime);
 }
 
 DataManager *gDataManager = new DataManager();
@@ -96,7 +96,7 @@ bool DataManager::Init(string sInput)
     fLGTree->Branch("chLG", fLGamp, "chLG[32]/D");
     fLGTree->Branch("chLGid", &fLGid, "chLGid/i");
     fTDCTree->Branch("chTDCid", &fTDCid, "chTDCid/i");
-    fTDCTree->Branch("chTDC", fTDCTime, "chLG[33]/l");
+    fTDCTree->Branch("chTDC", fTDCTime, "chTDC[33]/l");
 
     // fTree->AutoSave();
     fHGTree->AutoSave();
@@ -421,6 +421,10 @@ int DataManager::ProcessADCEvents(int adcNo, const uint32_t *src_data, int dataL
             totalEventCounter++;
             fADCEventCount[adcNo]++;
         }
+        else
+        {
+            std::cout << "John Test: Error while Processing ADC: error inside Manager buffer" << std::endl;
+        }
 
         // Judge whether contains 2 heads
         int headInside = 0;
@@ -447,6 +451,10 @@ int DataManager::ProcessADCEvents(int adcNo, const uint32_t *src_data, int dataL
                 FillADCData(adcNo);
                 totalEventCounter++;
                 fADCEventCount[adcNo]++;
+            }
+            else
+            {
+                std::cout << "John Test: Error while Processing ADC: error for 2nd data inside Manager buffer" << std::endl;
             }
         }
         fADCBufCount[adcNo] = 0;
@@ -475,6 +483,8 @@ int DataManager::ProcessADCEvents(int adcNo, const uint32_t *src_data, int dataL
 
         if (!dataflag)
         {
+            std::cout << "John Test: Error while Processing ADC: error in normal Processing" << std::endl;
+
             if (idx_processed == 0)
                 return totalEventCounter;
             else
@@ -495,6 +505,9 @@ int DataManager::ProcessADCEvents(int adcNo, const uint32_t *src_data, int dataL
     return totalEventCounter;
 }
 
+#include <fstream>
+std::ofstream fout("test2.dat");
+
 bool DataManager::ProcessOneADCEvent(const uint32_t *const iter_first, const uint32_t *const iter_end, uint32_t &id, double *chArray, int &idx_processed)
 {
     // Process trigger id
@@ -504,14 +517,16 @@ bool DataManager::ProcessOneADCEvent(const uint32_t *const iter_first, const uin
     // thrshold Calculating
     double ped = TMath::Mean(iter_first + 5, iter_first + 25);
     double pedrms = TMath::StdDev(iter_first + 5, iter_first + 25);
-    double thr_signal = ped + pedrms * 10; // set threshold at pedestal + 10 sigma
-    // std::cout << "Test: Threshold: " << thr_signal << std::endl;
+    double thr_signal_front = ped + pedrms * 10;    // set front threshold at pedestal + 10 sigma
+    double thr_signal_end = thr_signal_front + 512; //
+    // std::cout << pedrms << std::endl;
+    // std::cout << "Test: Threshold: " << thr_signal_front << std::endl;
 
     // Find start data
     int idx_ch0 = 0;
     for (auto idx_search = 25; idx_search < (int)(iter_end - iter_first); idx_search++)
     {
-        if (*(iter_first + idx_search) > thr_signal)
+        if (*(iter_first + idx_search) > thr_signal_front)
         {
             idx_ch0 = idx_search;
             break;
@@ -519,7 +534,7 @@ bool DataManager::ProcessOneADCEvent(const uint32_t *const iter_first, const uin
     }
     if (idx_ch0 == 0)
     {
-        std::cout << "Error in ADC Process single event: Cannot find signal start point: threshold: " << thr_signal << std::endl;
+        std::cout << "Error in ADC Process single event: Cannot find signal start point: threshold: " << thr_signal_front << std::endl;
 
         idx_processed = 0;
         return false;
@@ -532,12 +547,12 @@ bool DataManager::ProcessOneADCEvent(const uint32_t *const iter_first, const uin
     {
         auto iterFirst = iter_first + idx_ch0 + N_SAMPLE_POINTS * ch;
         auto iterEnd = iter_first + idx_ch0 + N_SAMPLE_POINTS * ch + N_SAMPLE_POINTS - 1;
-        int boardLength = 2; // abort edge points
+        int boardLength = 5; // abort edge points
         chArray[ch] = TMath::Mean(iterFirst + boardLength, iterEnd - boardLength);
         // std::cout << "Test Channel Mean: " << ch << '\t' << chArray[ch] << std::endl;
 
         // data error processing, if one channel is beyond pedestal, it may reveals data error, and this will be a invalid data.
-        if (chArray[ch] < thr_signal)
+        if (chArray[ch] < thr_signal_end)
         {
             std::cout << "Error in ADC Process single event: Invalid channel: " << ch << ",  below threshold may reveals invalid data." << std::endl;
             idx_processed = idx_ch0 + N_SAMPLE_POINTS * (ch - 1 > 0 ? ch - 1 : 0);
@@ -545,7 +560,7 @@ bool DataManager::ProcessOneADCEvent(const uint32_t *const iter_first, const uin
         }
     }
     // In case of all 31 channels are beyond threshold, but the last few points were set into below pedestal
-    if (*(iter_first + idx_ch0 + N_SAMPLE_POINTS * N_BOARD_CHANNELS - 3) < thr_signal)
+    if (*(iter_first + idx_ch0 + N_SAMPLE_POINTS * N_BOARD_CHANNELS - 5) < thr_signal_end)
     {
         std::cout << "Error in ADC Process single event: Invalid last points,  below threshold may reveals invalid data" << std::endl;
         idx_processed = idx_ch0 + N_SAMPLE_POINTS * (N_BOARD_CHANNELS - 1);
@@ -556,7 +571,7 @@ bool DataManager::ProcessOneADCEvent(const uint32_t *const iter_first, const uin
     int idx_end = 0;
     for (int idx_search = idx_ch0 + N_SAMPLE_POINTS * N_BOARD_CHANNELS - 1; idx_search < (int)(iter_end - iter_first); idx_search++)
     {
-        if (*(iter_first + idx_search) < thr_signal)
+        if (*(iter_first + idx_search) < thr_signal_end)
         {
             // std::cout << "Test: back-edge searching: " << idx_search << '\t' << *(iter_first + idx_search) << std::endl;
             idx_end = idx_search;
@@ -576,7 +591,41 @@ bool DataManager::ProcessOneADCEvent(const uint32_t *const iter_first, const uin
     // std::cout << "Test: Process done, idx_processed: " << idx_processed << std::endl;
     // Judge data length, if it's too long, return false data
     if (idx_processed > N_SAMPLE_POINTS * N_BOARD_CHANNELS + idx_ch0 + 20)
+    {
+        // static int countTest = 0;
+        // std::cout << "Error in ADC Process single event: data back-edge is too long: Error Count: " << countTest++ << '\t' << idx_end - idx_ch0 << '\t' << idx_ch0 << '\t' << idx_end << '\t' << N_SAMPLE_POINTS * N_BOARD_CHANNELS << std::endl;
+        // std::cout << "Threshold: " << thr_signal_front << std::endl;
+        // for (int i = 0; i < idx_ch0 + 10; i++)
+        // {
+        //     std::cout << *(iter_first + i);
+        //     if (i % 30 == 30 - 1)
+        //         std::cout << std::endl;
+        //     else
+        //         std::cout << ' ';
+        // }
+        // std::cout << endl;
+        // for (int i = idx_ch0 - 10 + N_SAMPLE_POINTS * N_BOARD_CHANNELS; i < (idx_end +5); i++)
+        // {
+        //     std::cout << *(iter_first + i);
+        //     if (i % 30 == 30 - 1)
+        //         std::cout << std::endl;
+        //     else
+        //         std::cout << ' ';
+        // }
+        // std::cout << "End of this error output" << std::endl;
+        // for (int i = 0; i < (idx_end+5); i++)
+        // {
+        //     fout << *(iter_first + i) << std::endl;
+        //     // if (i % 30 == 30 - 1)
+        //     //     fout << std::endl;
+        //     // else
+        //     //     fout << ' ';
+        // }
+        // fout << std::endl
+        //      << std::endl;
+        std::cout << "Error in ADC Process single event: data back-edge is too long." << std::endl;
         return false;
+    }
     return true;
 }
 
@@ -714,7 +763,7 @@ bool DataManager::ProcessOneTDCEvent(const uint32_t *const iter_first, const uin
         for (int i = 0; i < 4; i++)
         {
             uint64_t temp = (*(start_iter + i)) & 0xffff;
-            fTDCTime[N_BOARD_CHANNELS - ch] += temp << ((4 - i) * 16);
+            fTDCTime[N_BOARD_CHANNELS - ch] += (temp << ((4 - (i + 1)) * 16));
         }
     }
     dataLength = fTDCPointFactor;
@@ -795,7 +844,7 @@ ReadManager *&ReadManager::Instance()
 
 bool ReadManager::Draw(int ch, DrawOption option)
 {
-    std::cout <<"Draw option: " <<option <<std::endl;
+    std::cout << "Draw option: " << option << std::endl;
     if (option == HGDataDraw)
         return DrawHG(ch);
     else if (option == LGDataDraw)
@@ -816,7 +865,7 @@ bool ReadManager::DrawHG(int ch)
         // Init("F:/Projects/MuonTestControl/Data/Fiber-00.root");
         return false;
     }
-    std::cout <<"Test: Draw HG: " << std::endl;
+    std::cout << "Test: Draw HG: " << std::endl;
 
     auto hHG = (TH1F *)fFile->Get(Form("hHG%d", ch));
     if (hHG)

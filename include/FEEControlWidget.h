@@ -140,6 +140,7 @@ private:
     QThread fWorkThread3;              //
     int fDAQBufferSleepms = 200;       // FEE control while DAQ, Wait time of buffer reading
     int fDAQBufferLeastEvents = 30;    // FEE control while DAQ, Only when buffer length larger than this, Fifo data will be readout
+    bool fFlagClearQueue = 0;          // FEE control before DAQ, give signal whether clear Queue before DAQ
 
     // FEE Logic Selection
     QButtonGroup *fpbtngrpLogic; // Single button group of logical selection

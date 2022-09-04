@@ -57,6 +57,15 @@ void DAQRuning::startDAQ(FEEControlWin *w)
     int nDAQEventCount = 0;
     w->fDAQStartTime = QDateTime::currentDateTime();
 
+    // Clear queue before DAQ Start
+    if(w->fFlagClearQueue)
+    {
+        gBoard->clean_queue(0);
+        gBoard->clean_queue(1);
+        gBoard->clean_queue(2);
+        gBoard->clean_queue(3);
+    }
+
     bool loopFlag = JudgeLoopFlag(w, 0);
     for (nDAQLoop = 0; loopFlag; nDAQLoop++)
     {
@@ -655,6 +664,7 @@ void FEEControlWin::ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting
     on_btnHVON_clicked();
     Sleep(1000);
 
+    fFlagClearQueue = ui->boxClearQueue->isChecked();
     emit startDAQSignal(this);
     fDAQClock.start(1000);
 
@@ -855,7 +865,8 @@ bool FEEControlWin::ScanFromScreen()
 bool FEEControlWin::SendCITIROCConfig()
 {
     auto rtn = gBoard->SendConfig(gParser);
-    if (!rtn)
+    std::cout << "Test: send config return " << rtn << std::endl;
+    if (rtn)
     {
         ui->brsMessage->setTextColor(redColor);
         ui->brsMessage->setFontWeight(QFont::Bold);
@@ -1007,10 +1018,11 @@ void FEEControlWin::handle_ContinousDraw()
     static int ch = -1;
     static DrawOption option = DrawOption::HGDataDraw;
 
-    if (ch != ui->boxDrawCh->value() && (GetDrawOption() != option || GetDrawOption() != -1))
+    if (ch != ui->boxDrawCh->value() || (GetDrawOption() != option && GetDrawOption() != -1))
     {
         ch = ui->boxDrawCh->value();
         option = (DrawOption)GetDrawOption();
+        std::cout << option << std::endl;
         // gDataManager->DrawHG(ui->boxDrawCh->value());
         gDataManager->Draw(ui->boxDrawCh->value(), (DrawOption)GetDrawOption());
     }

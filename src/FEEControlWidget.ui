@@ -1319,7 +1319,7 @@
          </layout>
         </widget>
        </item>
-       <item row="2" column="0">
+       <item row="3" column="0">
         <widget class="QPushButton" name="btnDAQStop">
          <property name="font">
           <font>
@@ -1338,13 +1338,6 @@
           <string>DAQ Setting</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_10">
-          <item row="4" column="0" colspan="2">
-           <widget class="QPushButton" name="btnDAQStart">
-            <property name="text">
-             <string>Start DAQ</string>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="1">
            <widget class="QSpinBox" name="boxDAQEvent">
             <property name="minimum">
@@ -1362,6 +1355,13 @@
            <widget class="QTimeEdit" name="timeDAQSetting">
             <property name="displayFormat">
              <string>HH::mm::ss</string>
+            </property>
+            <property name="time">
+             <time>
+              <hour>0</hour>
+              <minute>0</minute>
+              <second>0</second>
+             </time>
             </property>
            </widget>
           </item>
@@ -1416,6 +1416,20 @@
             </property>
             <property name="value">
              <number>30</number>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QPushButton" name="btnDAQStart">
+            <property name="text">
+             <string>Start DAQ</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QCheckBox" name="boxClearQueue">
+            <property name="text">
+             <string>Clear Q before DAQ</string>
             </property>
            </widget>
           </item>
