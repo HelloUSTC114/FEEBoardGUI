@@ -47,13 +47,14 @@ public:
     bool DrawHG(int ch);                  // HG Draw
     bool DrawLG(int ch);                  // LG Draw
     bool DrawTDC(int ch);                 // TDC Draw
+    void ClearDraw();                     // Clear All chs inside memory
     inline TFile *GetTFile() { return fFile; };
     inline std::string GetFileName() { return sFileName; }
 
     static double GetFreq() { return fgFreq; };
     static double ConvertADC2Amp(uint32_t adc) { return (double)adc / 32.768 - 1000; };                             // in unit of mV
     static double ConvertTDC2Time(uint64_t tdc) { return ((tdc >> 16) - (tdc & 0xffff) / 65536.0) / fgFreq * 1e3; } // in unit of ns
-    static double ConvertTDC2Time(uint64_t tdc, double &coarseTime, double &fineTime);                            // in unit of ns
+    static double ConvertTDC2Time(uint64_t tdc, double &coarseTime, double &fineTime);                              // in unit of ns
 
 private:
 public:
@@ -146,7 +147,7 @@ public:
     // public variables
     static const int fcgNChannels;     // N channels for one board
     static const int fcgNSamplePoints; // N sample points for one channel in hg/lg
-    static double fgFreq;                 // frequency MHz
+    static double fgFreq;              // frequency MHz
     static int fADCPointFactor;        // adc Point Factor
     static int fTDCPointFactor;        // tdc Point Factor
 

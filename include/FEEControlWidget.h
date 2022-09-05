@@ -227,6 +227,7 @@ private slots:
 
     void on_btnGenerateIP_clicked();
     void on_btnExit_clicked();
+    void on_btnClearDraw_clicked();
 };
 #define gFEEControlWin (FEEControlWin::Instance())
 

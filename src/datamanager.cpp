@@ -180,6 +180,19 @@ bool DataManager::DrawTDC(int ch)
     return true;
 }
 
+void DataManager::ClearDraw()
+{
+    if (!IsOpen() || !fHGHist[0])
+        return;
+    for (int ch = 0; ch < 32; ch++)
+    {
+        fHGHist[ch]->Reset("ICESM");
+        fLGHist[ch]->Reset("ICESM");
+        fTDCHist[ch]->Reset("ICESM");
+    }
+    fTDCHist[32]->Reset("ICESM");
+}
+
 int DataManager::ProcessFEEData(FEEControl *fee)
 {
     // Previous processing codes
@@ -865,7 +878,7 @@ bool ReadManager::DrawHG(int ch)
         // Init("F:/Projects/MuonTestControl/Data/Fiber-00.root");
         return false;
     }
-//    std::cout << "Test: Draw HG: " << std::endl;
+    //    std::cout << "Test: Draw HG: " << std::endl;
 
     auto hHG = (TH1F *)fFile->Get(Form("hHG%d", ch));
     if (hHG)

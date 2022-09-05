@@ -566,7 +566,7 @@ void FEEControlWin::handle_DAQCount(int nCount)
     int transCount = nCount - sLastCount;
     if ((sTransTimeInteval = sLastTime.msecsTo(QDateTime::currentDateTime())) > 1000 && transCount > 0)
     {
-        std::cout << "Count: " << nCount << '\t' << transCount << '\t' << sTransTimeInteval << std::endl;
+        // std::cout << "Count: " << nCount << '\t' << transCount << '\t' << sTransTimeInteval << std::endl;
         sTransCR = (double)transCount / sTransTimeInteval * 1000;
         sLastCount = nCount;
         sTransTimeInteval = 0;
@@ -598,7 +598,7 @@ void FEEControlWin::handle_DAQCount(int nCount)
     else
     {
         if (fDAQSettingTime == QTime(0, 0, 0, 0))
-            ui->pbarDAQ->setValue(percentCount);
+            ui->pbarDAQ->setValue(percentCount > 100 ? 100 : percentCount);
         else
             ui->pbarDAQ->setValue(percentCount > percentTime ? percentCount : percentTime);
     }
@@ -1052,7 +1052,7 @@ void FEEControlWin::handle_ContinousDraw()
     {
         ch = ui->boxDrawCh->value();
         option = (DrawOption)GetDrawOption();
-        std::cout << option << std::endl;
+        // std::cout << option << std::endl;
         // gDataManager->DrawHG(ui->boxDrawCh->value());
         gDataManager->Draw(ui->boxDrawCh->value(), (DrawOption)GetDrawOption());
     }
@@ -1201,3 +1201,8 @@ void FEEControlWin::on_btnAllSetMask_clicked()
     PrintMaskToScreen();
 }
 // FEE Mask Control END
+
+void FEEControlWin::on_btnClearDraw_clicked()
+{
+    gDataManager->ClearDraw();
+}
