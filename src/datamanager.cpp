@@ -560,7 +560,7 @@ bool DataManager::ProcessOneADCEvent(const uint32_t *const iter_first, const uin
         }
     }
     // In case of all 31 channels are beyond threshold, but the last few points were set into below pedestal
-    if (*(iter_first + idx_ch0 + N_SAMPLE_POINTS * N_BOARD_CHANNELS - 5) < thr_signal_end)
+    if (*(iter_first + idx_ch0 + N_SAMPLE_POINTS * N_BOARD_CHANNELS - 15) < thr_signal_end)
     {
         std::cout << "Error in ADC Process single event: Invalid last points,  below threshold may reveals invalid data" << std::endl;
         idx_processed = idx_ch0 + N_SAMPLE_POINTS * (N_BOARD_CHANNELS - 1);
@@ -844,7 +844,7 @@ ReadManager *&ReadManager::Instance()
 
 bool ReadManager::Draw(int ch, DrawOption option)
 {
-    std::cout << "Draw option: " << option << std::endl;
+    // std::cout << "Test: Draw option: " << option << std::endl;
     if (option == HGDataDraw)
         return DrawHG(ch);
     else if (option == LGDataDraw)
@@ -865,7 +865,7 @@ bool ReadManager::DrawHG(int ch)
         // Init("F:/Projects/MuonTestControl/Data/Fiber-00.root");
         return false;
     }
-    std::cout << "Test: Draw HG: " << std::endl;
+//    std::cout << "Test: Draw HG: " << std::endl;
 
     auto hHG = (TH1F *)fFile->Get(Form("hHG%d", ch));
     if (hHG)

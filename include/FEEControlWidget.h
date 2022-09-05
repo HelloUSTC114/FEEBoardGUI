@@ -114,6 +114,8 @@ private:
     void PrintT();                   // Print Temerature information
     void PrintClock();               // Print Si570 clock frequency
 
+    QTimer fOnceTimer; // Timer only used for once action, such as monitor starter
+
     // DAQ control
 
     /// @brief Force to start DAQ, regardless of file initial, focus only on emit start signal, all start methods should contain this method
@@ -123,11 +125,13 @@ private:
     void ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting, int leastBufferEvent = 30);
 
     // DAQ File Manager
-    bool GenerateROOTFile();  // Generate root file
-    QString fsFilePath;       // Save ROOT File Path
-    QString fsFileName;       // Save ROOT File Name without time stamp
-    QString fsFileNameTotal;  // Save ROOT File Total Name, with time stamp
-    QDateTime fFileTimeStamp; //
+    bool GenerateROOTFile(); // Generate root file
+    void CloseSaveFile();   // Close ROOT File
+
+    QString fsFilePath = "../MuonTestControl/Data"; // Save ROOT File Path
+    QString fsFileName = "Data";                    // Save ROOT File Name without time stamp
+    QString fsFileNameTotal;                        // Save ROOT File Total Name, with time stamp
+    QDateTime fFileTimeStamp;                       //
 
     int fDAQSettingCount = -1;         // -1 means DAQ forever until stopDAQ clicked
     QTime fDAQSettingTime{0, 0, 0, 0}; // DAQ time setting, 0,0,0,0 means forever until stopDAQ clicked
@@ -219,6 +223,7 @@ private slots:
 
     // Draw Button
     void on_btnDraw_clicked();
+    void handle_DrawOption_Changed();
 
     void on_btnGenerateIP_clicked();
     void on_btnExit_clicked();

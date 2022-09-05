@@ -524,6 +524,7 @@ void ROOTDraw::Setup()
     fpbtngrpDrawOption->addButton(ui->btnHGDraw, 0);
     fpbtngrpDrawOption->addButton(ui->btnLGDraw, 1);
     fpbtngrpDrawOption->addButton(ui->btnTDCDraw, 2);
+    fpbtngrpDrawOption->button(0)->setChecked(1);
 
     // Draw control;
     connect(fpbtngrpDrawOption, SIGNAL(buttonClicked(int)), this, SLOT(on_btnFileDraw_clicked()));
@@ -611,10 +612,10 @@ void ROOTDraw::on_btnFileDraw_clicked()
     if (!gReadManager->IsOpen())
         return;
 
-    std::cout << "Test: Drawing: " << std::endl;
+    // std::cout << "Test: Drawing: " << std::endl;
     // gReadManager->DrawHG(GetDrawChannel());
     gReadManager->Draw(GetDrawChannel(), (DrawOption)GetDrawOption());
-    std::cout << "Drawed" << std::endl;
+    // std::cout << "Test: Drawed" << std::endl;
     Update();
 }
 

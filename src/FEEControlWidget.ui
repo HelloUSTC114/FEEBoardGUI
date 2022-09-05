@@ -724,87 +724,10 @@
          <string>Load CITIROC Cofiguration File</string>
         </property>
         <layout class="QGridLayout" name="gridLayout">
-         <item row="0" column="1" colspan="2">
-          <widget class="QPushButton" name="btnCITIROC_Path">
-           <property name="text">
-            <string>Choose Path</string>
-           </property>
-          </widget>
-         </item>
-         <item row="11" column="0" colspan="3">
-          <widget class="QPushButton" name="btnSaveCITIROC">
-           <property name="text">
-            <string>Scan From Monitor &amp;&amp; Save </string>
-           </property>
-          </widget>
-         </item>
-         <item row="13" column="0" colspan="3">
-          <widget class="Line" name="line_4">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="0" colspan="3">
+         <item row="7" column="0" colspan="3">
           <widget class="QLineEdit" name="lineCITIROC_scFile">
            <property name="readOnly">
             <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="0" colspan="3">
-          <widget class="Line" name="line_2">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-          </widget>
-         </item>
-         <item row="14" column="2">
-          <widget class="QPushButton" name="btnPrintToScreen">
-           <property name="text">
-            <string>Print to Screen</string>
-           </property>
-          </widget>
-         </item>
-         <item row="10" column="0" colspan="3">
-          <widget class="QPushButton" name="btnSendConfig">
-           <property name="text">
-            <string>Scan From Monitor &amp;&amp; Send</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0" colspan="3">
-          <widget class="QLineEdit" name="lineCITIROC_Path">
-           <property name="readOnly">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="14" column="0" colspan="2">
-          <widget class="QPushButton" name="btnScanConfig2Mem">
-           <property name="text">
-            <string>Scan to Memory</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="0">
-          <widget class="QLabel" name="label_20">
-           <property name="text">
-            <string>SC File:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="1" colspan="2">
-          <widget class="QPushButton" name="btnCITIROC_pbFile">
-           <property name="text">
-            <string>Choose Probe File</string>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="0">
-          <widget class="QLabel" name="label_21">
-           <property name="text">
-            <string>Probe File: </string>
            </property>
           </widget>
          </item>
@@ -815,45 +738,125 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="0" colspan="3">
-          <widget class="Line" name="line">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
+         <item row="14" column="0" colspan="3">
+          <widget class="QPushButton" name="btnSaveCITIROC">
+           <property name="text">
+            <string>Scan From Monitor &amp;&amp; Save </string>
            </property>
           </widget>
          </item>
-         <item row="7" column="0" colspan="3">
+         <item row="10" column="0" colspan="3">
           <widget class="QLineEdit" name="lineCITIROC_pbFile">
            <property name="readOnly">
             <bool>true</bool>
            </property>
           </widget>
          </item>
+         <item row="2" column="0" colspan="3">
+          <widget class="QLineEdit" name="lineCITIROC_Path">
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="13" column="0" colspan="3">
+          <widget class="QPushButton" name="btnSendConfig">
+           <property name="text">
+            <string>Scan From Monitor &amp;&amp; Send</string>
+           </property>
+          </widget>
+         </item>
+         <item row="17" column="2">
+          <widget class="QPushButton" name="btnPrintToScreen">
+           <property name="text">
+            <string>Print to Screen</string>
+           </property>
+          </widget>
+         </item>
+         <item row="9" column="0">
+          <widget class="QLabel" name="label_21">
+           <property name="text">
+            <string>Probe File: </string>
+           </property>
+          </widget>
+         </item>
          <item row="8" column="0" colspan="3">
-          <widget class="Line" name="line_3">
+          <widget class="Line" name="line_2">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
           </widget>
          </item>
-         <item row="9" column="0" colspan="3">
-          <widget class="QPushButton" name="btnReadCITIROC">
+         <item row="17" column="0" colspan="2">
+          <widget class="QPushButton" name="btnScanConfig2Mem">
            <property name="text">
-            <string>Read From File &amp;&amp; Send</string>
+            <string>Scan to Memory</string>
            </property>
           </widget>
          </item>
-         <item row="3" column="1" colspan="2">
+         <item row="15" column="0" colspan="3">
+          <widget class="QPushButton" name="btnMask_3">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Send Masks</string>
+           </property>
+          </widget>
+         </item>
+         <item row="9" column="1" colspan="2">
+          <widget class="QPushButton" name="btnCITIROC_pbFile">
+           <property name="text">
+            <string>Choose Probe File</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0" colspan="3">
+          <widget class="Line" name="line">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="1" colspan="2">
           <widget class="QPushButton" name="btnCITIROC_scFile">
            <property name="text">
             <string>Choose SC File</string>
            </property>
           </widget>
          </item>
-         <item row="12" column="0" colspan="3">
-          <widget class="QPushButton" name="btnMask">
+         <item row="6" column="0">
+          <widget class="QLabel" name="label_20">
            <property name="text">
-            <string>Send Masks</string>
+            <string>SC File:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="16" column="0" colspan="3">
+          <widget class="Line" name="line_4">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="11" column="0" colspan="3">
+          <widget class="Line" name="line_3">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0" colspan="3">
+          <widget class="QPushButton" name="btnReadCITIROC">
+           <property name="text">
+            <string>Read From File &amp;&amp; Send</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1" colspan="2">
+          <widget class="QPushButton" name="btnCITIROC_Path">
+           <property name="text">
+            <string>Choose Path</string>
            </property>
           </widget>
          </item>
@@ -895,7 +898,7 @@
           </widget>
          </item>
          <item row="6" column="0" colspan="2">
-          <widget class="QPushButton" name="btnMask_2">
+          <widget class="QPushButton" name="btnMask">
            <property name="text">
             <string>Send Masks</string>
            </property>
@@ -1161,7 +1164,7 @@
        <item row="3" column="0">
         <widget class="QLabel" name="label_31">
          <property name="text">
-          <string>Count Rate:</string>
+          <string>Count Rate:(all/tran)</string>
          </property>
         </widget>
        </item>
@@ -1172,20 +1175,13 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="1" colspan="2">
-        <widget class="QLineEdit" name="lineCountRate">
-         <property name="readOnly">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="1">
         <widget class="QTimeEdit" name="timerDAQ">
          <property name="readOnly">
           <bool>true</bool>
          </property>
          <property name="displayFormat">
-          <string>HH:mm::ss</string>
+          <string>HH:mm:ss</string>
          </property>
          <property name="calendarPopup">
           <bool>false</bool>
@@ -1216,12 +1212,26 @@
        <item row="2" column="0">
         <widget class="QLabel" name="label_37">
          <property name="text">
-          <string>Count: </string>
+          <string>Count: (all/tran)</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="1" colspan="2">
+       <item row="3" column="1">
+        <widget class="QLineEdit" name="lineCountRate">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
         <widget class="QLineEdit" name="lineDAQCount">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="2">
+        <widget class="QLineEdit" name="lineCountRateTran">
          <property name="readOnly">
           <bool>true</bool>
          </property>
@@ -1312,7 +1322,7 @@
           <item row="1" column="2" colspan="2">
            <widget class="QPushButton" name="btnFileClose">
             <property name="text">
-             <string>Close Save File</string>
+             <string>Close&amp;&amp;Delete</string>
             </property>
            </widget>
           </item>
@@ -1354,7 +1364,7 @@
           <item row="1" column="1">
            <widget class="QTimeEdit" name="timeDAQSetting">
             <property name="displayFormat">
-             <string>HH::mm::ss</string>
+             <string>HH:mm:ss</string>
             </property>
             <property name="time">
              <time>
@@ -1480,6 +1490,9 @@
         <widget class="QRadioButton" name="btnHGDraw">
          <property name="text">
           <string>High Gain</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
          </property>
         </widget>
        </item>

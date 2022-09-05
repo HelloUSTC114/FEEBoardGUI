@@ -58,7 +58,7 @@ void DAQRuning::startDAQ(FEEControlWin *w)
     w->fDAQStartTime = QDateTime::currentDateTime();
 
     // Clear queue before DAQ Start
-    if(w->fFlagClearQueue)
+    if (w->fFlagClearQueue)
     {
         gBoard->clean_queue(0);
         gBoard->clean_queue(1);
@@ -215,6 +215,10 @@ FEEControlWin::FEEControlWin(QWidget *parent)
     fpbtngrpDrawOption->addButton(ui->btnHGDraw, 0);
     fpbtngrpDrawOption->addButton(ui->btnLGDraw, 1);
     fpbtngrpDrawOption->addButton(ui->btnTDCDraw, 2);
+    fpbtngrpDrawOption->button(0)->setChecked(1);
+
+    connect(fpbtngrpDrawOption, SIGNAL(buttonClicked(int)), this, SLOT(handle_DrawOption_Changed()));
+    connect(ui->boxDrawCh, SIGNAL(textChanged(QString)), this, SLOT(handle_DrawOption_Changed()));
 
     // End
     // show();
@@ -410,9 +414,7 @@ void FEEControlWin::on_btnConnect_clicked()
 void FEEControlWin::on_btnHVON_clicked()
 {
     gBoard->HVON();
-    Sleep(500);
-    gBoard->HVMonitor();
-    PrintHV();
+    QTimer::singleShot(2000, this, SLOT(on_btnHPO_clicked()));
 }
 
 void FEEControlWin::on_btnHPO_clicked()
@@ -423,11 +425,13 @@ void FEEControlWin::on_btnHPO_clicked()
 void FEEControlWin::on_btnHVOFF_clicked()
 {
     gBoard->HVOFF();
+    QTimer::singleShot(2000, this, SLOT(on_btnHPO_clicked()));
 }
 
 void FEEControlWin::on_btnHVSet_clicked()
 {
     gBoard->HVSet(ui->boxHVSet->value());
+    QTimer::singleShot(2000, this, SLOT(on_btnHPO_clicked()));
 }
 
 void FEEControlWin::on_btnRegTest_clicked()
@@ -466,7 +470,7 @@ void FEEControlWin::on_btnExit_clicked()
 // ROOT File Open, DAQ Control: Start, Stop
 void FEEControlWin::on_btnPath_clicked()
 {
-    fsFilePath = QFileDialog::getExistingDirectory(this, tr("Choosing File Path"), QDir::currentPath() + "/../MuonTestControl");
+    fsFilePath = QFileDialog::getExistingDirectory(this, tr("Choosing File Path"), QDir::currentPath() + "/../MuonTestControl/Data");
 
     if (fsFilePath == "")
         return;
@@ -524,7 +528,7 @@ void FEEControlWin::on_btnFileInit_clicked()
     ui->btnDAQStop->setEnabled(false);
 }
 
-void FEEControlWin::on_btnFileClose_clicked()
+void FEEControlWin::CloseSaveFile()
 {
     gDataManager->Close();
     ui->btnFileInit->setEnabled(true);
@@ -544,9 +548,33 @@ void FEEControlWin::on_btnFileClose_clicked()
     ui->btnDAQStop->setEnabled(false);
 }
 
+void FEEControlWin::on_btnFileClose_clicked()
+{
+    CloseSaveFile();
+    QFile fileTemp(fsFilePath + "/" + fsFileNameTotal);
+    fileTemp.remove();
+}
+
 //! TODO: Add HG, LG, TDC data counter monitor in GUI
 void FEEControlWin::handle_DAQCount(int nCount)
 {
+    // Update Transist count rate
+    static QDateTime sLastTime = QDateTime::currentDateTime();
+    static int sLastCount = nCount;
+    static double sTransCR = 0;
+    static int sTransTimeInteval = 0;
+    int transCount = nCount - sLastCount;
+    if ((sTransTimeInteval = sLastTime.msecsTo(QDateTime::currentDateTime())) > 1000 && transCount > 0)
+    {
+        std::cout << "Count: " << nCount << '\t' << transCount << '\t' << sTransTimeInteval << std::endl;
+        sTransCR = (double)transCount / sTransTimeInteval * 1000;
+        sLastCount = nCount;
+        sTransTimeInteval = 0;
+        sLastTime = QDateTime::currentDateTime();
+    }
+
+    ui->lineCountRateTran->setText(QString::number(sTransCR));
+
     // Update real count and time monitor first
     fDAQRealCount = nCount;
     fDAQRealTime = fDAQStartTime.msecsTo(QDateTime::currentDateTime());
@@ -616,7 +644,8 @@ bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nD
 
     if (gDataManager->IsOpen())
     {
-        on_btnFileClose_clicked();
+        // on_btnFileClose_clicked();
+        CloseSaveFile();
     }
 
     auto rtn = GenerateROOTFile();
@@ -696,7 +725,8 @@ void FEEControlWin::on_DAQStoped(int nDAQLoop)
     fDAQClock.stop();
     update_DAQClock();
 
-    on_btnFileClose_clicked();
+    CloseSaveFile();
+    // on_btnFileClose_clicked();
     on_btnHVOFF_clicked();
 
     // Tell other class that DAQ is done
@@ -1010,7 +1040,7 @@ void FEEControlWin::on_btnStopDraw_clicked()
     if (!fdrawWin)
         return;
     fdrawWin->Update();
-    fdrawWin->SetOccupied(false);
+    fdrawWin->SetOccupied(NULL, false);
 }
 
 void FEEControlWin::handle_ContinousDraw()
@@ -1060,6 +1090,15 @@ void FEEControlWin::on_btnDraw_clicked()
     fdrawWin->show();
     // fdrawWin->Update();
     fdrawWin->Update();
+}
+
+void FEEControlWin::handle_DrawOption_Changed()
+{
+    if (fDrawFlag && fdrawWin && !fdrawWin->isHidden())
+    {
+        fdrawWin->SetDrawChannel(GetDrawChannel());
+        fdrawWin->SetDrawOption(GetDrawOption());
+    }
 }
 // Draw Control End
 
