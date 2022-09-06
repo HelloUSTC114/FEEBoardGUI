@@ -60,6 +60,7 @@ public:
     /// @param msBufferSleep FEE board buffer reading waiting time (in ms)
     /// @return whether DAQ start Successfully
     bool TryStartDAQ(std::string sPath, std::string sFileName, int nDAQCount = -1, QTime DAQTime = {0, 0, 0}, int msBufferSleep = 200, int leastBufferEvent = 30);
+    bool IsDAQRunning() { return fDAQIsRunning; }
 
     QDateTime GetFileTimeStamp() { return fFileTimeStamp; };
 
@@ -126,18 +127,19 @@ private:
 
     // DAQ File Manager
     bool GenerateROOTFile(); // Generate root file
-    void CloseSaveFile();   // Close ROOT File
+    void CloseSaveFile();    // Close ROOT File
 
     QString fsFilePath = "../MuonTestControl/Data"; // Save ROOT File Path
     QString fsFileName = "Data";                    // Save ROOT File Name without time stamp
     QString fsFileNameTotal;                        // Save ROOT File Total Name, with time stamp
     QDateTime fFileTimeStamp;                       //
 
+    bool fDAQIsRunning = 0;            // record whehter DAQ is running
     int fDAQSettingCount = -1;         // -1 means DAQ forever until stopDAQ clicked
     QTime fDAQSettingTime{0, 0, 0, 0}; // DAQ time setting, 0,0,0,0 means forever until stopDAQ clicked
     int fDAQRealTime = 0;              // monitored real DAQ total time
     int fDAQRealCount = 0;             // Monitored read DAQ count
-    volatile bool fDAQRuningFlag = 0;  // DAQ runing flag
+    volatile bool fDAQRuningFlag = 0;  // DAQ runing flag, used to break daq process
     QDateTime fDAQStartTime;           // Record start DAQ time
     QTimer fDAQClock;                  // a 1s clock, aims at updating DAQ time in GUI
     DAQRuning *fDAQProcessor = NULL;   //
@@ -230,5 +232,94 @@ private slots:
     void on_btnClearDraw_clicked();
 };
 #define gFEEControlWin (FEEControlWin::Instance())
+
+// DAQ Controller and device contoller
+
+struct DAQRequestInfo
+{
+    std::string sPath;
+    std::string sFileName;
+    int nDAQCount;
+    QTime DAQTime;
+    int msBufferSleep;
+    int leastBufferEvent;
+};
+
+class DeviceDAQConnector : public QObject
+{
+    Q_OBJECT
+public:
+    static DeviceDAQConnector *Instance();
+    ~DeviceDAQConnector();
+    bool IsOccupied() { return fOccupied; };
+    void SetBreak() { fBreakFlag = 1; };
+
+    bool TryTestPrepare(); // connect DAQ signals inside FEEControlWidget and slots in this class
+    void TestStop();       // Disconnect singlas and slots
+
+private:
+    DeviceDAQConnector();
+    void ConnectSlots();
+    void DisconnectSlots();
+
+    bool fOccupied = 0;
+    volatile bool fBreakFlag = 0;
+    volatile bool fLastLoopFlag = 0;
+
+    int fDAQhandle = 0;
+
+signals:
+    void DAQDone(int daqHandle); // Whole process is controlled by device controller
+    void LastDAQDone(int daqHandle);
+
+public slots:
+    void handle_DAQRequest(int deviceHandle, DAQRequestInfo *daq);
+    void handle_LastDAQRequest(int deviceHandle, DAQRequestInfo *daq);
+
+private slots:
+    void handle_DAQStart();
+    void handle_DAQDone();
+};
+
+#define gDAQConnector (DeviceDAQConnector::Instance())
+
+/// @brief pure virtual device controller
+class VDeviceController : public QObject
+{
+    Q_OBJECT
+public:
+    virtual bool StartTest();
+    virtual void ForceStopDevice();
+
+signals:
+    void RequestForDAQ(int daqHandle, DAQRequestInfo *daq);
+    void RequestForLastDAQ(int daqHandle, DAQRequestInfo *daq);
+
+public slots:
+    virtual void handle_DAQDone(int daqHandle);
+    virtual void handle_LastDAQDone(int daqHandle);
+
+protected:
+    int fDeviceHandle = 0;
+    bool fOccupied = 0;
+    volatile bool fStopFlag = 0;
+    volatile bool fLastLoopFlag = 0;
+
+    DAQRequestInfo fDAQInfo;
+
+    virtual void TestStop();
+    virtual void ProcessDeviceHandle(int deviceHandle) = 0;
+
+    virtual void ConnectSlots();
+    virtual void DisconnectSlots();
+};
+
+class TestDevice : public VDeviceController
+{
+    Q_OBJECT
+
+public:
+    virtual void ProcessDeviceHandle(int deviceHandle) override;
+};
 
 #endif // WIDGET_H

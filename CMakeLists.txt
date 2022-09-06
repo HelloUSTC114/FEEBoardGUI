@@ -16,6 +16,13 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 find_package(ROOT REQUIRED COMPONENTS Core)
 
 include_directories("include/")
+include_directories("C:/Program\ Files/IVI Foundation/VISA/Win64/Include")
+
+find_library(NIVISA64 nivisa64.lib "C:/Program\ Files/IVI\ Foundation/VISA/Win64/Lib_x64/msc")
+find_library(VISA64 visa64.lib "C:/Program\ Files/IVI\ Foundation/VISA/Win64/Lib_x64/msc")
+# message(${VISA64} ${NIVISA64})
+
+link_libraries(${VISA64} ${NIVISA64})
 link_libraries(Ws2_32)
 link_libraries(
     ROOT::Core ROOT::Imt ROOT::RIO ROOT::Net ROOT::Hist ROOT::Graf ROOT::Graf3d ROOT::Gpad ROOT::ROOTDataFrame ROOT::Tree ROOT::TreePlayer ROOT::Rint ROOT::Postscript ROOT::Matrix ROOT::Physics ROOT::MathCore ROOT::Thread ROOT::ROOTVecOps
@@ -40,6 +47,9 @@ set(PROJECT_SOURCES
     include/ROOTDraw.h
     src/ROOTDraw.cpp
     src/ROOTDraw.ui
+
+    include/visaapi.h
+    src/visaapi.cpp
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
