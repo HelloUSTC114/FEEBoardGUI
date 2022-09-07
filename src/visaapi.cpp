@@ -1,11 +1,49 @@
+#define VISAAPI_CXX
+#pragma warning(disable : 4996)
 #include "visaapi.h"
 
 #include <iostream>
 
+std::string ConvertAFGWaveform(AFGWaveform waveform)
+{
+    switch (waveform)
+    {
+    case (Pulse):
+        return "Pulse";
+    case (DC):
+        return "DC";
+    case (USER1):
+        return "USER1";
+    case (USER2):
+        return "USER2";
+    case (USER3):
+        return "USER3";
+    default:
+        return "";
+    }
+    return "";
+}
+
+std::string ConvertAFGFreqUnit(AFGFreqUnit unit)
+{
+    switch (unit)
+    {
+    case (MHz):
+        return "MHz";
+    case (kHz):
+        return "kHz";
+    case (Hz):
+        return "Hz";
+    default:
+        return "";
+    }
+    return "";
+}
+
 VisaAPI::VisaAPI()
 {
     OpenDevice();
-    Init();
+    // InitDevice();
 }
 
 VisaAPI::~VisaAPI()
@@ -14,7 +52,7 @@ VisaAPI::~VisaAPI()
     CloseDevice();
 }
 
-void VisaAPI::Init()
+void VisaAPI::InitDevice()
 {
     if (!fDeviceFound)
         return;
@@ -30,7 +68,6 @@ void VisaAPI::Init()
     std::cout << "id: " << deviceName << ": " << buffer << std::endl;
 
     // Core write read
-    int errorCount = 0;
     std::string sCmd;
 
     // Oscilllator setting
@@ -141,32 +178,139 @@ void VisaAPI::CloseDevice()
 int VisaAPI::SetAmp(int amp)
 {
     int status = 0;
-    // Open resource found in rsrc deviceList
-    status = viOpen(defaultRM, deviceName, VI_NULL, VI_NULL, &device);
-
-    int errorCount = 0;
     std::string sCmd;
     sCmd = "source1:voltage:level:immediate:amplitude " + std::to_string(amp) + "mVpp";
-    WriteCMD(sCmd);
-
-    if (status < 0)
-    {
-        ProcessError(status);
-    }
+    int rtn = WriteCMD(sCmd);
+    if (rtn < 0)
+        return rtn;
 
     // Read amplitude
     sCmd = "source1:voltage:level:immediate:amplitude?";
     double recieveAmp = 0;
     // char *buf[256];
     status = viQueryf(device, (ViString)sCmd.c_str(), "%lf", &recieveAmp);
-    std::cout << recieveAmp * 1000 << '\t' << (amp == (recieveAmp * 1000)) << std::endl;
-    _sleep(1000);
+    std::cout << "Recieved Amplitude: " << recieveAmp * 1000 << " mV." << std::endl;
+    _sleep(100);
+    return 0;
+}
+
+int VisaAPI::SetHigh(double high)
+{
+    int status = 0;
+    char buf[20];
+    sprintf(buf, "%.2f", high);
+    std::string sCmd;
+    std::string sHigh = buf;
+
+    sCmd = "source1:voltage:high " + sHigh + "mV";
+    int rtn = WriteCMD(sCmd);
+    if (rtn < 0)
+        return rtn;
+
+    // Read amplitude
+    sCmd = "source1:voltage:high?";
+    double recieveAmp = 0;
+    // char *buf[256];
+    status = viQueryf(device, (ViString)sCmd.c_str(), "%lf", &recieveAmp);
+    std::cout << "Recieved high: " << recieveAmp * 1000 << " mV." << std::endl;
+    _sleep(100);
+    return 0;
+}
+
+int VisaAPI::SetLow(double low)
+{
+    int status = 0;
+    char buf[20];
+    sprintf(buf, "%.2f", low);
+    std::string sCmd;
+    std::string sLow = buf;
+
+    sCmd = "source1:voltage:low " + sLow + "mV";
+    int rtn = WriteCMD(sCmd);
+    if (rtn < 0)
+        return rtn;
+
+    // Read amplitude
+    sCmd = "source1:voltage:low?";
+    double recieveAmp = 0;
+    // char *buf[256];
+    status = viQueryf(device, (ViString)sCmd.c_str(), "%lf", &recieveAmp);
+    std::cout << "Recieved low: " << recieveAmp * 1000 << " mV." << std::endl;
+    _sleep(100);
+    return 0;
+}
+
+int VisaAPI::SetOffset(double offset)
+{
+    int status = 0;
+    char buf[20];
+    sprintf(buf, "%.2f", offset);
+    std::string sCmd;
+    std::string sOffset = buf;
+
+    sCmd = "source1:voltage:offset " + sOffset + "mV";
+    int rtn = WriteCMD(sCmd);
+    if (rtn < 0)
+        return rtn;
+
+    // Read amplitude
+    sCmd = "source1:voltage:offset?";
+    double recieveAmp = 0;
+    // char *buf[256];
+    status = viQueryf(device, (ViString)sCmd.c_str(), "%lf", &recieveAmp);
+    std::cout << "Recieved offset: " << recieveAmp * 1000 << " mV." << std::endl;
+    _sleep(100);
+    return 0;
+}
+
+int VisaAPI::SetChannelStatus(int ch, bool openFlag)
+{
+    if (ch < 1 || ch > 2)
+        return 1;
+    int status = 0;
+    char buf[80];
+    sprintf(buf, "output%d: %d", ch, openFlag);
+    std::string sCmd = buf;
+
+    int rtn = WriteCMD(sCmd);
+    if (rtn < 0)
+        return rtn;
+
+    // Read amplitude
+    sCmd = "source1?";
+    int recieveAmp = 0;
+    // char *buf[256];
+    status = viQueryf(device, (ViString)sCmd.c_str(), "%d", &recieveAmp);
+    std::cout << "Channel " << ch << " status: " << recieveAmp << std::endl;
+    _sleep(100);
+    return 0;
+}
+
+int VisaAPI::SetWaveForm(AFGWaveform wave)
+{
+    int status = 0;
+    std::string sCmd;
+    std::string sWave = ConvertAFGWaveform(wave);
+    if (sWave == "")
+        return 1;
+    sCmd = "source1:function:shape " + sWave + "mVpp";
+    int rtn = WriteCMD(sCmd);
+    if (rtn < 0)
+        return rtn;
+
+    // Read amplitude
+    sCmd = "source1:function:shape?";
+    // double recieveAmp = 0;
+    memset(buffer, '\0', 256 * sizeof(char));
+    status = viQueryf(device, (ViString)sCmd.c_str(), "%s", buffer);
+    std::cout << "Recieved Amplitude: " << buffer << " mV." << std::endl;
+    _sleep(100);
     return 0;
 }
 
 int VisaAPI::ProcessError(ViStatus status)
 {
-    ViChar buffer[256];
+    memset(buffer, '\0', 256 * sizeof(char));
     // Report error and clean up
     viStatusDesc(device, status, buffer);
     std::cout << "Failure: " << buffer << std::endl;

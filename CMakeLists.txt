@@ -50,6 +50,13 @@ set(PROJECT_SOURCES
 
     include/visaapi.h
     src/visaapi.cpp
+
+    include/VDeviceController.h
+    src/VDeviceController.cpp
+
+    include/VisaDAQControl.h
+    src/VisaDAQControl.cpp
+    src/VisaDAQControl.ui
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

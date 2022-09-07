@@ -29,7 +29,7 @@
     <enum>Qt::DefaultContextMenu</enum>
    </property>
    <property name="currentIndex">
-    <number>2</number>
+    <number>0</number>
    </property>
    <property name="movable">
     <bool>false</bool>
@@ -1024,11 +1024,6 @@
       <string>CITIROC Config</string>
      </property>
     </widget>
-   </widget>
-   <widget class="QWidget" name="tab">
-    <attribute name="title">
-     <string>ADC NonLinear</string>
-    </attribute>
    </widget>
   </widget>
   <widget class="QFrame" name="frame_6">

@@ -17,11 +17,22 @@
 // #include "feecontrol.h"
 #include "configfileparser.h"
 #include "ROOTDraw.h"
+#include "VDeviceController.h"
+#include "VisaDAQControl.h"
 
 int main(int argc, char *argv[])
 {
     QApplication qapp(argc, argv);
     new TApplication("QTCanvas Demo", &argc, argv);
+
+    {
+        VisaDAQControlWin b;
+        b.show();
+        return qapp.exec();
+    }
+
+    // TestDevice a;
+    // a.StartTest();
 
     //    std::vector<Device> deviceList;
 
@@ -110,14 +121,14 @@ int main(int argc, char *argv[])
     //     return qapp.exec();
     // }
 
-    {
-        // gFEEControlWin->Test();
-        gFEEControlWin->show();
-        // ROOTDraw a;
-        // a.show();
-        return qapp.exec();
-        return 1;
-    }
+    // {
+    //     // gFEEControlWin->Test();
+    //     gFEEControlWin->show();
+    //     // ROOTDraw a;
+    //     // a.show();
+    //     return qapp.exec();
+    //     return 1;
+    // }
 
     // /*! \class dataManager test
     //  *
