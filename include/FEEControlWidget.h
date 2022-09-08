@@ -1,5 +1,6 @@
 #ifndef WIDGET_H
 #define WIDGET_H
+#pragma warning(disable : 4996)
 
 // Qt
 #include <QWidget>
@@ -64,8 +65,11 @@ public:
     /// @param DAQTime DAQ time
     /// @param msBufferSleep FEE board buffer reading waiting time (in ms)
     /// @return whether DAQ start Successfully
-    bool TryStartDAQ(std::string sPath, std::string sFileName, int nDAQCount = -1, QTime DAQTime = {0, 0, 0}, int msBufferSleep = 200, int leastBufferEvent = 30);
+    bool TryStartDAQ(std::string sPath, std::string sFileName, int nDAQCount = -1, QTime DAQTime = {0, 0, 0}, int msBufferSleep = 200, int leastBufferEvent = 30, bool clearBeforeDAQ = 1);
     bool IsDAQRunning() { return fDAQIsRunning; }
+    QString GetPath() { return fsFilePath; }
+    QString GetFileName() { return fsFileName; }
+    QString GetFileNameWithStamp() { return fsFileNameTotal; }
 
     QDateTime GetFileTimeStamp() { return fFileTimeStamp; };
 
@@ -132,7 +136,7 @@ private:
     /// @param nCount Count number for DAQ, -1 for forever
     /// @param daqTime Count time for DAQ, 00:00:00.000 for forever
     /// @param msBufferWaiting Parameter for Socket communication, if buffer is not long enough, how long (in ms) should be wait.
-    void ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting, int leastBufferEvent = 30);
+    void ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting, int leastBufferEvent = 30, bool fClearQueue = 1);
 
     // DAQ File Manager
     bool GenerateROOTFile(); // Generate root file

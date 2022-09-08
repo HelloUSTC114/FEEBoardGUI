@@ -90,8 +90,14 @@ void DeviceDAQConnector::handle_DAQRequest(int deviceHandle, DAQRequestInfo *daq
     if (fDAQhandle != deviceHandle)
         std::cout << "Warning inside DAQ connector: Handle not match: DAQ handle: " << fDAQhandle << '\t' << "Device request Handle: " << deviceHandle << std::endl;
     std::cout << "Message: Processing DAQ handle: " << fDAQhandle << std::endl;
+    // gFEEControlWin->TryStartDAQ(daq->sPath, daq->sFileName, daq->nDAQCount, daq->DAQTime, daq->msBufferSleep, daq->leastBufferEvent);
+
+    std::cout << "daq file name: " << daq->sFileName << std::endl
+              << std::endl;
+    QTimer timer;
+    timer.singleShot(1000, gFEEControlWin, SIGNAL(stopDAQSignal()));
+    // _sleep(1000);
     // emit gFEEControlWin->stopDAQSignal();
-    gFEEControlWin->TryStartDAQ(daq->sPath, daq->sFileName, daq->nDAQCount, daq->DAQTime, daq->msBufferSleep, daq->leastBufferEvent);
 }
 
 //! \class VDeviceController
@@ -99,7 +105,6 @@ void VDeviceController::handle_DAQDone(int daqHandle)
 {
     if (fDeviceHandle - 1 != daqHandle)
         std::cout << "Warning inside device controller: Handle not match: DAQ handle: " << daqHandle << '\t' << "Device request DAQ Handle: " << fDeviceHandle - 1 << std::endl;
-    ProcessDeviceHandle(fDeviceHandle);
 
     if (fStopFlag)
     {
@@ -107,6 +112,15 @@ void VDeviceController::handle_DAQDone(int daqHandle)
         return;
     }
 
+    bool flag = ProcessDeviceHandle(fDeviceHandle);
+
+    if (fStopFlag || !flag)
+    {
+        TestStop();
+        return;
+    }
+
+    fLastLoopFlag = JudgeLastLoop(fDeviceHandle);
     if (fLastLoopFlag)
     {
         emit RequestForLastDAQ(fDeviceHandle++, &fDAQInfo);
@@ -122,8 +136,18 @@ void VDeviceController::handle_LastDAQDone(int daqHandle)
     TestStop();
 }
 
+void VDeviceController::handle_ForceStopDAQ()
+{
+    TestStop();
+}
+
 bool VDeviceController::StartTest()
 {
+    if (fOccupied)
+    {
+        std::cout << "Warning: Device is occupied, abort" << std::endl;
+        return false;
+    }
     if (fStopFlag)
     {
         std::cout << "Warning: Stop flag is set to 1 before device start, abort." << std::endl;
@@ -136,9 +160,10 @@ bool VDeviceController::StartTest()
         return false;
     }
     bool flag = ProcessDeviceHandle(fDeviceHandle);
-    if (fStopFlag && flag)
+    if (fStopFlag || !flag)
     {
         std::cout << "Message: DAQ stop after the first device request." << std::endl;
+        std::cout << "fStopFlag: " << fStopFlag << '\t' << "flag: " << flag << std::endl;
         return true;
     }
     fOccupied = 1;
@@ -164,9 +189,9 @@ void VDeviceController::ConnectSlots()
 
     connect(gDAQConnector, &DeviceDAQConnector::DAQDone, this, &VDeviceController::handle_DAQDone);
     connect(gDAQConnector, &DeviceDAQConnector::LastDAQDone, this, &VDeviceController::handle_LastDAQDone);
-    
+
     // Connect force stop daq signal with last daq done slots, tell device to stop
-    connect(gDAQConnector, &DeviceDAQConnector::forceStopDAQSignal, this, &VDeviceController::handle_LastDAQDone);
+    connect(gDAQConnector, &DeviceDAQConnector::forceStopDAQSignal, this, &VDeviceController::handle_ForceStopDAQ);
 }
 
 void VDeviceController::DisconnectSlots()
@@ -176,7 +201,7 @@ void VDeviceController::DisconnectSlots()
 
     disconnect(gDAQConnector, &DeviceDAQConnector::DAQDone, this, &VDeviceController::handle_DAQDone);
     disconnect(gDAQConnector, &DeviceDAQConnector::LastDAQDone, this, &VDeviceController::handle_LastDAQDone);
-    disconnect(gDAQConnector, &DeviceDAQConnector::forceStopDAQSignal, this, &VDeviceController::handle_LastDAQDone);
+    disconnect(gDAQConnector, &DeviceDAQConnector::forceStopDAQSignal, this, &VDeviceController::handle_ForceStopDAQ);
 }
 
 bool TestDevice::ProcessDeviceHandle(int deviceHandle)
@@ -188,4 +213,11 @@ bool TestDevice::ProcessDeviceHandle(int deviceHandle)
         return false;
     }
     return true;
+}
+
+void VDeviceController::ForceStopDevice()
+{
+    fStopFlag = 1;
+    gDAQConnector->SetBreak();
+    TestStop();
 }

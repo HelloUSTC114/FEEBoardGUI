@@ -11,6 +11,7 @@ struct DAQRequestInfo
     QTime DAQTime;
     int msBufferSleep;
     int leastBufferEvent;
+    bool clearQueueFlag;
 };
 
 // DAQ Controller and device contoller
@@ -63,15 +64,17 @@ class VDeviceController : public QObject
     Q_OBJECT
 public:
     virtual bool StartTest();
-    virtual void ForceStopDevice() { fStopFlag = 1; };
+    virtual void ForceStopDevice();
 
 signals:
     void RequestForDAQ(int daqHandle, DAQRequestInfo *daq);
     void RequestForLastDAQ(int daqHandle, DAQRequestInfo *daq);
+    void RequestForForceStop();
 
 public slots:
     virtual void handle_DAQDone(int daqHandle);
     virtual void handle_LastDAQDone(int daqHandle);
+    virtual void handle_ForceStopDAQ();
 
 protected:
     int fDeviceHandle = 0;
@@ -83,6 +86,7 @@ protected:
 
     virtual void TestStop();
     virtual bool ProcessDeviceHandle(int deviceHandle) = 0;
+    virtual bool JudgeLastLoop(int deviceHandle) = 0;
 
     virtual void ConnectSlots();
     virtual void DisconnectSlots();

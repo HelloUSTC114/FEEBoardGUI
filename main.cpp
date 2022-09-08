@@ -26,8 +26,8 @@ int main(int argc, char *argv[])
     new TApplication("QTCanvas Demo", &argc, argv);
 
     {
-        VisaDAQControlWin b;
-        b.show();
+        gFEEControlWin->show();
+        gVisaDAQWin->show();
         return qapp.exec();
     }
 

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>800</width>
-    <height>600</height>
+    <height>663</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,10 +17,10 @@
    <widget class="QFrame" name="frame">
     <property name="geometry">
      <rect>
-      <x>420</x>
-      <y>10</y>
-      <width>300</width>
-      <height>531</height>
+      <x>389</x>
+      <y>0</y>
+      <width>331</width>
+      <height>571</height>
      </rect>
     </property>
     <property name="frameShape">
@@ -30,6 +30,234 @@
      <enum>QFrame::Raised</enum>
     </property>
     <layout class="QGridLayout" name="gridLayout_2">
+     <item row="3" column="0" colspan="2">
+      <widget class="QGroupBox" name="grpDAQctrl">
+       <property name="title">
+        <string>DAQ Control</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_23">
+        <item row="0" column="0">
+         <widget class="QGroupBox" name="groupBox_10">
+          <property name="title">
+           <string>Data File</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_10">
+           <item row="0" column="0">
+            <widget class="QPushButton" name="btnPath">
+             <property name="text">
+              <string>Choose Path</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <widget class="QLabel" name="lblFileSuf_2">
+             <property name="text">
+              <string>*.root</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1" colspan="2">
+            <widget class="QLineEdit" name="lblFileName">
+             <property name="text">
+              <string>Data</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QGroupBox" name="grpDAQStart">
+          <property name="title">
+           <string>DAQ Setting</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_12">
+           <item row="0" column="1">
+            <widget class="QSpinBox" name="boxDAQEvent">
+             <property name="minimum">
+              <number>-1</number>
+             </property>
+             <property name="maximum">
+              <number>999999999</number>
+             </property>
+             <property name="value">
+              <number>-1</number>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QTimeEdit" name="timeDAQSetting">
+             <property name="displayFormat">
+              <string>HH:mm:ss</string>
+             </property>
+             <property name="time">
+              <time>
+               <hour>0</hour>
+               <minute>0</minute>
+               <second>0</second>
+              </time>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QSpinBox" name="boxBufferWait">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>999999999</number>
+             </property>
+             <property name="value">
+              <number>200</number>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_19">
+             <property name="text">
+              <string>Time Setting:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_32">
+             <property name="text">
+              <string>nEvents Setting:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_2">
+             <property name="text">
+              <string>Loop Wait (ms)</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="label_3">
+             <property name="text">
+              <string>Loop Least Events:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QSpinBox" name="boxLeastEvents">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>200</number>
+             </property>
+             <property name="value">
+              <number>30</number>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0" colspan="2">
+            <widget class="QCheckBox" name="boxClearQueue">
+             <property name="text">
+              <string>Clear Q before DAQ</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="5" column="0" colspan="2">
+      <spacer name="verticalSpacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>40</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item row="4" column="1">
+      <widget class="QGroupBox" name="groupBox">
+       <property name="title">
+        <string>DAC R Test</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_10">
+          <property name="text">
+           <string>Waiting:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="boxRTestTime">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="value">
+           <number>1</number>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="label_15">
+          <property name="text">
+           <string>s</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="3">
+         <widget class="QPushButton" name="btnStartRTest">
+          <property name="text">
+           <string>Start DAC R Test</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0" colspan="3">
+         <widget class="QPushButton" name="btnStopRTest">
+          <property name="text">
+           <string>Stop R Test</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QGroupBox" name="groupBox_3">
+       <property name="title">
+        <string>NL Test</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_5">
+        <item row="0" column="0">
+         <widget class="QPushButton" name="btnADCNL">
+          <property name="text">
+           <string>Start NL Test</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QPushButton" name="btnStopNL">
+          <property name="text">
+           <string>Stop after this done</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
      <item row="0" column="0" colspan="2">
       <widget class="QGroupBox" name="grpAFG3252">
        <property name="title">
@@ -163,153 +391,74 @@
        </layout>
       </widget>
      </item>
-     <item row="3" column="0" colspan="2">
-      <widget class="QGroupBox" name="grpDAQctrl">
-       <property name="title">
-        <string>DAQ Control</string>
+    </layout>
+   </widget>
+   <widget class="QGroupBox" name="groupBox_2">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>20</y>
+      <width>351</width>
+      <height>541</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Amp &amp;&amp; Gain List</string>
+    </property>
+    <layout class="QGridLayout" name="gridLayout_3">
+     <item row="7" column="0">
+      <widget class="QPushButton" name="btnGenerateList">
+       <property name="text">
+        <string>Generate List</string>
        </property>
-       <layout class="QGridLayout" name="gridLayout_23">
-        <item row="0" column="0">
-         <widget class="QGroupBox" name="groupBox_10">
-          <property name="title">
-           <string>Data File</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_10">
-           <item row="0" column="0">
-            <widget class="QPushButton" name="btnPath_2">
-             <property name="text">
-              <string>Choose Path</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="3">
-            <widget class="QLabel" name="lblFileSuf_2">
-             <property name="text">
-              <string>*.root</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1" colspan="2">
-            <widget class="QLineEdit" name="lblFileName_2">
-             <property name="text">
-              <string>Data</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QGroupBox" name="grpDAQStart">
-          <property name="title">
-           <string>DAQ Setting</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_12">
-           <item row="0" column="1">
-            <widget class="QSpinBox" name="boxDAQEvent">
-             <property name="minimum">
-              <number>-1</number>
-             </property>
-             <property name="maximum">
-              <number>999999999</number>
-             </property>
-             <property name="value">
-              <number>-1</number>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QTimeEdit" name="timeDAQSetting">
-             <property name="displayFormat">
-              <string>HH:mm:ss</string>
-             </property>
-             <property name="time">
-              <time>
-               <hour>0</hour>
-               <minute>0</minute>
-               <second>0</second>
-              </time>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QSpinBox" name="boxBufferWait">
-             <property name="minimum">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <number>999999999</number>
-             </property>
-             <property name="value">
-              <number>200</number>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_19">
-             <property name="text">
-              <string>Time Setting:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_32">
-             <property name="text">
-              <string>nEvents Setting:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_2">
-             <property name="text">
-              <string>Loop Wait (ms)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="label_3">
-             <property name="text">
-              <string>Loop Least Events:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="QSpinBox" name="boxLeastEvents">
-             <property name="minimum">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <number>200</number>
-             </property>
-             <property name="value">
-              <number>30</number>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="0" colspan="2">
-            <widget class="QCheckBox" name="boxClearQueue">
-             <property name="text">
-              <string>Clear Q before DAQ</string>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-       </layout>
       </widget>
      </item>
-     <item row="6" column="0" colspan="2">
-      <spacer name="verticalSpacer">
+     <item row="9" column="1">
+      <widget class="QListWidget" name="listGain"/>
+     </item>
+     <item row="1" column="0" colspan="3">
+      <widget class="QLineEdit" name="lineAFGAmp">
+       <property name="text">
+        <string>[50:10:100]</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0" colspan="3">
+      <widget class="Line" name="line">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="9" column="0">
+      <widget class="QListWidget" name="listAmp"/>
+     </item>
+     <item row="5" column="0" colspan="3">
+      <widget class="QLineEdit" name="lineSelectChannel">
+       <property name="text">
+        <string>[0:1:31]</string>
+       </property>
+      </widget>
+     </item>
+     <item row="9" column="2">
+      <widget class="QListWidget" name="listCh"/>
+     </item>
+     <item row="3" column="0" colspan="3">
+      <widget class="QLineEdit" name="lineCITIROCGain">
+       <property name="text">
+        <string>30</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="2">
+      <widget class="QPushButton" name="btnClearList">
+       <property name="text">
+        <string>Clear List</string>
+       </property>
+      </widget>
+     </item>
+     <item row="8" column="0" colspan="3">
+      <spacer name="verticalSpacer_2">
        <property name="orientation">
         <enum>Qt::Vertical</enum>
        </property>
@@ -321,78 +470,15 @@
        </property>
       </spacer>
      </item>
-     <item row="4" column="0">
-      <widget class="QPushButton" name="btnADCNL">
-       <property name="text">
-        <string>Start NL Test</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
-      <widget class="QPushButton" name="pushButton_2">
-       <property name="text">
-        <string>Start DAC R Test</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QGroupBox" name="groupBox_2">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>30</y>
-      <width>341</width>
-      <height>481</height>
-     </rect>
-    </property>
-    <property name="title">
-     <string>Amp &amp;&amp; Gain List</string>
-    </property>
-    <layout class="QGridLayout" name="gridLayout_3">
-     <item row="6" column="1">
-      <widget class="QListWidget" name="listGain"/>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_7">
-       <property name="text">
-        <string>CITIROC Gain:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="0" colspan="2">
-      <widget class="Line" name="line">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
+     <item row="0" column="0" colspan="2">
       <widget class="QLabel" name="label_6">
        <property name="text">
-        <string>AFG Amplitude:</string>
+        <string>AFG Amplitude/Offset:</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="0" colspan="2">
-      <widget class="QLineEdit" name="lineAFGAmp">
-       <property name="text">
-        <string>[[1:1:100]]</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="0">
-      <widget class="QListWidget" name="listAmp"/>
-     </item>
-     <item row="3" column="0" colspan="2">
-      <widget class="QLineEdit" name="lineCITIROCGain">
-       <property name="text">
-        <string>3,2,3,4,5,56</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QComboBox" name="comboBox">
+     <item row="2" column="2">
+      <widget class="QComboBox" name="boxHGLG">
        <item>
         <property name="text">
          <string>High Gain</string>
@@ -403,6 +489,27 @@
          <string>Low Gain</string>
         </property>
        </item>
+      </widget>
+     </item>
+     <item row="2" column="0" colspan="2">
+      <widget class="QLabel" name="label_7">
+       <property name="text">
+        <string>CITIROC Gain:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="2">
+      <widget class="QPushButton" name="btnAllCh">
+       <property name="text">
+        <string>All Check</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0" colspan="2">
+      <widget class="QLabel" name="label_9">
+       <property name="text">
+        <string>Channels:</string>
+       </property>
       </widget>
      </item>
     </layout>

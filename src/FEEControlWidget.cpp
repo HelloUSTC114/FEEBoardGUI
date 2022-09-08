@@ -623,10 +623,10 @@ void FEEControlWin::update_DAQClock()
 
 void FEEControlWin::on_btnDAQStart_clicked()
 {
-    TryStartDAQ(fsFilePath.toStdString(), fsFileName.toStdString(), ui->boxDAQEvent->value(), ui->timeDAQSetting->time(), ui->boxBufferWait->value(), ui->boxLeastEvents->value());
+    TryStartDAQ(fsFilePath.toStdString(), fsFileName.toStdString(), ui->boxDAQEvent->value(), ui->timeDAQSetting->time(), ui->boxBufferWait->value(), ui->boxLeastEvents->value(), ui->boxClearQueue->isChecked());
 }
 
-bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nDAQCount, QTime DAQTime, int msBufferSleep, int leastBufferEvent)
+bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nDAQCount, QTime DAQTime, int msBufferSleep, int leastBufferEvent, bool clearBeforeDAQ)
 {
     if (fDAQRuningFlag)
         return false;
@@ -667,7 +667,7 @@ bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nD
     return true;
 }
 
-void FEEControlWin::ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting, int leastBufferEvent)
+void FEEControlWin::ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting, int leastBufferEvent, bool clearBeforeDAQ)
 {
     fDAQSettingCount = nCount;
     fDAQSettingTime = daqTime;
@@ -693,7 +693,8 @@ void FEEControlWin::ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting
     on_btnHVON_clicked();
     Sleep(1000);
 
-    fFlagClearQueue = ui->boxClearQueue->isChecked();
+    ui->boxClearQueue->setChecked(clearBeforeDAQ);
+    fFlagClearQueue = clearBeforeDAQ;
     emit startDAQSignal(this);
     fDAQClock.start(1000);
     fDAQIsRunning = 1;
@@ -852,6 +853,7 @@ bool FEEControlWin::Modify_SP_CITIROC_BiasDAC(const std::vector<std::pair<int, i
 
     SendCITIROCConfig();
     PrintToScreen();
+    return true;
 }
 
 bool FEEControlWin::Modify_SP_CITIROC_HGAmp(const std::vector<std::pair<int, int>> &vStatus)
@@ -871,6 +873,7 @@ bool FEEControlWin::Modify_SP_CITIROC_HGAmp(const std::vector<std::pair<int, int
 
     SendCITIROCConfig();
     PrintToScreen();
+    return true;
 }
 
 bool FEEControlWin::Modify_SP_CITIROC_LGAmp(const std::vector<std::pair<int, int>> &vStatus)
@@ -890,6 +893,7 @@ bool FEEControlWin::Modify_SP_CITIROC_LGAmp(const std::vector<std::pair<int, int
 
     SendCITIROCConfig();
     PrintToScreen();
+    return true;
 }
 
 bool FEEControlWin::ReadCITIROC_configFile()
