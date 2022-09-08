@@ -52,6 +52,12 @@ VisaAPI::~VisaAPI()
     CloseDevice();
 }
 
+VisaAPI *VisaAPI::Instance()
+{
+    static VisaAPI instance;
+    return &instance;
+}
+
 void VisaAPI::InitDevice()
 {
     if (!fDeviceFound)

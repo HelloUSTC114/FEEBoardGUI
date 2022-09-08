@@ -739,6 +739,7 @@ void FEEControlWin::on_btnDAQStop_clicked()
 {
     fDAQRuningFlag = 0;
     gBoard->SetFifoReadBreak();
+    emit forceStopDAQSignal();
 }
 // DAQ control end
 
@@ -832,6 +833,63 @@ bool FEEControlWin::RSP_CITIROC_configFile(std::string scFile, std::string pbFil
     PrintToScreen();
 
     return true;
+}
+
+bool FEEControlWin::Modify_SP_CITIROC_BiasDAC(const std::vector<std::pair<int, int>> &vStatus)
+{
+    if (!gParser->sConfigValidate())
+        return false;
+    for (int i = 0; i < vStatus.size(); i++)
+    {
+        auto p = vStatus[i];
+        int ch = p.first, bias = p.second;
+        if (ch < 0 || ch > 32)
+            return false;
+        if (bias < 0 || bias > 255)
+            return false;
+        gParser->SetBiasDAC(ch, bias);
+    }
+
+    SendCITIROCConfig();
+    PrintToScreen();
+}
+
+bool FEEControlWin::Modify_SP_CITIROC_HGAmp(const std::vector<std::pair<int, int>> &vStatus)
+{
+    if (!gParser->sConfigValidate())
+        return false;
+    for (int i = 0; i < vStatus.size(); i++)
+    {
+        auto p = vStatus[i];
+        int ch = p.first, amp = p.second;
+        if (ch < 0 || ch > 32)
+            return false;
+        if (amp < 0 || amp > 63)
+            return false;
+        gParser->Set_AMP_HG_DAC(ch, amp);
+    }
+
+    SendCITIROCConfig();
+    PrintToScreen();
+}
+
+bool FEEControlWin::Modify_SP_CITIROC_LGAmp(const std::vector<std::pair<int, int>> &vStatus)
+{
+    if (!gParser->sConfigValidate())
+        return false;
+    for (int i = 0; i < vStatus.size(); i++)
+    {
+        auto p = vStatus[i];
+        int ch = p.first, amp = p.second;
+        if (ch < 0 || ch > 32)
+            return false;
+        if (amp < 0 || amp > 63)
+            return false;
+        gParser->Set_AMP_LG_DAC(ch, amp);
+    }
+
+    SendCITIROCConfig();
+    PrintToScreen();
 }
 
 bool FEEControlWin::ReadCITIROC_configFile()

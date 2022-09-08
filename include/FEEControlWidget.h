@@ -1,10 +1,15 @@
 #ifndef WIDGET_H
 #define WIDGET_H
 
+// Qt
 #include <QWidget>
 #include <QThread>
 #include <QTimer>
 #include <QTime>
+
+// C++ STL
+#include <string>
+#include <vector>
 
 class FEEControlWin;
 class PlotWindow;
@@ -87,10 +92,14 @@ public:
     /// @param pbFile pb configuration file, with path inside
     /// @return whether Read, send, print successfully
     bool RSP_CITIROC_configFile(std::string scFile, std::string pbFile);
+    bool Modify_SP_CITIROC_BiasDAC(const std::vector<std::pair<int, int>> &vStatus);
+    bool Modify_SP_CITIROC_HGAmp(const std::vector<std::pair<int, int>> &vStatus);
+    bool Modify_SP_CITIROC_LGAmp(const std::vector<std::pair<int, int>> &vStatus);
 
 signals:
     void startDAQSignal(FEEControlWin *); // FEE Start DAQ signal
     void stopDAQSignal();                 // DAQ Stop signal, tell other class that DAQ is done
+    void forceStopDAQSignal();            // DAQ Force stop signal, tell other class that DAQ is interrupted
 
 private slots:
     void on_DAQStoped(int nDAQLoop);     // FEE DAQ Stop slot

@@ -44,6 +44,8 @@ signals:
     void DAQDone(int daqHandle); // Whole process is controlled by device controller
     void LastDAQDone(int daqHandle);
 
+    void forceStopDAQSignal(); // DAQ Force stop signal, tell other class that DAQ is interrupted
+
 public slots:
     void handle_DAQRequest(int deviceHandle, DAQRequestInfo *daq);
     void handle_LastDAQRequest(int deviceHandle, DAQRequestInfo *daq);

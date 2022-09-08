@@ -26,10 +26,11 @@ enum AFGFreqUnit
 };
 std::string ConvertAFGFreqUnit(AFGFreqUnit unit);
 
+#define gVisa (VisaAPI::Instance())
 class VisaAPI
 {
 public:
-    VisaAPI();
+    static VisaAPI *Instance();
     ~VisaAPI();
     int SetAmp(int amp);                         // in unit of mVpp
     int SetHigh(double high);                    // in unit of mV
@@ -43,6 +44,9 @@ public:
 
     int WriteCMD(std::string sCmd);
     int ReadBuf();
+
+private:
+    VisaAPI();
 
 #ifdef VISAAPI_CXX
     int ProcessError(ViStatus status);

@@ -23,12 +23,16 @@ void DeviceDAQConnector::ConnectSlots()
 {
     connect(gFEEControlWin, &FEEControlWin::startDAQSignal, this, &DeviceDAQConnector::handle_DAQStart);
     connect(gFEEControlWin, &FEEControlWin::stopDAQSignal, this, &DeviceDAQConnector::handle_DAQDone);
+
+    connect(gFEEControlWin, &FEEControlWin::forceStopDAQSignal, this, &DeviceDAQConnector::forceStopDAQSignal);
 }
 
 void DeviceDAQConnector::DisconnectSlots()
 {
     disconnect(gFEEControlWin, &FEEControlWin::startDAQSignal, this, &DeviceDAQConnector::handle_DAQStart);
     disconnect(gFEEControlWin, &FEEControlWin::stopDAQSignal, this, &DeviceDAQConnector::handle_DAQDone);
+
+    disconnect(gFEEControlWin, &FEEControlWin::forceStopDAQSignal, this, &DeviceDAQConnector::forceStopDAQSignal);
 }
 
 bool DeviceDAQConnector::TryTestPrepare()
@@ -160,6 +164,9 @@ void VDeviceController::ConnectSlots()
 
     connect(gDAQConnector, &DeviceDAQConnector::DAQDone, this, &VDeviceController::handle_DAQDone);
     connect(gDAQConnector, &DeviceDAQConnector::LastDAQDone, this, &VDeviceController::handle_LastDAQDone);
+    
+    // Connect force stop daq signal with last daq done slots, tell device to stop
+    connect(gDAQConnector, &DeviceDAQConnector::forceStopDAQSignal, this, &VDeviceController::handle_LastDAQDone);
 }
 
 void VDeviceController::DisconnectSlots()
@@ -169,6 +176,7 @@ void VDeviceController::DisconnectSlots()
 
     disconnect(gDAQConnector, &DeviceDAQConnector::DAQDone, this, &VDeviceController::handle_DAQDone);
     disconnect(gDAQConnector, &DeviceDAQConnector::LastDAQDone, this, &VDeviceController::handle_LastDAQDone);
+    disconnect(gDAQConnector, &DeviceDAQConnector::forceStopDAQSignal, this, &VDeviceController::handle_LastDAQDone);
 }
 
 bool TestDevice::ProcessDeviceHandle(int deviceHandle)
