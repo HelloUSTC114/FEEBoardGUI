@@ -133,7 +133,17 @@ bool VisaAPI::OpenDevice()
         if (itemCnt > 0)
             fDeviceFound = 1;
     }
+    sprintf(deviceName, "TCPIP::192.168.1.177::INSTR");
     status = viOpen(defaultRM, deviceName, VI_NULL, VI_NULL, &device);
+    if (status == 0)
+    {
+        fDeviceFound = 1;
+    }
+    else
+    {
+        std::cout << "Error: " << deviceName << "\t not found." << std::endl;
+        return false;
+    }
     std::cout << "API open device: " << std::endl;
     std::cout << defaultRM << '\t' << deviceList << '\t' << itemCnt << '\t' << deviceName << '\t' << device << std::endl;
     WriteCMD("*idn?");
@@ -299,7 +309,7 @@ int VisaAPI::SetWaveForm(AFGWaveform wave)
     std::string sWave = ConvertAFGWaveform(wave);
     if (sWave == "")
         return 1;
-    sCmd = "source1:function:shape " + sWave + "mVpp";
+    sCmd = "source1:function:shape " + sWave;
     int rtn = WriteCMD(sCmd);
     if (rtn < 0)
         return rtn;

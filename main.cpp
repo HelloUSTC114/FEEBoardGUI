@@ -29,6 +29,9 @@ int main(int argc, char *argv[])
         gFEEControlWin->show();
         gVisaDAQWin->show();
         return qapp.exec();
+        // gVisa;
+        // std::cout << gVisa->WriteCMD("output1 on") << std::endl;
+        // return 1;
     }
 
     // TestDevice a;

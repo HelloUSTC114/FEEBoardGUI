@@ -395,12 +395,12 @@ bool VisaDAQControl::ProcessDeviceHandle(int deviceHandle)
     if (status != 0)
         return false;
 
+    rtn = gFEEControlWin->Modify_SP_CITIROC_HGAmp(CombineChDAC(gVisaDAQWin->GetSelectedChannels(), gain));
+    rtn = gFEEControlWin->Modify_SP_CITIROC_LGAmp(CombineChDAC(gVisaDAQWin->GetSelectedChannels(), gain));
     // if (gainType == 0)
-    //     rtn = gFEEControlWin->Modify_SP_CITIROC_HGAmp(CombineChDAC(gVisaDAQWin->GetSelectedChannels(), gain));
     // else if (gainType == 1)
-    //     rtn = gFEEControlWin->Modify_SP_CITIROC_LGAmp(CombineChDAC(gVisaDAQWin->GetSelectedChannels(), gain));
     // else
-    //     return false;
+    // return false;
 
     if (!rtn)
         return false;
@@ -446,6 +446,7 @@ void VisaDAQControlWin::handle_DACRTest()
         fTimer.stop();
     }
 }
+
 void VisaDAQControlWin::on_btnStartRTest_clicked()
 {
     StartDAC_R_Test();
