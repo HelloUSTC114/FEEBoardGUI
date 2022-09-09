@@ -347,7 +347,8 @@ void FEEControlWin::ProcessConnect()
     // Init File manager
     if (!gDataManager->IsOpen())
     {
-        ui->grpDAQStart->setEnabled(false);
+        // ui->grpDAQStart->setEnabled(false);
+        ui->grpDAQStart->setEnabled(true);
         ui->btnDAQStop->setEnabled(false);
     }
     else
@@ -485,7 +486,8 @@ void FEEControlWin::on_btnPath_clicked()
     ui->brsMessage->setFontWeight(QFont::Normal);
     ui->brsMessage->append(tr("File Path: ") + fsFilePath);
 
-    ui->btnFileInit->setEnabled(true);
+    // ui->btnFileInit->setEnabled(true);
+    ui->btnFileInit->setEnabled(false);
 }
 
 bool FEEControlWin::GenerateROOTFile()
@@ -533,7 +535,7 @@ void FEEControlWin::on_btnFileInit_clicked()
 void FEEControlWin::CloseSaveFile()
 {
     gDataManager->Close();
-    ui->btnFileInit->setEnabled(true);
+    // ui->btnFileInit->setEnabled(true);
     ui->btnFileClose->setEnabled(false);
 
     ui->brsMessage->setTextColor(greenColor);
@@ -545,7 +547,7 @@ void FEEControlWin::CloseSaveFile()
     ui->brsMessage->append(tr("File Path: ") + fsFilePath);
     ui->brsMessage->append(tr("File Name: ") + fsFileName);
 
-    ui->grpDAQStart->setEnabled(false);
+    // ui->grpDAQStart->setEnabled(false);
 
     ui->btnDAQStop->setEnabled(false);
 }
