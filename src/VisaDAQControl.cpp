@@ -339,15 +339,16 @@ bool VisaDAQControlWin::ParseHandle(int deviceHandle, double &amp, double &gain,
 {
     int nAmp = fAmpList.size(), nGain = fGainList.size();
     int nTotalTest = nAmp * nGain;
-    // First fix Amp, change Gain
+    // First fix Gain, change amp
     if (deviceHandle >= nTotalTest)
         return false;
 
-    ui->listAmp->setCurrentRow(deviceHandle / nGain);
-    ui->listGain->setCurrentRow(deviceHandle % nGain);
+    std::cout << deviceHandle / nAmp << '\t' << deviceHandle % nAmp << std::endl;
+    ui->listGain->setCurrentRow(deviceHandle / nAmp);
+    ui->listAmp->setCurrentRow(deviceHandle % nAmp);
 
-    amp = fAmpList[deviceHandle / nGain];
-    gain = fGainList[deviceHandle % nGain];
+    amp = fAmpList[deviceHandle % nAmp];
+    gain = fGainList[deviceHandle / nAmp];
     gainType = fHGLGflag;
     GenerateDAQRequestInfo(daq);
 
@@ -392,17 +393,24 @@ bool VisaDAQControl::ProcessDeviceHandle(int deviceHandle)
     if (!rtn)
         return false;
     auto status = gVisa->SetHigh(amp);
+    if (deviceHandle == 0)
+    {
+        status = gVisa->SetChannelStatus(1, 1);
+        gVisa->SetWaveForm(AFGWaveform::USER1);
+    }
     if (status != 0)
         return false;
 
-    rtn = gFEEControlWin->Modify_SP_CITIROC_HGAmp(CombineChDAC(gVisaDAQWin->GetSelectedChannels(), gain));
-    rtn = gFEEControlWin->Modify_SP_CITIROC_LGAmp(CombineChDAC(gVisaDAQWin->GetSelectedChannels(), gain));
+    auto rtn1 = gFEEControlWin->Modify_SP_CITIROC_HGAmp(CombineChDAC(gVisaDAQWin->GetSelectedChannels(), gain));
+    auto rtn2 = gFEEControlWin->Modify_SP_CITIROC_LGAmp(CombineChDAC(gVisaDAQWin->GetSelectedChannels(), gain));
+
+    _sleep(500);
     // if (gainType == 0)
     // else if (gainType == 1)
     // else
     // return false;
 
-    if (!rtn)
+    if (!(rtn1 && rtn2))
         return false;
 
     return true;
@@ -430,6 +438,7 @@ void VisaDAQControlWin::StartDAC_R_Test()
     fTimer.start(ui->boxRTestTime->value() * 1000);
 
     gVisa->SetWaveForm(AFGWaveform::DC);
+    gVisa->SetChannelStatus(1, 1);
     handle_DACRTest();
 }
 

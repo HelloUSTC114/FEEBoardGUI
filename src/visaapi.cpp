@@ -285,7 +285,8 @@ int VisaAPI::SetChannelStatus(int ch, bool openFlag)
         return 1;
     int status = 0;
     char buf[80];
-    sprintf(buf, "output%d: %d", ch, openFlag);
+    sprintf(buf, "output%d %d", ch, openFlag);
+    std::cout << "Test: " << buf << std::endl;
     std::string sCmd = buf;
 
     int rtn = WriteCMD(sCmd);
@@ -293,7 +294,7 @@ int VisaAPI::SetChannelStatus(int ch, bool openFlag)
         return rtn;
 
     // Read amplitude
-    sCmd = "source1?";
+    sCmd = "output1?";
     int recieveAmp = 0;
     // char *buf[256];
     status = viQueryf(device, (ViString)sCmd.c_str(), "%d", &recieveAmp);

@@ -367,6 +367,8 @@ void FEEControlWin::ProcessConnect()
     PrintT();
 
     // Select Default Logic
+    SelectLogic(1);
+    on_btnAllSetMask_clicked();
     on_btnSendLogic_clicked();
     on_btnMask_clicked();
     bool parserFlag = gParser->Init();
@@ -659,6 +661,7 @@ bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nD
 
     // Draw Start
     on_btnStartDraw_clicked();
+    QTimer::singleShot(500, this, SLOT(on_btnStartDraw_clicked()));
     // gDataManager->DrawHG(ui->boxDrawCh->value());
     gDataManager->Draw(ui->boxDrawCh->value(), (DrawOption)GetDrawOption());
     if (fdrawWin)
