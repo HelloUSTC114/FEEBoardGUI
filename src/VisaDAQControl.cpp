@@ -392,11 +392,11 @@ bool VisaDAQControl::ProcessDeviceHandle(int deviceHandle)
     bool rtn = gVisaDAQWin->ParseHandle(deviceHandle, amp, gain, gainType, fDAQInfo);
     if (!rtn)
         return false;
-    auto status = gVisa->SetHigh(amp);
+    auto status = gAFGVisa->SetHigh(amp);
     if (deviceHandle == 0)
     {
-        status = gVisa->SetChannelStatus(1, 1);
-        gVisa->SetWaveForm(AFGWaveform::USER1);
+        status = gAFGVisa->SetChannelStatus(1, 1);
+        gAFGVisa->SetWaveForm(AFGWaveform::USER1);
     }
     if (status != 0)
         return false;
@@ -437,8 +437,8 @@ void VisaDAQControlWin::StartDAC_R_Test()
     connect(&fTimer, &QTimer::timeout, this, &VisaDAQControlWin::handle_DACRTest);
     fTimer.start(ui->boxRTestTime->value() * 1000);
 
-    gVisa->SetWaveForm(AFGWaveform::DC);
-    gVisa->SetChannelStatus(1, 1);
+    gAFGVisa->SetWaveForm(AFGWaveform::DC);
+    gAFGVisa->SetChannelStatus(1, 1);
     handle_DACRTest();
 }
 
@@ -447,7 +447,7 @@ void VisaDAQControlWin::handle_DACRTest()
     if (handle < fAmpList.size())
     {
         ui->listAmp->setCurrentRow(handle);
-        gVisa->SetOffset(fAmpList[handle++]);
+        gAFGVisa->SetOffset(fAmpList[handle++]);
     }
     else
     {

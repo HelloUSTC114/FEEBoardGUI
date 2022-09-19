@@ -7,6 +7,7 @@
 // C++ STL
 #include <fstream>
 #include <iostream>
+#include <time.h>
 
 // ROOT
 #include <TApplication.h>
@@ -26,12 +27,22 @@ int main(int argc, char *argv[])
     new TApplication("QTCanvas Demo", &argc, argv);
 
     {
-        gFEEControlWin->show();
-        gVisaDAQWin->show();
-        return qapp.exec();
-        // gVisa;
-        // std::cout << gVisa->WriteCMD("output1 on") << std::endl;
-        // return 1;
+        // gFEEControlWin->show();
+        // gVisaDAQWin->show();
+        // return qapp.exec();
+        // gAFGVisa;
+        // // std::cout << gAFGVisa->WriteCMD("output1 on") << std::endl;
+        // std::cout << gAFGVisa->SetChannelStatus(1, 0) << std::endl;
+        gAgi1344Visa->InitMeasure();
+        auto start = clock();
+        for (int i = 0; i < 40; i++)
+        {
+            auto start0 = clock();
+            double mes = gAgi1344Visa->MeasureOnce();
+            std::cout << i << '\t' << mes << '\t' << "Start time: " << start0 << "\t running time: " << clock() - start0 << std::endl;
+        }
+        std::cout << "Total running time: " << clock()-start << '\t' << std::endl;
+        return 1;
     }
 
     // TestDevice a;

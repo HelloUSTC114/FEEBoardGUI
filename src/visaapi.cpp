@@ -2,6 +2,8 @@
 #pragma warning(disable : 4996)
 #include "visaapi.h"
 
+// C++
+#include <string>
 #include <iostream>
 
 std::string ConvertAFGWaveform(AFGWaveform waveform)
@@ -40,22 +42,18 @@ std::string ConvertAFGFreqUnit(AFGFreqUnit unit)
     return "";
 }
 
-VisaAPI::VisaAPI()
+VisaAPI::VisaAPI(std::string sDeviceName)
 {
-    OpenDevice();
+    OpenDevice(sDeviceName);
     // InitDevice();
 }
+
+std::stringstream VisaAPI::gss;
 
 VisaAPI::~VisaAPI()
 {
     std::cout << "Destructor" << std::endl;
     CloseDevice();
-}
-
-VisaAPI *VisaAPI::Instance()
-{
-    static VisaAPI instance;
-    return &instance;
 }
 
 void VisaAPI::InitDevice()
@@ -124,7 +122,7 @@ void VisaAPI::InitDevice()
     WriteCMD(sCmd);
 }
 
-bool VisaAPI::OpenDevice()
+bool VisaAPI::OpenDevice(std::string sDeviceName)
 {
     auto status = viOpenDefaultRM(&defaultRM);
     if (!fDeviceFound)
@@ -133,7 +131,7 @@ bool VisaAPI::OpenDevice()
         if (itemCnt > 0)
             fDeviceFound = 1;
     }
-    sprintf(deviceName, "TCPIP::192.168.1.177::INSTR");
+    sprintf(deviceName, sDeviceName.c_str());
     status = viOpen(defaultRM, deviceName, VI_NULL, VI_NULL, &device);
     if (status == 0)
     {
@@ -182,6 +180,17 @@ int VisaAPI::ReadBuf()
     return status;
 }
 
+std::string VisaAPI::Query(std::string sCmd)
+{
+    if (!fDeviceFound)
+        return "";
+    memset(buffer, '\0', 256 * sizeof(char));
+    auto status = viQueryf(device, (ViString)sCmd.c_str(), "%s", buffer);
+    if (status < 0)
+        ProcessError(status);
+    return std::string(buffer);
+}
+
 void VisaAPI::CloseDevice()
 {
 
@@ -190,8 +199,28 @@ void VisaAPI::CloseDevice()
     // std::cout << "Closed." << std::endl;
 }
 
-#include <string>
-int VisaAPI::SetAmp(int amp)
+int VisaAPI::ProcessError(ViStatus status)
+{
+    memset(buffer, '\0', 256 * sizeof(char));
+    // Report error and clean up
+    viStatusDesc(device, status, buffer);
+    std::cout << "Failure: " << buffer << std::endl;
+    return 1;
+}
+
+const std::string AFGVisaAPI::sDeviceName = "TCPIP::192.168.1.177::INSTR";
+AFGVisaAPI::AFGVisaAPI() : VisaAPI(sDeviceName.c_str())
+{
+    std::cout << "Constructing: AFG " << std::endl;
+}
+
+AFGVisaAPI *AFGVisaAPI::Instance()
+{
+    static AFGVisaAPI instance;
+    return &instance;
+}
+
+int AFGVisaAPI::SetAmp(int amp)
 {
     int status = 0;
     std::string sCmd;
@@ -203,14 +232,18 @@ int VisaAPI::SetAmp(int amp)
     // Read amplitude
     sCmd = "source1:voltage:level:immediate:amplitude?";
     double recieveAmp = 0;
+
     // char *buf[256];
-    status = viQueryf(device, (ViString)sCmd.c_str(), "%lf", &recieveAmp);
+    // status = viQueryf(device, (ViString)sCmd.c_str(), "%lf", &recieveAmp);
+    std::string sQuery = Query(sCmd);
+    sscanf(sQuery.c_str(), "%lf", &recieveAmp);
+
     std::cout << "Recieved Amplitude: " << recieveAmp * 1000 << " mV." << std::endl;
     _sleep(100);
     return 0;
 }
 
-int VisaAPI::SetHigh(double high)
+int AFGVisaAPI::SetHigh(double high)
 {
     int status = 0;
     char buf[20];
@@ -227,13 +260,16 @@ int VisaAPI::SetHigh(double high)
     sCmd = "source1:voltage:high?";
     double recieveAmp = 0;
     // char *buf[256];
-    status = viQueryf(device, (ViString)sCmd.c_str(), "%lf", &recieveAmp);
+    // status = viQueryf(device, (ViString)sCmd.c_str(), "%lf", &recieveAmp);
+    std::string sQuery = Query(sCmd);
+    sscanf(sQuery.c_str(), "%lf", &recieveAmp);
+
     std::cout << "Recieved high: " << recieveAmp * 1000 << " mV." << std::endl;
     _sleep(100);
     return 0;
 }
 
-int VisaAPI::SetLow(double low)
+int AFGVisaAPI::SetLow(double low)
 {
     int status = 0;
     char buf[20];
@@ -250,13 +286,16 @@ int VisaAPI::SetLow(double low)
     sCmd = "source1:voltage:low?";
     double recieveAmp = 0;
     // char *buf[256];
-    status = viQueryf(device, (ViString)sCmd.c_str(), "%lf", &recieveAmp);
+    // status = viQueryf(device, (ViString)sCmd.c_str(), "%lf", &recieveAmp);
+    std::string sQuery = Query(sCmd);
+    sscanf(sQuery.c_str(), "%lf", &recieveAmp);
+
     std::cout << "Recieved low: " << recieveAmp * 1000 << " mV." << std::endl;
     _sleep(100);
     return 0;
 }
 
-int VisaAPI::SetOffset(double offset)
+int AFGVisaAPI::SetOffset(double offset)
 {
     int status = 0;
     char buf[20];
@@ -273,13 +312,16 @@ int VisaAPI::SetOffset(double offset)
     sCmd = "source1:voltage:offset?";
     double recieveAmp = 0;
     // char *buf[256];
-    status = viQueryf(device, (ViString)sCmd.c_str(), "%lf", &recieveAmp);
+    // status = viQueryf(device, (ViString)sCmd.c_str(), "%lf", &recieveAmp);
+    std::string sQuery = Query(sCmd);
+    sscanf(sQuery.c_str(), "%lf", &recieveAmp);
+
     std::cout << "Recieved offset: " << recieveAmp * 1000 << " mV." << std::endl;
     _sleep(100);
     return 0;
 }
 
-int VisaAPI::SetChannelStatus(int ch, bool openFlag)
+int AFGVisaAPI::SetChannelStatus(int ch, bool openFlag)
 {
     if (ch < 1 || ch > 2)
         return 1;
@@ -297,13 +339,16 @@ int VisaAPI::SetChannelStatus(int ch, bool openFlag)
     sCmd = "output1?";
     int recieveAmp = 0;
     // char *buf[256];
-    status = viQueryf(device, (ViString)sCmd.c_str(), "%d", &recieveAmp);
+    // status = viQueryf(device, (ViString)sCmd.c_str(), "%d", &recieveAmp);
+    std::string sQuery = Query(sCmd);
+    sscanf(sQuery.c_str(), "%d", &recieveAmp);
+
     std::cout << "Channel " << ch << " status: " << recieveAmp << std::endl;
     _sleep(100);
     return 0;
 }
 
-int VisaAPI::SetWaveForm(AFGWaveform wave)
+int AFGVisaAPI::SetWaveForm(AFGWaveform wave)
 {
     int status = 0;
     std::string sCmd;
@@ -318,18 +363,116 @@ int VisaAPI::SetWaveForm(AFGWaveform wave)
     // Read amplitude
     sCmd = "source1:function:shape?";
     // double recieveAmp = 0;
-    memset(buffer, '\0', 256 * sizeof(char));
-    status = viQueryf(device, (ViString)sCmd.c_str(), "%s", buffer);
-    std::cout << "Recieved Amplitude: " << buffer << " mV." << std::endl;
+    // memset(buffer, '\0', 256 * sizeof(char));
+    // status = viQueryf(device, (ViString)sCmd.c_str(), "%s", buffer);
+    // std::cout << "Recieved Amplitude: " << buffer << " mV." << std::endl;
+    std::string sQuery = Query(sCmd);
+    std::cout << "Recieved Amplitude: " << sQuery << " mV." << std::endl;
     _sleep(100);
     return 0;
 }
 
-int VisaAPI::ProcessError(ViStatus status)
+// const std::string Agi344VisaAPI::sDeviceName = "TCPIP::192.168.1.178::INSTR";
+const std::string Agi344VisaAPI::sDeviceName = "USB::0x0957::0x0618::MY51520158::INSTR";
+Agi344VisaAPI::Agi344VisaAPI() : VisaAPI(sDeviceName.c_str())
 {
-    memset(buffer, '\0', 256 * sizeof(char));
-    // Report error and clean up
-    viStatusDesc(device, status, buffer);
-    std::cout << "Failure: " << buffer << std::endl;
-    return 1;
+}
+
+Agi344VisaAPI *Agi344VisaAPI::Instance()
+{
+    static Agi344VisaAPI instance;
+    return &instance;
+}
+
+int Agi344VisaAPI::SetImpedance(bool autoON)
+{
+    int status = 0;
+    std::string sCmd;
+    sCmd = "sense:voltage:dc:impedance:auto" + std::to_string(autoON);
+    int rtn = WriteCMD(sCmd);
+    if (rtn < 0)
+        return rtn;
+
+    // Read amplitude
+    sCmd = "sense:voltage:dc:impedance:auto?";
+    bool recieveAmp = 0;
+
+    // char *buf[256];
+    // status = viQueryf(device, (ViString)sCmd.c_str(), "%lf", &recieveAmp);
+    std::string sQuery = Query(sCmd);
+    sscanf(sQuery.c_str(), "%d", &recieveAmp);
+
+    std::cout << "Recieved Impedance auto: " << recieveAmp << std::endl;
+    _sleep(100);
+    return 0;
+}
+
+int Agi344VisaAPI::SetSamplePoints(int points)
+{
+    int status = 0;
+    std::string sCmd;
+    sCmd = "trigger:count " + std::to_string(points);
+    int rtn = WriteCMD(sCmd);
+    if (rtn < 0)
+        return rtn;
+    int recieveAmp;
+    status = GetSamplePoints(recieveAmp);
+    if (rtn < 0)
+        return rtn;
+    std::cout << "Recieved Impedance auto: " << recieveAmp << std::endl;
+    _sleep(100);
+    return 0;
+}
+
+int Agi344VisaAPI::GetSamplePoints(int &points)
+{
+    int status = 0;
+    std::string sCmd;
+    sCmd = "trigger:count?";
+    std::string sQuery = Query(sCmd);
+
+    if (sQuery == "")
+    {
+        points = 0;
+    }
+    double recieveAmp = 0;
+    sscanf(sQuery.c_str(), "%lf", &recieveAmp);
+    points = (int)recieveAmp;
+
+    return 0;
+}
+
+int Agi344VisaAPI::InitMeasure()
+{
+    // SetImpedance(1);
+    // SetSamplePoints(40);
+
+    int rtn = 0;
+    std::string sCmd = "";
+
+    sCmd = "measure:dc";
+    WriteCMD(sCmd);
+    // sCmd = "sense:voltage:dc:nplc 10";
+    // WriteCMD(sCmd);
+    sCmd = "trigger:source bus";
+    WriteCMD(sCmd);
+
+    return 0;
+}
+
+double Agi344VisaAPI::MeasureOnce()
+{
+    int rtn = 0;
+    std::string sCmd = "";
+
+    sCmd = "init";
+    WriteCMD(sCmd);
+    sCmd = "*trg";
+    WriteCMD(sCmd);
+
+    sCmd = "fetch?"; // Query
+    std::string sQuery = Query(sCmd);
+    double temp = 0;
+    sscanf(sQuery.c_str(), "%lf", &temp);
+    return temp;
 }
