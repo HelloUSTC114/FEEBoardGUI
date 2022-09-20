@@ -861,6 +861,20 @@ bool FEEControlWin::Modify_SP_CITIROC_BiasDAC(const std::vector<std::pair<int, i
     return true;
 }
 
+bool FEEControlWin::Modify_SP_CITIROC_BiasDAC(int ch, int dac)
+{
+    if (!gParser->sConfigValidate())
+        return false;
+    if (ch < 0 || ch > 32)
+        return false;
+    if (dac < 0 || dac > 255)
+        return false;
+    gParser->SetBiasDAC(ch, dac);
+    SendCITIROCConfig();
+    PrintToScreen();
+    return true;
+}
+
 bool FEEControlWin::Modify_SP_CITIROC_HGAmp(const std::vector<std::pair<int, int>> &vStatus)
 {
     if (!gParser->sConfigValidate())

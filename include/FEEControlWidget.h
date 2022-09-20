@@ -97,6 +97,7 @@ public:
     /// @return whether Read, send, print successfully
     bool RSP_CITIROC_configFile(std::string scFile, std::string pbFile);
     bool Modify_SP_CITIROC_BiasDAC(const std::vector<std::pair<int, int>> &vStatus);
+    bool Modify_SP_CITIROC_BiasDAC(int ch, int dac);
     bool Modify_SP_CITIROC_HGAmp(const std::vector<std::pair<int, int>> &vStatus);
     bool Modify_SP_CITIROC_LGAmp(const std::vector<std::pair<int, int>> &vStatus);
 

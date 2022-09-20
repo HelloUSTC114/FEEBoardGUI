@@ -73,6 +73,12 @@ public:
 
     // DAC R test
     void StartDAC_R_Test();
+    void StopDAC_R_Test();
+
+    // DAC V test
+    void StartDAC_V_Test();
+    void StopDAC_V_Test();
+
 private slots:
 
     void on_btnGenerateList_clicked();
@@ -88,9 +94,17 @@ private slots:
 
     void handle_DACRTest();
 
+    void handle_DACVTest();
+
     void on_btnStartRTest_clicked();
 
     void on_btnStopRTest_clicked();
+
+    void on_btnStartVTest_clicked();
+
+    void on_btnStopVTest_clicked();
+
+    void on_btnNextChReady_clicked();
 
 private:
     explicit VisaDAQControlWin(QWidget *parent = nullptr);
@@ -110,13 +124,16 @@ private:
 
     // FEE
     void GenerateGainList();
+    void GenerateBiasList();
     bool GenerateAmpList();
     bool GenerateChList();
     void ClearList();
     std::vector<int> fGainList;
+    std::vector<int> fBiasList;
     std::vector<double> fAmpList;
     std::vector<int> fChList;
     const int fDefaultGain = 30;
+    const int fDefaultBias = 100;
     int fHGLGflag = 0;
 
     // Qt Thread
@@ -125,6 +142,10 @@ private:
     // DAC R Test
     QTimer fTimer;
     int handle = 0;
+
+    // DAC V Test
+    int handleDACV = 0;
+    int handleDACVch = 0;
 };
 
 #endif // VISADAQCONTROL_H

@@ -152,6 +152,9 @@ VisaDAQControlWin::VisaDAQControlWin(QWidget *parent) : QMainWindow(parent),
     fDAQControl = new VisaDAQControl;
     // fDAQControl->moveToThread(&fThread1);
     // connect(&fThread1, &QThread::finished, fDAQControl, &QObject::deleteLater);
+
+    // Test tab
+    ui->tabTestChoosen->setCurrentIndex(1);
 }
 
 VisaDAQControlWin::~VisaDAQControlWin()
@@ -264,6 +267,33 @@ void VisaDAQControlWin::GenerateGainList()
     return;
 }
 
+void VisaDAQControlWin::GenerateBiasList()
+{
+    ui->listBias->clear();
+    std::vector<double> temp;
+    bool rtn = UserDefine::ParseLine(ui->lineCITIROCBias->text().toStdString(), temp);
+    if (!rtn)
+    {
+        fBiasList.clear();
+        fBiasList.push_back(fDefaultBias);
+    }
+
+    fBiasList.clear();
+    for (int i = 0; i < temp.size(); i++)
+    {
+        if (temp[i] >= 0 && temp[i] < 256)
+        {
+            fBiasList.push_back(temp[i]);
+        }
+    }
+    for (int i = 0; i < fBiasList.size(); i++)
+    {
+        QString temp = QString::fromStdString("Bias ") + QString::number(fBiasList[i]);
+        ui->listBias->addItem(temp);
+    }
+    return;
+}
+
 std::string VisaDAQControlWin::GetAmpType()
 {
     return ui->boxHGLG->currentText().toStdString();
@@ -289,6 +319,7 @@ VisaDAQControl::~VisaDAQControl()
 void VisaDAQControlWin::on_btnGenerateList_clicked()
 {
     GenerateGainList();
+    GenerateBiasList();
     GenerateAmpList();
     GenerateChList();
 }
@@ -297,9 +328,11 @@ void VisaDAQControlWin::ClearList()
 {
     ui->listAmp->clear();
     ui->listGain->clear();
+    ui->listBias->clear();
     ui->listCh->clear();
 
     fGainList.clear();
+    fBiasList.clear();
     fAmpList.clear();
     fChList.clear();
 }
@@ -431,6 +464,7 @@ void VisaDAQControlWin::on_btnStopNL_clicked()
     fDAQControl->ForceStopDevice();
 }
 
+// DAC Test
 void VisaDAQControlWin::StartDAC_R_Test()
 {
     handle = 0;
@@ -451,8 +485,61 @@ void VisaDAQControlWin::handle_DACRTest()
     }
     else
     {
-        disconnect(&fTimer, &QTimer::timeout, this, &VisaDAQControlWin::handle_DACRTest);
-        fTimer.stop();
+        StopDAC_R_Test();
+    }
+}
+
+void VisaDAQControlWin::StopDAC_R_Test()
+{
+    disconnect(&fTimer, &QTimer::timeout, this, &VisaDAQControlWin::handle_DACRTest);
+    fTimer.stop();
+}
+
+#include <QtConcurrent/QtConcurrentRun>
+void VisaDAQControlWin::StartDAC_V_Test()
+{
+    handleDACV = 0;
+    ui->listBias->setCurrentRow(handleDACV);
+    ui->listCh->setCurrentRow(handleDACVch);
+    ui->lineChMea->setText(QString::number(fChList[handleDACVch]));
+    ui->listCh->setEnabled(0);
+
+    // connect(&fTimer, &QTimer::timeout, this, &VisaDAQControlWin::handle_DACVTest);
+    // fTimer.start(ui->boxVSamplePoints->value() * 300);
+    handle_DACVTest();
+}
+
+void VisaDAQControlWin::StopDAC_V_Test()
+{
+    // disconnect(&fTimer, &QTimer::timeout, this, &VisaDAQControlWin::handle_DACVTest);
+    ui->listCh->setEnabled(1);
+    fTimer.stop();
+}
+
+double ProcessVoltageTest(int channel, int biasDAC, int nSamples, std::string sFolder);
+
+#include <QFuture>
+void VisaDAQControlWin::handle_DACVTest()
+{
+    static QFuture<double> DACVfuture;
+    // std::cout << "John Test: Start DAC V: " << std::endl;
+    if (handleDACV < fBiasList.size())
+    {
+        // std::cout << "Processing handle: " << handleDACV << std::endl;
+        std::string sFolder = "./";
+        if (handleDACV != 0)
+        {
+            auto result = DACVfuture.result();
+            std::cout << "John Test: totally got " << result << " points" << std::endl;
+        }
+        ui->listBias->setCurrentRow(handleDACV);
+        DACVfuture = QtConcurrent::run(ProcessVoltageTest, fChList[handleDACVch], fBiasList[handleDACV++], ui->boxVSamplePoints->value(), sFolder);
+
+        fTimer.singleShot(ui->boxVSamplePoints->value() * 300, this, &VisaDAQControlWin::handle_DACVTest);
+    }
+    else
+    {
+        StopDAC_V_Test();
     }
 }
 
@@ -463,5 +550,80 @@ void VisaDAQControlWin::on_btnStartRTest_clicked()
 
 void VisaDAQControlWin::on_btnStopRTest_clicked()
 {
-    fTimer.stop();
+    StopDAC_R_Test();
+}
+
+void VisaDAQControlWin::on_btnStartVTest_clicked()
+{
+    StartDAC_V_Test();
+}
+
+void VisaDAQControlWin::on_btnStopVTest_clicked()
+{
+    StopDAC_V_Test();
+}
+
+#include <QMutex>
+#include <fstream>
+double VoltageTest(int nSamplePoints, std::string fileName, std::string sHeader);
+
+double ProcessVoltageTest(int channel, int biasDAC, int nSamples, std::string sFolder)
+{
+    QMutex mutex;
+    mutex.lock();
+    // gFEEControlWin->Modify_SP_CITIROC_BiasDAC(channel, biasDAC);
+    std::string sHeader = "bias-" + std::to_string(biasDAC);
+    std::string fileName = sFolder + "Channel-" + std::to_string(channel) + ".txt";
+    auto rtn = VoltageTest(nSamples, fileName, sHeader);
+    mutex.unlock();
+    return rtn;
+}
+
+#include <time.h>
+double VoltageTest(int nSamplePoints, std::string fileName, std::string sHeader)
+{
+    std::ofstream fout(fileName, std::ios::app);
+    if (!fout.is_open())
+    {
+        std::cout << "Warning: cannot open file: " << fileName << std::endl;
+        return 0;
+    }
+
+    // Start Sampling
+    std::vector<double> vResult;
+    gAgi1344Visa->InitMeasure();
+    auto start = clock();
+    for (int i = 0; i < nSamplePoints; i++)
+    {
+        auto start0 = clock();
+        double mea = gAgi1344Visa->MeasureOnce();
+        std::cout << i << '\t' << mea << '\t' << "Start time: " << start0 << "\t running time: " << clock() - start0 << std::endl;
+        if (mea != 0)
+            vResult.push_back(mea);
+    }
+    std::cout << "Total running time: " << clock() - start << '\t' << std::endl;
+
+    // Output
+    fout << sHeader << '\t';
+    fout << vResult.size() << '\t';
+    for (int i = 0; i < vResult.size(); i++)
+    {
+        fout << vResult[i] << '\t';
+    }
+    fout << std::endl;
+    fout.close();
+    return vResult.size();
+}
+void VisaDAQControlWin::on_btnNextChReady_clicked()
+{
+    handleDACVch++;
+    if (handleDACVch >= fChList.size())
+    {
+        handleDACVch = 0;
+    }
+    ui->lineChMea->setText(QString::number(fChList[handleDACVch]));
+    ui->listCh->setCurrentRow(handleDACVch);
+    if (!handleDACVch)
+        return;
+    StartDAC_V_Test();
 }
