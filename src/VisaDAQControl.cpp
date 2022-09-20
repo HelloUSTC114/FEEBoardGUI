@@ -539,7 +539,7 @@ void VisaDAQControlWin::handle_DACVTest()
     {
         // std::cout << "John Test: Start DAC V: " << std::endl;
         // std::cout << "Processing handle: " << handleDACV << std::endl;
-        std::string sFolder = "./";
+        std::string sFolder = "../MuonTestControl/Data/DACVTest/";
 
         // Wait for previous measuring
         if (handleDACV != 0)
@@ -593,8 +593,11 @@ double ProcessVoltageTest(int channel, int biasDAC, int nSamples, std::string sF
     mutex.lock();
     gFEEControlWin->Modify_SP_CITIROC_BiasDAC(channel, biasDAC);
     _sleep(1000);
-    std::string sHeader = "bias-" + std::to_string(biasDAC);
+    
     std::string fileName = sFolder + "Channel-" + std::to_string(channel) + ".txt";
+
+    // Header is the first word in the line, input bias info
+    std::string sHeader = std::to_string(biasDAC);
     auto rtn = VoltageTest(nSamples, fileName, sHeader);
     mutex.unlock();
     return rtn;
