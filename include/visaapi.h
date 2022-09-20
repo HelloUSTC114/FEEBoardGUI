@@ -39,7 +39,8 @@ public:
     int ProcessError(ViStatus status);
     // int ProcessError(ViSession &defaultRM, ViSession &device, ViStatus status, ViChar *buffer);
     int WriteCMD(std::string sCmd);
-    int ReadBuf();
+    int WriteCMDSerial(std::vector<std::string> vCMDs);
+    std::string ReadBuf();
     std::string Query(std::string sCmd);
 
 private:
@@ -52,7 +53,7 @@ private:
     ViSession defaultRM = VI_NULL, device = VI_NULL;
     ViFindList deviceList = 0;
     ViUInt32 sendCharCount, itemCnt;
-    ViChar deviceName[256], buffer[256];
+    ViChar deviceName[256], buffer[4096], errBuffer[256];
 
 protected:
     bool OpenDevice(std::string sDeviceName);
@@ -89,16 +90,21 @@ public:
     static Agi344VisaAPI *Instance();
     int SetImpedance(bool autoON);
 
-    int SetSamplePoints(int points);
+    int SetSamplePoints(int points = 50);
     int GetSamplePoints(int &points);
 
-    int GetData(std::vector<double>& vData);
+    int GetData(std::vector<double> &vData);
 
     int InitMeasure();
     double MeasureOnce();
 
+    void Clear34410();
+    void InitMeasure34410();
+    void Measure34410(std::vector<double> &vResult);
+
 private:
     const static std::string sDeviceName;
+    int fNPoints = 50;
 };
 
 #endif // VISAAPI_H

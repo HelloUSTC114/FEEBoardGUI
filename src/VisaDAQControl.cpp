@@ -429,7 +429,7 @@ bool VisaDAQControl::ProcessDeviceHandle(int deviceHandle)
     if (deviceHandle == 0)
     {
         status = gAFGVisa->SetChannelStatus(1, 1);
-        gAFGVisa->SetWaveForm(AFGWaveform::USER1);
+        // gAFGVisa->SetWaveForm(AFGWaveform::USER1);
     }
     if (status != 0)
         return false;
@@ -498,11 +498,18 @@ void VisaDAQControlWin::StopDAC_R_Test()
 #include <QtConcurrent/QtConcurrentRun>
 void VisaDAQControlWin::StartDAC_V_Test()
 {
+    fDACVTestBreakFlag = 0;
     handleDACV = 0;
     ui->listBias->setCurrentRow(handleDACV);
+
+    int chTemp = ui->listCh->currentRow();
+    std::cout << chTemp << std::endl;
+    handleDACVch = (chTemp > 31 || chTemp < 0) ? 0 : chTemp;
     ui->listCh->setCurrentRow(handleDACVch);
     ui->lineChMea->setText(QString::number(fChList[handleDACVch]));
     ui->listCh->setEnabled(0);
+    ui->btnStartVTest->setEnabled(0);
+    ui->btnNextChReady->setEnabled(0);
 
     // connect(&fTimer, &QTimer::timeout, this, &VisaDAQControlWin::handle_DACVTest);
     // fTimer.start(ui->boxVSamplePoints->value() * 300);
@@ -511,8 +518,12 @@ void VisaDAQControlWin::StartDAC_V_Test()
 
 void VisaDAQControlWin::StopDAC_V_Test()
 {
+    fDACVTestBreakFlag = 0;
+
     // disconnect(&fTimer, &QTimer::timeout, this, &VisaDAQControlWin::handle_DACVTest);
     ui->listCh->setEnabled(1);
+    ui->btnStartVTest->setEnabled(1);
+    ui->btnNextChReady->setEnabled(1);
     fTimer.stop();
 }
 
@@ -522,11 +533,15 @@ double ProcessVoltageTest(int channel, int biasDAC, int nSamples, std::string sF
 void VisaDAQControlWin::handle_DACVTest()
 {
     static QFuture<double> DACVfuture;
-    // std::cout << "John Test: Start DAC V: " << std::endl;
+
+    // fTimer.singleShot(ui->boxVSamplePoints->value() * 300, this, &VisaDAQControlWin::handle_DACVTest);
     if (handleDACV < fBiasList.size())
     {
+        // std::cout << "John Test: Start DAC V: " << std::endl;
         // std::cout << "Processing handle: " << handleDACV << std::endl;
         std::string sFolder = "./";
+
+        // Wait for previous measuring
         if (handleDACV != 0)
         {
             auto result = DACVfuture.result();
@@ -534,8 +549,12 @@ void VisaDAQControlWin::handle_DACVTest()
         }
         ui->listBias->setCurrentRow(handleDACV);
         DACVfuture = QtConcurrent::run(ProcessVoltageTest, fChList[handleDACVch], fBiasList[handleDACV++], ui->boxVSamplePoints->value(), sFolder);
+        std::cout << "Test" << std::endl;
 
-        fTimer.singleShot(ui->boxVSamplePoints->value() * 300, this, &VisaDAQControlWin::handle_DACVTest);
+        if (!fDACVTestBreakFlag)
+            fTimer.singleShot(ui->boxVSamplePoints->value() * 50, this, &VisaDAQControlWin::handle_DACVTest);
+        else
+            StopDAC_V_Test();
     }
     else
     {
@@ -560,7 +579,8 @@ void VisaDAQControlWin::on_btnStartVTest_clicked()
 
 void VisaDAQControlWin::on_btnStopVTest_clicked()
 {
-    StopDAC_V_Test();
+    fDACVTestBreakFlag = 1;
+    // StopDAC_V_Test();
 }
 
 #include <QMutex>
@@ -571,7 +591,8 @@ double ProcessVoltageTest(int channel, int biasDAC, int nSamples, std::string sF
 {
     QMutex mutex;
     mutex.lock();
-    // gFEEControlWin->Modify_SP_CITIROC_BiasDAC(channel, biasDAC);
+    gFEEControlWin->Modify_SP_CITIROC_BiasDAC(channel, biasDAC);
+    _sleep(1000);
     std::string sHeader = "bias-" + std::to_string(biasDAC);
     std::string fileName = sFolder + "Channel-" + std::to_string(channel) + ".txt";
     auto rtn = VoltageTest(nSamples, fileName, sHeader);
@@ -581,6 +602,32 @@ double ProcessVoltageTest(int channel, int biasDAC, int nSamples, std::string sF
 
 #include <time.h>
 double VoltageTest(int nSamplePoints, std::string fileName, std::string sHeader)
+{
+    std::ofstream fout(fileName, std::ios::app);
+    if (!fout.is_open())
+    {
+        std::cout << "Warning: cannot open file: " << fileName << std::endl;
+        return 0;
+    }
+
+    // Start Sampling
+    std::vector<double> vResult;
+    gAgi1344Visa->InitMeasure34410();
+    gAgi1344Visa->Measure34410(vResult);
+
+    // Output
+    fout << sHeader << '\t';
+    fout << vResult.size() << '\t';
+    for (int i = 0; i < vResult.size(); i++)
+    {
+        fout << vResult[i] << '\t';
+    }
+    fout << std::endl;
+    fout.close();
+    return vResult.size();
+}
+
+double VoltageTest_Previous(int nSamplePoints, std::string fileName, std::string sHeader)
 {
     std::ofstream fout(fileName, std::ios::app);
     if (!fout.is_open())
@@ -614,6 +661,7 @@ double VoltageTest(int nSamplePoints, std::string fileName, std::string sHeader)
     fout.close();
     return vResult.size();
 }
+
 void VisaDAQControlWin::on_btnNextChReady_clicked()
 {
     handleDACVch++;

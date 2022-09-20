@@ -146,6 +146,7 @@ private:
     // DAC V Test
     int handleDACV = 0;
     int handleDACVch = 0;
+    volatile bool fDACVTestBreakFlag = 0;
 };
 
 #endif // VISADAQCONTROL_H

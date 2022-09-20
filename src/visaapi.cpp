@@ -164,11 +164,24 @@ int VisaAPI::WriteCMD(std::string sCmd)
     return status;
 }
 
-int VisaAPI::ReadBuf()
+int VisaAPI::WriteCMDSerial(std::vector<std::string> vCMDs)
 {
     if (!fDeviceFound)
         return 1;
-    auto status = viRead(device, (ViBuf)buffer, 256, &sendCharCount);
+    for (int i = 0; i < vCMDs.size(); i++)
+    {
+        WriteCMD(vCMDs[i]);
+    }
+    return 0;
+}
+
+// int VisaAPI::ReadBuf()
+std::string VisaAPI::ReadBuf()
+{
+    if (!fDeviceFound)
+        // return 1;
+        return "";
+    auto status = viRead(device, (ViBuf)buffer, 4096, &sendCharCount);
     _sleep(100);
     std::cout << "Recieve: " << '\t';
     for (int i = 0; i < sendCharCount; i++)
@@ -176,15 +189,19 @@ int VisaAPI::ReadBuf()
         std::cout << buffer[i];
     }
     if (status < 0)
+    {
         ProcessError(status);
-    return status;
+        return "";
+    }
+    return (std::string)buffer;
+    // return status;
 }
 
 std::string VisaAPI::Query(std::string sCmd)
 {
     if (!fDeviceFound)
         return "";
-    memset(buffer, '\0', 256 * sizeof(char));
+    memset(buffer, '\0', 4096 * sizeof(char));
     auto status = viQueryf(device, (ViString)sCmd.c_str(), "%s", buffer);
     if (status < 0)
         ProcessError(status);
@@ -201,10 +218,10 @@ void VisaAPI::CloseDevice()
 
 int VisaAPI::ProcessError(ViStatus status)
 {
-    memset(buffer, '\0', 256 * sizeof(char));
+    memset(errBuffer, '\0', 256 * sizeof(char));
     // Report error and clean up
-    viStatusDesc(device, status, buffer);
-    std::cout << "Failure: " << buffer << std::endl;
+    viStatusDesc(device, status, errBuffer);
+    std::cout << "Failure: " << errBuffer << std::endl;
     return 1;
 }
 
@@ -372,8 +389,8 @@ int AFGVisaAPI::SetWaveForm(AFGWaveform wave)
     return 0;
 }
 
-// const std::string Agi344VisaAPI::sDeviceName = "TCPIP::192.168.1.178::INSTR";
-const std::string Agi344VisaAPI::sDeviceName = "USB::0x0957::0x0618::MY51520158::INSTR";
+const std::string Agi344VisaAPI::sDeviceName = "TCPIP::192.168.1.178::INSTR";
+// const std::string Agi344VisaAPI::sDeviceName = "USB::0x0957::0x0618::MY51520158::INSTR";
 Agi344VisaAPI::Agi344VisaAPI() : VisaAPI(sDeviceName.c_str())
 {
 }
@@ -386,6 +403,7 @@ Agi344VisaAPI *Agi344VisaAPI::Instance()
 
 int Agi344VisaAPI::SetImpedance(bool autoON)
 {
+    Clear34410();
     int status = 0;
     std::string sCmd;
     sCmd = "sense:voltage:dc:impedance:auto" + std::to_string(autoON);
@@ -395,7 +413,7 @@ int Agi344VisaAPI::SetImpedance(bool autoON)
 
     // Read amplitude
     sCmd = "sense:voltage:dc:impedance:auto?";
-    bool recieveAmp = 0;
+    int recieveAmp = 0;
 
     // char *buf[256];
     // status = viQueryf(device, (ViString)sCmd.c_str(), "%lf", &recieveAmp);
@@ -403,6 +421,7 @@ int Agi344VisaAPI::SetImpedance(bool autoON)
     sscanf(sQuery.c_str(), "%d", &recieveAmp);
 
     std::cout << "Recieved Impedance auto: " << recieveAmp << std::endl;
+    // std::cout << "Recieved Impedance auto: " << sQuery << std::endl;
     _sleep(100);
     return 0;
 }
@@ -411,15 +430,22 @@ int Agi344VisaAPI::SetSamplePoints(int points)
 {
     int status = 0;
     std::string sCmd;
-    sCmd = "trigger:count " + std::to_string(points);
+    sCmd = "sample:count " + std::to_string(points);
     int rtn = WriteCMD(sCmd);
     if (rtn < 0)
+    {
+        fNPoints = 0;
         return rtn;
+    }
     int recieveAmp;
     status = GetSamplePoints(recieveAmp);
     if (rtn < 0)
+    {
+        fNPoints = 0;
         return rtn;
-    std::cout << "Recieved Impedance auto: " << recieveAmp << std::endl;
+    }
+    std::cout << "Recieved sample points: " << recieveAmp << std::endl;
+    fNPoints = points;
     _sleep(100);
     return 0;
 }
@@ -428,7 +454,7 @@ int Agi344VisaAPI::GetSamplePoints(int &points)
 {
     int status = 0;
     std::string sCmd;
-    sCmd = "trigger:count?";
+    sCmd = "sample:count?";
     std::string sQuery = Query(sCmd);
 
     if (sQuery == "")
@@ -444,9 +470,6 @@ int Agi344VisaAPI::GetSamplePoints(int &points)
 
 int Agi344VisaAPI::InitMeasure()
 {
-    // SetImpedance(1);
-    // SetSamplePoints(40);
-
     int rtn = 0;
     std::string sCmd = "";
 
@@ -475,4 +498,73 @@ double Agi344VisaAPI::MeasureOnce()
     double temp = 0;
     sscanf(sQuery.c_str(), "%lf", &temp);
     return temp;
+}
+
+void Agi344VisaAPI::Clear34410()
+{
+    std::vector<std::string> sCMDs;
+    sCMDs.push_back("measure:dc");
+    sCMDs.push_back("init");
+    sCMDs.push_back("*trg");
+}
+
+void Agi344VisaAPI::InitMeasure34410()
+{
+    int rtn = 0;
+    std::string sCmd = "";
+
+    // sCmd = "*rst";
+    // WriteCMD(sCmd);
+    // sCmd = "measure:dc";
+    // WriteCMD(sCmd);
+
+    sCmd = "trigger:source bus";
+    WriteCMD(sCmd);
+    // sCmd = "init";
+    // WriteCMD(sCmd);
+    // sCmd = "*trg";
+    // WriteCMD(sCmd);
+    // _sleep(5000);
+
+    sCmd = "sense:voltage:dc:impedance:auto 1";
+    WriteCMD(sCmd);
+
+    sCmd = "sample:count 40";
+    WriteCMD(sCmd);
+
+    sCmd = "sense:voltage:dc:nplc 1";
+    WriteCMD(sCmd);
+}
+
+void Agi344VisaAPI::Measure34410(std::vector<double> &vResult)
+{
+    std::string sCmd;
+    sCmd = "init";
+    WriteCMD(sCmd);
+    sCmd = "*trg";
+    WriteCMD(sCmd);
+    _sleep(2000);
+
+    sCmd = "R? ";
+    // WriteCMD(sCmd);
+    std::string sReply = Query(sCmd);
+    std::cout << sReply << std::endl;
+
+    gss.clear();
+    gss.str(sReply);
+    char c;
+    gss >> c;
+    int header;
+    gss >> header;
+    for (int i = 0; i < fNPoints; i++)
+    {
+        if (gss.eof())
+            break;
+        double temp;
+        gss >> temp;
+        if (i != fNPoints - 1)
+            gss >> c;
+        std::cout << i << '\t' << temp << std::endl;
+        vResult.push_back(temp);
+    }
 }

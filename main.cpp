@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     new TApplication("QTCanvas Demo", &argc, argv);
 
     {
-        // gFEEControlWin->show();
+        gFEEControlWin->show();
         gVisaDAQWin->show();
         return qapp.exec();
         // gAFGVisa;
@@ -44,6 +44,10 @@ int main(int argc, char *argv[])
         //     std::cout << i << '\t' << mes << '\t' << "Start time: " << start0 << "\t running time: " << clock() - start0 << std::endl;
         // }
         // std::cout << "Total running time: " << clock()-start << '\t' << std::endl;
+
+        // gAgi1344Visa->InitMeasure34410();
+        // std::vector<double> vResult;
+        // gAgi1344Visa->Measure34410(vResult);
         // return 1;
     }
 
