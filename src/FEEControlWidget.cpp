@@ -627,6 +627,7 @@ void FEEControlWin::update_DAQClock()
 
 void FEEControlWin::on_btnDAQStart_clicked()
 {
+    fsFileName = ui->lblFileName->text();
     TryStartDAQ(fsFilePath.toStdString(), fsFileName.toStdString(), ui->boxDAQEvent->value(), ui->timeDAQSetting->time(), ui->boxBufferWait->value(), ui->boxLeastEvents->value(), ui->boxClearQueue->isChecked());
 }
 
