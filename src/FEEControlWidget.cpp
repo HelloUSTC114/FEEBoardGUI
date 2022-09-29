@@ -1290,3 +1290,24 @@ void FEEControlWin::on_btnClearDraw_clicked()
 {
     gDataManager->ClearDraw();
 }
+
+#ifdef USE_VISA_CONTROL
+#include "VisaDAQControl.h"
+#endif
+void FEEControlWin::on_btnVISAControl_clicked()
+{
+#ifdef USE_VISA_CONTROL
+    gVisaDAQWin->show();
+#endif
+}
+
+#ifdef USE_ZABER_MOTION
+#include "ZaberControlWidget.h"
+#endif
+
+void FEEControlWin::on_btnZaberControl_clicked()
+{
+#ifdef USE_ZABER_MOTION
+    gZaberWindow->show();
+#endif
+}

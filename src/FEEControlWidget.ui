@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1026</width>
-    <height>974</height>
+    <height>1007</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -22,7 +22,7 @@
      <x>30</x>
      <y>30</y>
      <width>631</width>
-     <height>861</height>
+     <height>941</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -1032,7 +1032,7 @@
      <x>660</x>
      <y>9</y>
      <width>331</width>
-     <height>901</height>
+     <height>961</height>
     </rect>
    </property>
    <property name="frameShape">
@@ -1246,16 +1246,42 @@
        <enum>QFrame::Raised</enum>
       </property>
       <layout class="QGridLayout" name="gridLayout_16">
-       <item row="0" column="0">
-        <widget class="QPushButton" name="btnDraw">
+       <item row="1" column="0">
+        <widget class="QPushButton" name="btnVISAControl">
          <property name="font">
           <font>
-           <pointsize>18</pointsize>
+           <pointsize>12</pointsize>
            <bold>true</bold>
           </font>
          </property>
          <property name="text">
-          <string>Draw</string>
+          <string>VISA control window</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QPushButton" name="btnDraw">
+         <property name="font">
+          <font>
+           <pointsize>12</pointsize>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>ROOT Draw window</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QPushButton" name="btnZaberControl">
+         <property name="font">
+          <font>
+           <pointsize>12</pointsize>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>ZABER control window</string>
          </property>
         </widget>
        </item>

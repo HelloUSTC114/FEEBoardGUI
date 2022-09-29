@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 
     {
         gFEEControlWin->show();
-        gVisaDAQWin->show();
+        // gVisaDAQWin->show();
         return qapp.exec();
         // gAFGVisa;
         // // // std::cout << gAFGVisa->WriteCMD("output1 on") << std::endl;
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 
     //    std::vector<Device> deviceList;
 
-    //    ConnectionManager conM;
+    //    ZaberConnectionManager conM;
     //    conM.ScanDevice();
     //    cout << conM.getPortNameNow() << endl;
     //    cout << gcon.toString() << endl;
