@@ -12,8 +12,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # User defined library option
-set(USE_VISA OFF)
-set(USE_ZABER OFF)
+set(USE_VISA ON)
+set(USE_ZABER ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
@@ -49,6 +49,9 @@ set(PROJECT_SOURCES
 
     include/VDeviceController.h
     src/VDeviceController.cpp
+
+    include/General.h
+    src/General.cpp
 )
 
 # User define ZABER Motion Control lib

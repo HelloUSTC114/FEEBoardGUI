@@ -90,12 +90,12 @@ void DeviceDAQConnector::handle_DAQRequest(int deviceHandle, DAQRequestInfo *daq
     if (fDAQhandle != deviceHandle)
         std::cout << "Warning inside DAQ connector: Handle not match: DAQ handle: " << fDAQhandle << '\t' << "Device request Handle: " << deviceHandle << std::endl;
     std::cout << "Message: Processing DAQ handle: " << fDAQhandle << std::endl;
-    gFEEControlWin->TryStartDAQ(daq->sPath, daq->sFileName, daq->nDAQCount, daq->DAQTime, daq->msBufferSleep, daq->leastBufferEvent);
+    // gFEEControlWin->TryStartDAQ(daq->sPath, daq->sFileName, daq->nDAQCount, daq->DAQTime, daq->msBufferSleep, daq->leastBufferEvent);
 
     // std::cout << "daq file name: " << daq->sFileName << std::endl
     //           << std::endl;
-    // QTimer timer;
-    // timer.singleShot(1000, gFEEControlWin, SIGNAL(stopDAQSignal()));
+    QTimer timer;
+    timer.singleShot(1000, gFEEControlWin, SIGNAL(stopDAQSignal()));
     // _sleep(1000);
     // emit gFEEControlWin->stopDAQSignal();
 }
@@ -179,6 +179,7 @@ void VDeviceController::TestStop()
     fDeviceHandle = 0;
     fOccupied = 0;
     fStopFlag = 0;
+    std::cout << "Occupied Flag: " << fOccupied << std::endl;
     fLastLoopFlag = 0;
 }
 
@@ -214,6 +215,17 @@ bool TestDevice::ProcessDeviceHandle(int deviceHandle)
     }
     return true;
 }
+
+bool TestDevice::JudgeLastLoop(int deviceHandle)
+{
+    if (deviceHandle > 10)
+    {
+        fStopFlag = 1;
+        return true;
+    }
+    return false;
+}
+
 
 void VDeviceController::ForceStopDevice()
 {

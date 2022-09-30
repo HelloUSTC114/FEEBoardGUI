@@ -19,11 +19,6 @@ namespace Ui
     class VisaDAQControlWin;
 }
 
-namespace UserDefine
-{
-    bool ParseLine(std::string sInput, std::vector<double> &vOutput);
-}
-
 class VisaDAQControl : public VDeviceController
 {
 public:

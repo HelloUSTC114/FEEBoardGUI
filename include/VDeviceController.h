@@ -77,8 +77,8 @@ public slots:
     virtual void handle_ForceStopDAQ();
 
 protected:
-    int fDeviceHandle = 0;
-    bool fOccupied = 0;
+    volatile int fDeviceHandle = 0;
+    volatile bool fOccupied = 0;
     volatile bool fStopFlag = 0;
     volatile bool fLastLoopFlag = 0;
 
@@ -98,5 +98,6 @@ class TestDevice : public VDeviceController
 
 public:
     virtual bool ProcessDeviceHandle(int deviceHandle) override;
+    virtual bool JudgeLastLoop(int deviceHandle) override;
 };
 #endif // VDEVICECONTROLLER_H

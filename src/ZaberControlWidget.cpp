@@ -1,5 +1,5 @@
-#include "zabercontrolwidget.h"
-#include "ui_zabercontrolwidget.h"
+#include "ZaberControlWidget.h"
+#include "ui_ZaberControlWidget.h"
 
 // ROOT
 #include "TH1D.h"
@@ -94,14 +94,6 @@ void ZaberControlWidget::handle_MoveRequest(double pos)
         emit moveRequestStart(fProcessingHandle);
     }
     fNextHandle++;
-}
-
-void DeviceMove::startMove(ZaberControlWidget *w)
-{
-    auto dev = gconm->getDeviceList()[w->fDevIndex];
-
-    dev.moveAbsolute(w->fProcessingPos, zaber::motion::Units::LENGTH_MILLIMETRES);
-    emit moveReady();
 }
 
 void ZaberControlWidget::ScanPorts()
@@ -250,7 +242,8 @@ void ZaberControlWidget::startOneRunning(double pos)
     fProcessingPos = pos;
     fDevRunningFlag = 1;
     fMonitorTimer.start(100);
-    emit startRunning(this);
+
+    emit startRunning(this, 0);
 }
 
 void ZaberControlWidget::on_sliderMonitor_actionTriggered(int action)
@@ -272,18 +265,18 @@ void ZaberControlWidget::on_RunningStoped()
     ProcessMonitorValue();
     ProcessMoveSetValue();
 
-    // Emit to other class, fProcessingHandle shold increment here;
-    std::cout << "Test: End of Running: " << fProcessingHandle << '\t' << pos << std::endl;
-    emit moveRequestDone(fProcessingHandle++);
+    // // Emit to other class, fProcessingHandle shold increment here;
+    // std::cout << "Test: End of Running: " << fProcessingHandle << '\t' << pos << std::endl;
+    // emit moveRequestDone(fProcessingHandle++);
 
-    // Start Next moving
-    if (fHandles.size() != 0)
-    {
-        fProcessingHandle = fHandles.front();
-        startOneRunning(fRequestPos.front());
-        fHandles.pop();
-        fRequestPos.pop();
-    }
+    // // Start Next moving
+    // if (fHandles.size() != 0)
+    // {
+    //     fProcessingHandle = fHandles.front();
+    //     startOneRunning(fRequestPos.front());
+    //     fHandles.pop();
+    //     fRequestPos.pop();
+    // }
 }
 
 void ZaberControlWidget::ProcessMonitorValue()
@@ -318,6 +311,62 @@ void ZaberControlWidget::on_btnMonitor_clicked()
     auto dev = gconm->getDeviceList()[fDevIndex];
     monitorValue = dev.getPosition(zaber::motion::Units::LENGTH_MILLIMETRES);
     ProcessMonitorValue();
+}
+
+// Motion position list generation
+#include "General.h"
+bool ZaberControlWidget::GeneratePosList()
+{
+    ui->listPosition->clear();
+    std::vector<double> temp;
+    bool rtn = UserDefine::ParseLine(ui->linePositionSetting->text().toStdString(), temp);
+    if (!rtn)
+        return rtn;
+
+    fPosList.clear();
+    for (int i = 0; i < temp.size(); i++)
+    {
+        if (temp[i] >= 0 && temp[i] < 200)
+        {
+            fPosList.push_back(temp[i]);
+        }
+    }
+    for (int i = 0; i < fPosList.size(); i++)
+    {
+        QString temp = "Position: " + QString::number(fPosList[i]) + " mm";
+        ui->listPosition->addItem(temp);
+    }
+
+    return rtn;
+}
+
+void ZaberControlWidget::on_btnGenerateList_clicked()
+{
+    GeneratePosList();
+}
+
+void ZaberControlWidget::on_btnClearList_clicked()
+{
+    ui->listPosition->clear();
+    fPosList.clear();
+}
+
+bool ZaberControlWidget::GetPositionList(int deviceHandle, double &pos)
+{
+    if (deviceHandle >= fPosList.size() || deviceHandle < 0)
+    {
+        pos = 0;
+        return false;
+    }
+    pos = fPosList[deviceHandle];
+    return true;
+}
+
+bool ZaberControlWidget::JudgeLastMotion(int deviceHandle)
+{
+    if (deviceHandle == fPosList.size() - 1)
+        return true;
+    return false;
 }
 
 #include <Windows.h>
@@ -383,4 +432,55 @@ void ZaberTest::handle_DAQStart()
 
 void ZaberTest::handle_DAQDone()
 {
+}
+
+void DeviceMove::startMove(ZaberControlWidget *w, bool flagContinuous)
+{
+    if (!flagContinuous)
+    {
+        auto dev = gconm->getDeviceList()[gZaberWindow->fDevIndex];
+        dev.moveAbsolute(w->fProcessingPos, zaber::motion::Units::LENGTH_MILLIMETRES);
+        emit moveReady();
+    }
+    else
+    {
+        StartTest();
+    }
+}
+
+bool DeviceMove::ProcessDeviceHandle(int deviceHandle)
+{
+    auto dev = gconm->getDeviceList()[gZaberWindow->fDevIndex];
+
+    // dev.moveAbsolute(w->fProcessingPos, zaber::motion::Units::LENGTH_MILLIMETRES);
+    gZaberWindow->StartMonitorClock();
+    double pos = 0;
+    auto rtn = gZaberWindow->GetPositionList(deviceHandle, pos);
+    dev.moveAbsolute(pos, zaber::motion::Units::LENGTH_MILLIMETRES);
+    emit moveReady();
+    return rtn;
+}
+
+bool DeviceMove::JudgeLastLoop(int deviceHandle)
+{
+    return gZaberWindow->JudgeLastMotion(deviceHandle);
+}
+
+void ZaberControlWidget::on_btnStartConMotion_clicked()
+{
+    emit startRunning(this, 1);
+}
+
+void ZaberControlWidget::StartMonitorClock()
+{
+    fMonitorTimer.start(100);
+}
+
+void ZaberControlWidget::StopMonitorClock()
+{
+    fMonitorTimer.stop();
+}
+void ZaberControlWidget::on_btnStopConMotion_clicked()
+{
+    fMoveWorker->ForceStopDevice();
 }

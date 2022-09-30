@@ -34,7 +34,6 @@ int main(int argc, char *argv[])
         // // // std::cout << gAFGVisa->WriteCMD("output1 on") << std::endl;
         // std::cout << gAFGVisa->SetChannelStatus(1, 1) << std::endl;
 
-
         // gAgi1344Visa->InitMeasure();
         // auto start = clock();
         // for (int i = 0; i < 40; i++)
@@ -51,8 +50,11 @@ int main(int argc, char *argv[])
         // return 1;
     }
 
-    // TestDevice a;
-    // a.StartTest();
+    // {
+    //     TestDevice a;
+    //     a.StartTest();
+    //     return qapp.exec();;
+    // }
 
     //    std::vector<Device> deviceList;
 

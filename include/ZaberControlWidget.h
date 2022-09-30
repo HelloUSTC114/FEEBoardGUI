@@ -6,6 +6,8 @@
 #include <QTimer>
 #include <queue>
 
+#include "VDeviceController.h"
+
 #define gZaberWindow (ZaberControlWidget::Instance())
 
 class QListWidgetItem;
@@ -20,6 +22,7 @@ class PlotWindow;
 class FTAnalyzerWin;
 
 // Zaber Move Processing class
+/* Previous DeviceMove
 class DeviceMove : public QObject
 {
     Q_OBJECT
@@ -29,20 +32,34 @@ signals:
 public slots:
     void startMove(ZaberControlWidget *w);
 };
+*/
+
+class DeviceMove : public VDeviceController
+{
+    Q_OBJECT
+
+signals:
+    void moveReady();
+public slots:
+    void startMove(ZaberControlWidget *w, bool flagContinuous);
+
+public:
+    virtual bool ProcessDeviceHandle(int deviceHandle) override;
+    virtual bool JudgeLastLoop(int deviceHandle) override;
+};
 
 class ZaberControlWidget : public QMainWindow
 {
     Q_OBJECT
 
     friend class DeviceMove;
-    friend class DAQRuning;
-    friend class FiberTestDrawing;
-    friend class ZaberFunctionTestClass;
+    // friend class DAQRuning;
+    // friend class ZaberFunctionTestClass;
 
 signals:
-    void startRunning(ZaberControlWidget *w); // Zaber start runing signal
-    void moveRequestDone(int handle);         // emit move request done signal, requst handle should be the same as start
-    void moveRequestStart(int handle);        // emitted when move request start, emit request handle
+    void startRunning(ZaberControlWidget *w, bool flagContinous = 0); // Zaber start runing signal, flag means continuos motion or single motion
+    void moveRequestDone(int handle);                                 // emit move request done signal, requst handle should be the same as start
+    void moveRequestStart(int handle);                                // emitted when move request start, emit request handle
 
 public slots:
     void on_RunningStoped();             // Zaber Stop Slot
@@ -54,6 +71,14 @@ public:
 
     double getPosition() { return monitorValue; }
     bool isValid() { return !(fDevIndex < 0); }
+
+    // Get motion list:
+    bool GetPositionList(int deviceHandle, double &pos);
+    bool JudgeLastMotion(int deviceHandle);
+
+    // Monitor Clock
+    void StartMonitorClock();
+    void StopMonitorClock();
 
 private:
     Ui::ZaberControlWidget *ui;
@@ -87,6 +112,10 @@ private:
     std::queue<double> fRequestPos; // Requested position
     std::queue<double> fHandles;    // Requested handles
 
+    // Motion list
+    std::vector<double> fPosList;
+    bool GeneratePosList();
+
 private slots:
     void updateMonitor(); // Update monitor
 
@@ -101,6 +130,10 @@ private slots:
     void on_btnMove_clicked();
     void on_sliderMonitor_actionTriggered(int action);
     void on_btnMonitor_clicked();
+    void on_btnGenerateList_clicked();
+    void on_btnClearList_clicked();
+    void on_btnStartConMotion_clicked();
+    void on_btnStopConMotion_clicked();
 };
 
 #include <iostream>
