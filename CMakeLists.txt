@@ -12,7 +12,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # User defined library option
-set(USE_VISA ON)
+set(USE_VISA OFF)
 set(USE_ZABER OFF)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)

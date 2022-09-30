@@ -50,8 +50,8 @@ bool DAQRuning::JudgeLoopFlag(FEEControlWin *w, int nEventCount)
 
 void DAQRuning::startDAQ(FEEControlWin *w)
 {
-    cout << "Starting DAQ in DAQRuning" << endl;
-    cout << w->fDAQRuningFlag << endl;
+    // cout << "Test: Starting DAQ in DAQRuning" << endl;
+    // cout << w->fDAQRuningFlag << endl;
 
     int nDAQLoop = 0;
     int nDAQEventCount = 0;
@@ -568,7 +568,7 @@ void FEEControlWin::handle_DAQCount(int nCount)
     static double sTransCR = 0;
     static int sTransTimeInteval = 0;
     int transCount = nCount - sLastCount;
-    if ((sTransTimeInteval = sLastTime.msecsTo(QDateTime::currentDateTime())) > 1000 && transCount > 0)
+    if ((sTransTimeInteval = sLastTime.msecsTo(QDateTime::currentDateTime())) > 100 && transCount > 0)
     {
         // std::cout << "Count: " << nCount << '\t' << transCount << '\t' << sTransTimeInteval << std::endl;
         sTransCR = (double)transCount / sTransTimeInteval * 1000;
@@ -660,7 +660,7 @@ bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nD
         return false;
 
     // Force DAQ start
-    ForceStartDAQ(nDAQCount, DAQTime, msBufferSleep, leastBufferEvent);
+    ForceStartDAQ(nDAQCount, DAQTime, msBufferSleep, leastBufferEvent, clearBeforeDAQ);
 
     // Draw Start
     on_btnStartDraw_clicked();
@@ -679,6 +679,7 @@ void FEEControlWin::ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting
     fDAQSettingTime = daqTime;
     fDAQBufferSleepms = msBufferWaiting;
     fDAQBufferLeastEvents = leastBufferEvent;
+    fFlagClearQueue = clearBeforeDAQ;
 
     ui->boxDAQEvent->setValue(nCount);
     ui->timeDAQSetting->setTime(daqTime);
@@ -699,8 +700,7 @@ void FEEControlWin::ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting
     on_btnHVON_clicked();
     Sleep(1000);
 
-    ui->boxClearQueue->setChecked(clearBeforeDAQ);
-    fFlagClearQueue = clearBeforeDAQ;
+    ui->boxClearQueue->setChecked(fFlagClearQueue);
     emit startDAQSignal(this);
     fDAQClock.start(1000);
     fDAQIsRunning = 1;
