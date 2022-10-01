@@ -116,6 +116,14 @@ private:
     std::vector<double> fPosList;
     bool GeneratePosList();
 
+    // DAQ
+    QString GetPath() { return fsFilePath; }
+    const DAQRequestInfo &GenerateDAQRequestInfo(DAQRequestInfo &daq);
+
+    // DAQ Setting
+    QString fsFileName = "Data";
+    QString fsFilePath = "../MuonTestControl/Data";
+
 private slots:
     void updateMonitor(); // Update monitor
 

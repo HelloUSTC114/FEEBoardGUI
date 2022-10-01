@@ -450,13 +450,15 @@ void DeviceMove::startMove(ZaberControlWidget *w, bool flagContinuous)
 
 bool DeviceMove::ProcessDeviceHandle(int deviceHandle)
 {
-    auto dev = gconm->getDeviceList()[gZaberWindow->fDevIndex];
+    // First Extract DAQ info from gZaberWindow;
+    gZaberWindow->GenerateDAQRequestInfo(fDAQInfo);
 
+    auto dev = gconm->getDeviceList()[gZaberWindow->fDevIndex];
     // dev.moveAbsolute(w->fProcessingPos, zaber::motion::Units::LENGTH_MILLIMETRES);
-    gZaberWindow->StartMonitorClock();
     double pos = 0;
     auto rtn = gZaberWindow->GetPositionList(deviceHandle, pos);
     dev.moveAbsolute(pos, zaber::motion::Units::LENGTH_MILLIMETRES);
+
     emit moveReady();
     return rtn;
 }
@@ -483,4 +485,16 @@ void ZaberControlWidget::StopMonitorClock()
 void ZaberControlWidget::on_btnStopConMotion_clicked()
 {
     fMoveWorker->ForceStopDevice();
+}
+
+const DAQRequestInfo &ZaberControlWidget::GenerateDAQRequestInfo(DAQRequestInfo &daq)
+{
+    daq.DAQTime = ui->timeDAQSetting->time();
+    daq.leastBufferEvent = ui->boxLeastEvents->value();
+    daq.msBufferSleep = ui->boxBufferWait->value();
+    daq.nDAQCount = ui->boxDAQEvent->value();
+    daq.sFileName = ui->lblFileName->text().toStdString();
+    daq.sPath = fsFilePath.toStdString();
+    daq.clearQueueFlag = ui->boxClearQueue->isChecked();
+    return daq;
 }
