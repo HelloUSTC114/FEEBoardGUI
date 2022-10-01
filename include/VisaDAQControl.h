@@ -51,7 +51,7 @@ public:
 
     // DAQ
     QString GetPath() { return fsFilePath; }
-    const DAQRequestInfo &GenerateDAQRequestInfo(DAQRequestInfo &daq);
+    const UserDefine::DAQRequestInfo &GenerateDAQRequestInfo(UserDefine::DAQRequestInfo &daq);
 
     // AFG3000
     void SetWaveform(AFGWaveform wave);
@@ -63,7 +63,7 @@ public:
     const std::vector<int> &GetSelectedChannels() { return fChList; }
 
     // DAQ & FEE Control Parser
-    bool ParseHandle(int deviceHandle, double &amp, double &gain, int &gainType, DAQRequestInfo &daq);
+    bool ParseHandle(int deviceHandle, double &amp, double &gain, int &gainType, UserDefine::DAQRequestInfo &daq);
     bool JudgeLastLoop(int deviceHandle);
 
     // DAC R test

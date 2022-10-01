@@ -216,7 +216,7 @@ void VisaDAQControlWin::on_boxHGLG_currentIndexChanged(int index)
 }
 
 // NL Test & Device control
-const DAQRequestInfo &VisaDAQControlWin::GenerateDAQRequestInfo(DAQRequestInfo &daq)
+const UserDefine::DAQRequestInfo &VisaDAQControlWin::GenerateDAQRequestInfo(UserDefine::DAQRequestInfo &daq)
 {
     daq.DAQTime = ui->timeDAQSetting->time();
     daq.leastBufferEvent = ui->boxLeastEvents->value();
@@ -237,7 +237,7 @@ void VisaDAQControlWin::on_btnPath_clicked()
         return;
 }
 
-bool VisaDAQControlWin::ParseHandle(int deviceHandle, double &amp, double &gain, int &gainType, DAQRequestInfo &daq)
+bool VisaDAQControlWin::ParseHandle(int deviceHandle, double &amp, double &gain, int &gainType, UserDefine::DAQRequestInfo &daq)
 {
     int nAmp = fAmpList.size(), nGain = fGainList.size();
     int nTotalTest = nAmp * nGain;

@@ -597,7 +597,7 @@ void FEEControlWin::handle_DAQCount(int nCount)
         if (fDAQSettingTime == QTime(0, 0, 0, 0))
             ui->pbarDAQ->setValue(0);
         else
-            ui->pbarDAQ->setValue(percentTime);
+            ui->pbarDAQ->setValue(percentTime > 100 ? 100 : percentTime);
     }
     else
     {
@@ -748,6 +748,13 @@ void FEEControlWin::on_btnDAQStop_clicked()
     gBoard->SetFifoReadBreak();
     emit forceStopDAQSignal();
 }
+
+#include "General.h"
+void FEEControlWin::handle_DAQRequest(UserDefine::DAQRequestInfo *daq)
+{
+    TryStartDAQ(daq->sPath, daq->sFileName, daq->nDAQCount, daq->DAQTime, daq->msBufferSleep, daq->leastBufferEvent, daq->clearQueueFlag);
+}
+
 // DAQ control end
 
 // CITIROC Configuration control

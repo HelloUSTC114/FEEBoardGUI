@@ -12,6 +12,10 @@
 #include <string>
 #include <vector>
 
+namespace UserDefine{
+    struct DAQRequestInfo;
+}
+
 class FEEControlWin;
 class PlotWindow;
 class ROOTDraw;
@@ -111,6 +115,9 @@ private slots:
     void handle_ContinousDraw();         // Handle draw slot
     void handle_DAQCount(int nDAQCount); // Handle DAQ Count
     void update_DAQClock();              // Handle DAQ Clock
+
+public slots:
+    void handle_DAQRequest(UserDefine::DAQRequestInfo *); // Process DAQ signal
 
 private:
     /// @brief Generator, private for now. Will be public and update to several boards control

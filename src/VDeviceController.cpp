@@ -25,6 +25,8 @@ void DeviceDAQConnector::ConnectSlots()
     connect(gFEEControlWin, &FEEControlWin::stopDAQSignal, this, &DeviceDAQConnector::handle_DAQDone);
 
     connect(gFEEControlWin, &FEEControlWin::forceStopDAQSignal, this, &DeviceDAQConnector::forceStopDAQSignal);
+
+    connect(this, &DeviceDAQConnector::DirectRequestForWidgetDAQ, gFEEControlWin, &FEEControlWin::handle_DAQRequest);
 }
 
 void DeviceDAQConnector::DisconnectSlots()
@@ -33,6 +35,9 @@ void DeviceDAQConnector::DisconnectSlots()
     disconnect(gFEEControlWin, &FEEControlWin::stopDAQSignal, this, &DeviceDAQConnector::handle_DAQDone);
 
     disconnect(gFEEControlWin, &FEEControlWin::forceStopDAQSignal, this, &DeviceDAQConnector::forceStopDAQSignal);
+
+    disconnect(this, &DeviceDAQConnector::DirectRequestForWidgetDAQ, gFEEControlWin, &FEEControlWin::handle_DAQRequest);
+
 }
 
 bool DeviceDAQConnector::TryTestPrepare()
@@ -79,23 +84,24 @@ void DeviceDAQConnector::handle_DAQStart()
     std::cout << "DAQ Start: handle: " << fDAQhandle << std::endl;
 }
 
-void DeviceDAQConnector::handle_LastDAQRequest(int deviceHandle, DAQRequestInfo *daq)
+void DeviceDAQConnector::handle_LastDAQRequest(int deviceHandle, UserDefine::DAQRequestInfo *daq)
 {
     fLastLoopFlag = 1;
     handle_DAQRequest(deviceHandle, daq);
 }
 
-void DeviceDAQConnector::handle_DAQRequest(int deviceHandle, DAQRequestInfo *daq)
+void DeviceDAQConnector::handle_DAQRequest(int deviceHandle, UserDefine::DAQRequestInfo *daq)
 {
     if (fDAQhandle != deviceHandle)
         std::cout << "Warning inside DAQ connector: Handle not match: DAQ handle: " << fDAQhandle << '\t' << "Device request Handle: " << deviceHandle << std::endl;
     std::cout << "Message: Processing DAQ handle: " << fDAQhandle << std::endl;
     // gFEEControlWin->TryStartDAQ(daq->sPath, daq->sFileName, daq->nDAQCount, daq->DAQTime, daq->msBufferSleep, daq->leastBufferEvent);
+    emit DirectRequestForWidgetDAQ(daq);
 
     // std::cout << "daq file name: " << daq->sFileName << std::endl
     //           << std::endl;
-    QTimer timer;
-    timer.singleShot(1000, gFEEControlWin, SIGNAL(stopDAQSignal()));
+    // QTimer timer;
+    // timer.singleShot(1000, gFEEControlWin, SIGNAL(stopDAQSignal()));
     // _sleep(1000);
     // emit gFEEControlWin->stopDAQSignal();
 }
@@ -225,7 +231,6 @@ bool TestDevice::JudgeLastLoop(int deviceHandle)
     }
     return false;
 }
-
 
 void VDeviceController::ForceStopDevice()
 {

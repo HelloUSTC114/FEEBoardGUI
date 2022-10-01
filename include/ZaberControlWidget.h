@@ -118,7 +118,7 @@ private:
 
     // DAQ
     QString GetPath() { return fsFilePath; }
-    const DAQRequestInfo &GenerateDAQRequestInfo(DAQRequestInfo &daq);
+    const UserDefine::DAQRequestInfo &GenerateDAQRequestInfo(int deviceHandle, UserDefine::DAQRequestInfo &daq);
 
     // DAQ Setting
     QString fsFileName = "Data";

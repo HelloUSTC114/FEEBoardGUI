@@ -451,7 +451,7 @@ void DeviceMove::startMove(ZaberControlWidget *w, bool flagContinuous)
 bool DeviceMove::ProcessDeviceHandle(int deviceHandle)
 {
     // First Extract DAQ info from gZaberWindow;
-    gZaberWindow->GenerateDAQRequestInfo(fDAQInfo);
+    gZaberWindow->GenerateDAQRequestInfo(deviceHandle, fDAQInfo);
 
     auto dev = gconm->getDeviceList()[gZaberWindow->fDevIndex];
     // dev.moveAbsolute(w->fProcessingPos, zaber::motion::Units::LENGTH_MILLIMETRES);
@@ -482,18 +482,25 @@ void ZaberControlWidget::StopMonitorClock()
 {
     fMonitorTimer.stop();
 }
+
 void ZaberControlWidget::on_btnStopConMotion_clicked()
 {
     fMoveWorker->ForceStopDevice();
 }
 
-const DAQRequestInfo &ZaberControlWidget::GenerateDAQRequestInfo(DAQRequestInfo &daq)
+const UserDefine::DAQRequestInfo &ZaberControlWidget::GenerateDAQRequestInfo(int deviceHandle, UserDefine::DAQRequestInfo &daq)
 {
     daq.DAQTime = ui->timeDAQSetting->time();
     daq.leastBufferEvent = ui->boxLeastEvents->value();
     daq.msBufferSleep = ui->boxBufferWait->value();
     daq.nDAQCount = ui->boxDAQEvent->value();
-    daq.sFileName = ui->lblFileName->text().toStdString();
+
+    char fileNameTemp[256];
+    sprintf(fileNameTemp, "StripTest-Pos-%.2f", fPosList[deviceHandle]);
+    daq.sFileName = fileNameTemp;
+    ui->lblFileName->setText(QString::fromStdString(daq.sFileName));
+    // daq.sFileName = ui->lblFileName->text().toStdString();
+
     daq.sPath = fsFilePath.toStdString();
     daq.clearQueueFlag = ui->boxClearQueue->isChecked();
     return daq;
