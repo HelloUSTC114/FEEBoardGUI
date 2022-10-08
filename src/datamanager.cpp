@@ -84,8 +84,8 @@ bool DataManager::Init(string sInput)
 
     for (int i = 0; i < N_BOARD_CHANNELS; i++)
     {
-        fHGHist[i] = new TH1S(Form("hHG%d", i), Form("High Gain ch%d", i), 65534, 1, 65535);
-        fLGHist[i] = new TH1S(Form("hLG%d", i), Form("Low Gain ch%d", i), 65534, 1, 65535);
+        fHGHist[i] = new TH1S(Form("hHG%d", i), Form("High Gain ch%d", i), 4096, 0, 65536);
+        fLGHist[i] = new TH1S(Form("hLG%d", i), Form("Low Gain ch%d", i), 4096, 0, 65536);
         fTDCHist[i] = new TH1I(Form("hTDC%d", i), Form("TDC Value ch%d", i), 2 ^ 16, 0, 2 ^ 32);
     }
     fTDCHist[32] = new TH1I(Form("hTDC%d", 32), Form("TDC Value ch%d", 32), 2 ^ 16, 0, 2 ^ 32);
@@ -887,7 +887,7 @@ bool ReadManager::DrawHG(int ch)
         return true;
     }
     fFile->cd();
-    fHGTree->Draw(Form("chHG[%d]>>hHG%d(65534, 1, 65535)", ch, ch));
+    fHGTree->Draw(Form("chHG[%d]>>hHG%d(4096, 0, 65536)", ch, ch));
     hHG = (TH1F *)fFile->Get(Form("hHG%d", ch));
 
     if (!hHG)
@@ -915,7 +915,7 @@ bool ReadManager::DrawLG(int ch)
         return true;
     }
     fFile->cd();
-    fLGTree->Draw(Form("chLG[%d]>>hLG%d(65534, 1, 65535)", ch, ch));
+    fLGTree->Draw(Form("chLG[%d]>>hLG%d(4096, 0, 65536)", ch, ch));
     hLG = (TH1F *)fFile->Get(Form("hLG%d", ch));
 
     if (!hLG)

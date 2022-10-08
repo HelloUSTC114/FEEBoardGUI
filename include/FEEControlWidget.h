@@ -12,7 +12,8 @@
 #include <string>
 #include <vector>
 
-namespace UserDefine{
+namespace UserDefine
+{
     struct DAQRequestInfo;
 }
 

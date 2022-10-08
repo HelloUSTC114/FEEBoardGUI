@@ -448,8 +448,29 @@ void DeviceMove::startMove(ZaberControlWidget *w, bool flagContinuous)
     }
 }
 
+#include <fstream>
+void DeviceMove::ProcessDAQCountRate()
+{
+    std::ofstream fout;
+    std::string sFileName = gZaberWindow->GetFilePath() + "/" + gZaberWindow->GetFileName() + ".txt";
+    fout.open(sFileName, std::ios::app);
+    if (!fout.is_open())
+    {
+        std::cout << "Error: cannot open count rate file." << std::endl;
+        return;
+    }
+    fout << fDeviceHandle - 1 << '\t' << fCurrentPosition << '\t' << gFEEControlWin->GetCountRate() << std::endl;
+    fout.close();
+}
+
 bool DeviceMove::ProcessDeviceHandle(int deviceHandle)
 {
+    // Process Count rate info
+    if (deviceHandle > 0)
+    {
+        ProcessDAQCountRate();
+    }
+
     // First Extract DAQ info from gZaberWindow;
     gZaberWindow->GenerateDAQRequestInfo(deviceHandle, fDAQInfo);
 
@@ -457,6 +478,7 @@ bool DeviceMove::ProcessDeviceHandle(int deviceHandle)
     // dev.moveAbsolute(w->fProcessingPos, zaber::motion::Units::LENGTH_MILLIMETRES);
     double pos = 0;
     auto rtn = gZaberWindow->GetPositionList(deviceHandle, pos);
+    fCurrentPosition = pos;
     dev.moveAbsolute(pos, zaber::motion::Units::LENGTH_MILLIMETRES);
 
     emit moveReady();
@@ -466,6 +488,13 @@ bool DeviceMove::ProcessDeviceHandle(int deviceHandle)
 bool DeviceMove::JudgeLastLoop(int deviceHandle)
 {
     return gZaberWindow->JudgeLastMotion(deviceHandle);
+}
+
+void DeviceMove::TestStop()
+{
+    // std::cout << "Test for children class" << std::endl;
+    ProcessDAQCountRate();
+    VDeviceController::TestStop();
 }
 
 void ZaberControlWidget::on_btnStartConMotion_clicked()
@@ -496,12 +525,21 @@ const UserDefine::DAQRequestInfo &ZaberControlWidget::GenerateDAQRequestInfo(int
     daq.nDAQCount = ui->boxDAQEvent->value();
 
     char fileNameTemp[256];
-    sprintf(fileNameTemp, "StripTest-Pos-%.2f", fPosList[deviceHandle]);
+    sprintf(fileNameTemp, "%s-Pos-%.2f", ui->lblFileName->text().toStdString().c_str(), fPosList[deviceHandle]);
     daq.sFileName = fileNameTemp;
-    ui->lblFileName->setText(QString::fromStdString(daq.sFileName));
+    ui->lblFileName_Display->setText(QString::fromStdString(daq.sFileName));
     // daq.sFileName = ui->lblFileName->text().toStdString();
 
     daq.sPath = fsFilePath.toStdString();
+    ui->lblFilePath_Display->setText(QString::fromStdString(daq.sPath));
     daq.clearQueueFlag = ui->boxClearQueue->isChecked();
     return daq;
+}
+
+void ZaberControlWidget::on_btnPath_clicked()
+{
+    fsFilePath = QFileDialog::getExistingDirectory(this, tr("Choosing File Path"), QDir::currentPath() + "/../MuonTestControl/Data");
+    if (fsFilePath == "")
+        return;
+    ui->lblFilePath_Display->setText(fsFilePath);
 }

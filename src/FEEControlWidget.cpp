@@ -69,7 +69,7 @@ void DAQRuning::startDAQ(FEEControlWin *w)
     bool loopFlag = JudgeLoopFlag(w, 0);
     for (nDAQLoop = 0; loopFlag; nDAQLoop++)
     {
-        auto rtnRead = gBoard->ReadFifo(w->fDAQBufferSleepms);
+        auto rtnRead = gBoard->ReadFifo(w->fDAQBufferSleepms, w->fDAQBufferLeastEvents);
         if (!rtnRead)
             break;
         nDAQEventCount += gDataManager->ProcessFEEData(gBoard);
@@ -368,7 +368,7 @@ void FEEControlWin::ProcessConnect()
     PrintT();
 
     // Select Default Logic
-    SelectLogic(1);
+    SelectLogic(2);
     on_btnAllSetMask_clicked();
     on_btnSendLogic_clicked();
     on_btnMask_clicked();
@@ -568,7 +568,8 @@ void FEEControlWin::handle_DAQCount(int nCount)
     static double sTransCR = 0;
     static int sTransTimeInteval = 0;
     int transCount = nCount - sLastCount;
-    if ((sTransTimeInteval = sLastTime.msecsTo(QDateTime::currentDateTime())) > 100 && transCount > 0)
+    // if ((sTransTimeInteval = sLastTime.msecsTo(QDateTime::currentDateTime())) > 100 && transCount > 0)
+    if ((sTransTimeInteval = sLastTime.msecsTo(QDateTime::currentDateTime())) >= 1)
     {
         // std::cout << "Count: " << nCount << '\t' << transCount << '\t' << sTransTimeInteval << std::endl;
         sTransCR = (double)transCount / sTransTimeInteval * 1000;

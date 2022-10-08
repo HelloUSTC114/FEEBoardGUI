@@ -870,8 +870,10 @@ bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
             break;
         if (!tdc_queue_length_read(fTDCQueueLengthMonitor))
             break;
+        // std::cout << "hg length: " << fHGQueueLengthMonitor << std::endl;
         if (fHGQueueLengthMonitor > nEvents * fHGPointFactor)
             break;
+
         Sleep(sleepms);
     }
     fBreakFlag = 0; // Set break flag to zero, regardless of whether is break.

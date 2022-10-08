@@ -42,10 +42,16 @@ signals:
     void moveReady();
 public slots:
     void startMove(ZaberControlWidget *w, bool flagContinuous);
+    int GetHandle() { return fDeviceHandle; }
 
 public:
+    void ProcessDAQCountRate();       // function for writing DAQ CR to file
+    virtual void TestStop() override; // Add ProcessDAQCountRate in stop step;
     virtual bool ProcessDeviceHandle(int deviceHandle) override;
     virtual bool JudgeLastLoop(int deviceHandle) override;
+
+private:
+    double fCurrentPosition = 0;
 };
 
 class ZaberControlWidget : public QMainWindow
@@ -79,6 +85,10 @@ public:
     // Monitor Clock
     void StartMonitorClock();
     void StopMonitorClock();
+
+    // DAQ Info
+    std::string GetFilePath() { return fsFilePath.toStdString(); }
+    std::string GetFileName() { return fsFileName.toStdString(); }
 
 private:
     Ui::ZaberControlWidget *ui;
@@ -142,6 +152,7 @@ private slots:
     void on_btnClearList_clicked();
     void on_btnStartConMotion_clicked();
     void on_btnStopConMotion_clicked();
+    void on_btnPath_clicked();
 };
 
 #include <iostream>

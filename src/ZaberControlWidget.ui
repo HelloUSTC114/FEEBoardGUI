@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>733</width>
-    <height>594</height>
+    <height>628</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,9 +18,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>40</y>
+      <y>20</y>
       <width>381</width>
-      <height>471</height>
+      <height>511</height>
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout_2">
@@ -237,9 +237,9 @@
     <property name="geometry">
      <rect>
       <x>410</x>
-      <y>30</y>
+      <y>10</y>
       <width>291</width>
-      <height>511</height>
+      <height>571</height>
      </rect>
     </property>
     <property name="title">
@@ -316,10 +316,29 @@
            <string>Data File</string>
           </property>
           <layout class="QGridLayout" name="gridLayout_10">
-           <item row="0" column="0">
-            <widget class="QPushButton" name="btnPath">
+           <item row="0" column="1" colspan="2">
+            <widget class="QLineEdit" name="lblFileName">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
              <property name="text">
-              <string>Choose Path</string>
+              <string>StripTest</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0" colspan="3">
+            <widget class="QLineEdit" name="lblFileName_Display">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>StripTest</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
             </widget>
            </item>
@@ -333,13 +352,43 @@
              </property>
             </widget>
            </item>
-           <item row="0" column="1" colspan="2">
-            <widget class="QLineEdit" name="lblFileName">
+           <item row="3" column="3">
+            <widget class="QLabel" name="lblFileSuf_3">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="text">
-              <string>Data</string>
+              <string>*.root</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QPushButton" name="btnPath">
+             <property name="text">
+              <string>Choose Path</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1" colspan="3">
+            <widget class="QLineEdit" name="lblFilePath_Display">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>StripTest</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_8">
+             <property name="text">
+              <string>Path:</string>
              </property>
             </widget>
            </item>
@@ -373,7 +422,7 @@
              <property name="time">
               <time>
                <hour>0</hour>
-               <minute>0</minute>
+               <minute>2</minute>
                <second>0</second>
               </time>
              </property>
