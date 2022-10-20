@@ -1,7 +1,6 @@
 
 #include "General.h"
 
-
 // C++
 #include <iostream>
 #include <string>
@@ -128,5 +127,15 @@ namespace UserDefine
         else if ((cFirst >= '0' && cFirst <= '9') || cFirst == '-')
             return ParseLineForArray(sInput, vOutput);
         return false;
+    }
+
+    void ConvertUInt32ToUInt16s(uint32_t *src_data, int src_counts, uint16_t *dst_data, int *dst_counts)
+    {
+        for (int i = 0; i < src_counts; i++)
+        {
+            dst_data[2 * i] = (src_data[i] >> 16);
+            dst_data[2 * i + 1] = (src_data[i] << 16) >> 16;
+        }
+        *dst_counts = 2 * src_counts;
     }
 }

@@ -52,7 +52,7 @@ public:
     inline std::string GetFileName() { return sFileName; }
 
     static double GetFreq() { return fgFreq; };
-    static double ConvertADC2Amp(uint32_t adc) { return (double)adc / 32.768 - 1000; };                             // in unit of mV
+    static double ConvertADC2Amp(uint16_t adc) { return (double)adc / 32.768 - 1000; };                             // in unit of mV
     static double ConvertTDC2Time(uint64_t tdc) { return ((tdc >> 16) - (tdc & 0xffff) / 65536.0) / fgFreq * 1e3; } // in unit of ns
     static double ConvertTDC2Time(uint64_t tdc, double &coarseTime, double &fineTime);                              // in unit of ns
 
@@ -98,10 +98,10 @@ public:
     int &fHGBufCount = fADCBufCount[0];
     int &fLGBufCount = fADCBufCount[1];
     int fTDCBufCount = 0; // Left point in Buffer
-    uint32_t *fADCBuffer[2]{NULL, NULL};
-    uint32_t *&fHGBuffer = fADCBuffer[0]; // HG Data buffer for unprocessed data. Only initiate once while constuction, Init() and Close() will not delete memory
-    uint32_t *&fLGBuffer = fADCBuffer[1]; // LG Data buffer for unprocessed data. Only initiate once while constuction, Init() and Close() will not delete memory
-    uint32_t *fTDCBuffer = NULL;          // TDC Data buffer for unprocessed data. Only initiate once while constuction, Init() and Close() will not delete memory
+    uint16_t *fADCBuffer[2]{NULL, NULL};
+    uint16_t *&fHGBuffer = fADCBuffer[0]; // HG Data buffer for unprocessed data. Only initiate once while constuction, Init() and Close() will not delete memory
+    uint16_t *&fLGBuffer = fADCBuffer[1]; // LG Data buffer for unprocessed data. Only initiate once while constuction, Init() and Close() will not delete memory
+    uint16_t *fTDCBuffer = NULL;          // TDC Data buffer for unprocessed data. Only initiate once while constuction, Init() and Close() will not delete memory
     void ClearBuffer();                   // Only set counter to zero, no need to absolute set to zero
 
     // Start Processing
@@ -112,9 +112,11 @@ public:
     int fTDCHeadIndex = 0;                // Head index for tdc
 
     int ProcessADCEvents(int adcNo);                                           // Process HG&LG adc data for one event, 0 for HG, 1 for LG
-    int ProcessADCEvents(int adcNo, const uint32_t *src_data, int dataLength); // Process HG&LG adc data, for test
+    int ProcessADCEvents(int adcNo, const uint16_t *src_data, int dataLength); // Process HG&LG adc data, for test
     int ProcessTDCEvents();
-    int ProcessTDCEvents(const uint32_t *src_data, int dataLength);
+    int ProcessTDCEvents(const uint16_t *src_data, int dataLength);
+    // int ProcessADCEvents(int adcNo, const uint32_t *src_data, int dataLength); // Process HG&LG adc data, for test
+    // int ProcessTDCEvents(const uint32_t *src_data, int dataLength);
 
     void FillADCData(int adcNo);
     void FillHGData();
@@ -132,14 +134,14 @@ public:
     /// @param chArray   [out] calculated amp value save array
     /// @param dataLength   [out] length from head to data end, useful for next head searching
     /// @return whether this data is valid
-    bool ProcessOneADCEvent(const uint32_t *const iter_first, const uint32_t *const iter_end, uint32_t &id, double *chArray, int &dataLength);
+    bool ProcessOneADCEvent(const uint16_t *const iter_first, const uint16_t *const iter_end, uint32_t &id, double *chArray, int &dataLength);
 
     /// @brief Process data from TDC
     /// @param iter_first
     /// @param iter_end
     /// @param dataLength [out] data[head+dataLength] is another head. if datalength is 0, means cannot find the next header, error
     /// @return
-    bool ProcessOneTDCEvent(const uint32_t *const iter_first, const uint32_t *const iter_end, int &dataLength);
+    bool ProcessOneTDCEvent(const uint16_t *const iter_first, const uint16_t *const iter_end, int &dataLength);
 
     // will be deleted later
     bool ProcessOneEvent(FEEControl *fee, int &currentIndex); // Process one event in data

@@ -1,6 +1,6 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
-#pragma warning(disable:4996)
+#pragma warning(disable : 4996)
 
 #ifndef CMDS_H
 #define CMDS_H
@@ -174,15 +174,15 @@ public:
     int GetLGQueueMonitor() { return fLGQueueLengthMonitor; }   // Get LG Queue length monitor
     int GetTDCQueueMonitor() { return fTDCQueueLengthMonitor; } // Get TDC Queue length monitor
 
-    int GetTestDataLength() { return fTestDataLength; }; // Get Data length;
-    int GetHGDataLength() { return fHGDataLength; };     // Get HG Data length;
-    int GetLGDataLength() { return fLGDataLength; };     // Get LG Data length;
-    int GetTDCDataLength() { return fTDCDataLength; };   // Get TDC Data length;
+    int GetTestDataLength() { return fTestDataLengthPoints; }; // Get Data Sample Points;
+    int GetHGDataLength() { return fHGDataLengthPoints; };     // Get HG Data Sample Points;
+    int GetLGDataLength() { return fLGDataLengthPoints; };     // Get LG Data Sample Points;
+    int GetTDCDataLength() { return fTDCDataLengthPoints; };   // Get TDC Data Sample Points;
 
-    const uint32_t *GetTestFIFOData() { return fTestQueueData; }; // Get fifodata pointer
-    const uint32_t *GetTDCFIFOData() { return fTDCQueueData; };   // Get fifodata pointer
-    const uint32_t *GetHGFIFOData() { return fHGQueueData; };     // Get fifodata pointer
-    const uint32_t *GetLGFIFOData() { return fLGQueueData; };     // Get fifodata pointer
+    const uint16_t *GetTestFIFOData() { return fTestQueueDataU16; }; // Get fifodata pointer
+    const uint16_t *GetTDCFIFOData() { return fTDCQueueDataU16; };   // Get fifodata pointer
+    const uint16_t *GetHGFIFOData() { return fHGQueueDataU16; };     // Get fifodata pointer
+    const uint16_t *GetLGFIFOData() { return fLGQueueDataU16; };     // Get fifodata pointer
     // FIFO Read Control END
 
 private:
@@ -214,10 +214,20 @@ private:
     uint32_t *fTDCQueueData;  // TDC fifo data
     bool fDataFlag = 0;       // fifo data validation
 
-    int fHGDataLength = 0;   // Read HG fifo data length
-    int fLGDataLength = 0;   // Read LG fifo data length
-    int fTDCDataLength = 0;  // Read TDC fifo data length
-    int fTestDataLength = 0; // Read Test fifo data length
+    uint16_t *fTestQueueDataU16; // fifo data in uint16
+    uint16_t *fHGQueueDataU16;   // HG fifo data in uint16
+    uint16_t *fLGQueueDataU16;   // LG fifo data in uint16
+    uint16_t *fTDCQueueDataU16;  // TDC fifo data in uint16
+
+    int fHGDataLength = 0;   // Read HG fifo data length, means byte number
+    int fLGDataLength = 0;   // Read LG fifo data length, means byte number
+    int fTDCDataLength = 0;  // Read TDC fifo data length, means byte number
+    int fTestDataLength = 0; // Read Test fifo data length, means byte number
+
+    int fHGDataLengthPoints = 0;   // Read HG fifo data length, means Sample points
+    int fLGDataLengthPoints = 0;   // Read LG fifo data length, means Sample points
+    int fTDCDataLengthPoints = 0;  // Read TDC fifo data length, means Sample points
+    int fTestDataLengthPoints = 0; // Read Test fifo data length, means Sample points
 
     int fHGQueueLengthMonitor = 0;  // Queue length monitor, update while readfifo
     int fLGQueueLengthMonitor = 0;  // Queue length monitor, update while readfifo

@@ -32,12 +32,12 @@ DataManager::DataManager()
     fPreviousData = new uint32_t[N_BOARD_CHANNELS * N_SAMPLE_POINTS];
     memset(fPreviousData, '\0', sizeof(uint32_t) * N_BOARD_CHANNELS * N_SAMPLE_POINTS);
 
-    fHGBuffer = new uint32_t[(int)(2.5 * fADCPointFactor)];
-    fLGBuffer = new uint32_t[(int)(2.5 * fADCPointFactor)];
-    fTDCBuffer = new uint32_t[(int)(2.5 * fTDCPointFactor)];
-    memset(fHGBuffer, '\0', sizeof(uint32_t) * (int)(2.5 * fADCPointFactor));
-    memset(fLGBuffer, '\0', sizeof(uint32_t) * (int)(2.5 * fADCPointFactor));
-    memset(fTDCBuffer, '\0', sizeof(uint32_t) * (int)(2.5 * fTDCPointFactor));
+    fHGBuffer = new uint16_t[(int)(2.5 * fADCPointFactor / 2)];
+    fLGBuffer = new uint16_t[(int)(2.5 * fADCPointFactor / 2)];
+    fTDCBuffer = new uint16_t[(int)(2.5 * fTDCPointFactor / 2)];
+    memset(fHGBuffer, '\0', sizeof(uint16_t) * (int)(2.5 * fADCPointFactor / 2));
+    memset(fLGBuffer, '\0', sizeof(uint16_t) * (int)(2.5 * fADCPointFactor / 2));
+    memset(fTDCBuffer, '\0', sizeof(uint16_t) * (int)(2.5 * fTDCPointFactor / 2));
 }
 
 DataManager::DataManager(string sInput) : DataManager()
@@ -382,7 +382,8 @@ int DataManager::ProcessADCEvents(int adcNo)
     if (adcNo != 0 && adcNo != 1)
         return -1;
 
-    const uint32_t *adcdata = NULL;
+    // const uint32_t *adcdata = NULL;
+    const uint16_t *adcdata = NULL;
     int adcdatalength = 0;
     if (adcNo == 0)
     {
@@ -397,12 +398,12 @@ int DataManager::ProcessADCEvents(int adcNo)
     return ProcessADCEvents(adcNo, adcdata, adcdatalength);
 }
 
-int DataManager::ProcessADCEvents(int adcNo, const uint32_t *src_data, int dataLength)
+int DataManager::ProcessADCEvents(int adcNo, const uint16_t *src_data, int dataLength)
 {
     if (adcNo != 0 && adcNo != 1)
         return -1;
 
-    const uint32_t *adcdata = src_data;
+    const uint16_t *adcdata = src_data;
     int adcdatalength = dataLength;
 
     int headFirst = 0, headLast = 0, totalEventCounter = 0;
@@ -422,7 +423,7 @@ int DataManager::ProcessADCEvents(int adcNo, const uint32_t *src_data, int dataL
                 break;
             }
         }
-        memcpy(fADCBuffer[adcNo] + fADCBufCount[adcNo], adcdata, headFirst * sizeof(uint32_t));
+        memcpy(fADCBuffer[adcNo] + fADCBufCount[adcNo], adcdata, headFirst * sizeof(uint16_t));
         fADCBufCount[adcNo] += headFirst;
 
         int idx_processed = 0;
@@ -487,7 +488,7 @@ int DataManager::ProcessADCEvents(int adcNo, const uint32_t *src_data, int dataL
         if (head + fADCPointFactor > adcdatalength - 10)
         {
             fADCBufCount[adcNo] = adcdatalength - head;
-            memcpy(fADCBuffer[adcNo], adcdata + head, (adcdatalength - head) * sizeof(uint32_t));
+            memcpy(fADCBuffer[adcNo], adcdata + head, (adcdatalength - head) * sizeof(uint16_t));
             break;
         }
 
@@ -521,7 +522,7 @@ int DataManager::ProcessADCEvents(int adcNo, const uint32_t *src_data, int dataL
 #include <fstream>
 std::ofstream fout("test2.dat");
 
-bool DataManager::ProcessOneADCEvent(const uint32_t *const iter_first, const uint32_t *const iter_end, uint32_t &id, double *chArray, int &idx_processed)
+bool DataManager::ProcessOneADCEvent(const uint16_t *const iter_first, const uint16_t *const iter_end, uint32_t &id, double *chArray, int &idx_processed)
 {
     // Process trigger id
     id = (*(iter_first + 2) << 16) + (*(iter_first + 3) & 0xffff);
@@ -644,14 +645,14 @@ bool DataManager::ProcessOneADCEvent(const uint32_t *const iter_first, const uin
 
 int DataManager::ProcessTDCEvents()
 {
-    const uint32_t *tdcdata = fFEECurrentProcessing->GetTDCFIFOData();
+    const uint16_t *tdcdata = fFEECurrentProcessing->GetTDCFIFOData();
     int tdcdatalength = fFEECurrentProcessing->GetTDCDataLength();
     return ProcessTDCEvents(tdcdata, tdcdatalength);
 }
 
-int DataManager::ProcessTDCEvents(const uint32_t *src_data, int dataLength)
+int DataManager::ProcessTDCEvents(const uint16_t *src_data, int dataLength)
 {
-    const uint32_t *tdcdata = src_data;
+    const uint16_t *tdcdata = src_data;
     int tdcdatalength = dataLength;
 
     int headFirst = 0, headLast = 0, totalEventCounter = 0;
@@ -669,7 +670,7 @@ int DataManager::ProcessTDCEvents(const uint32_t *src_data, int dataLength)
                 break;
             }
         }
-        memcpy(fTDCBuffer + fTDCBufCount, tdcdata, headFirst * sizeof(uint32_t));
+        memcpy(fTDCBuffer + fTDCBufCount, tdcdata, headFirst * sizeof(uint16_t));
         fTDCBufCount += headFirst;
 
         int idx_processed = 0;
@@ -699,7 +700,7 @@ int DataManager::ProcessTDCEvents(const uint32_t *src_data, int dataLength)
         if (head + fTDCPointFactor > tdcdatalength)
         {
             fTDCBufCount = tdcdatalength - head;
-            memcpy(fTDCBuffer, tdcdata + head, (tdcdatalength - head) * sizeof(uint32_t));
+            memcpy(fTDCBuffer, tdcdata + head, (tdcdatalength - head) * sizeof(uint16_t));
             break;
         }
 
@@ -736,7 +737,7 @@ int DataManager::ProcessTDCEvents(const uint32_t *src_data, int dataLength)
     return totalEventCounter;
 }
 
-bool DataManager::ProcessOneTDCEvent(const uint32_t *const iter_first, const uint32_t *const iter_end, int &dataLength)
+bool DataManager::ProcessOneTDCEvent(const uint16_t *const iter_first, const uint16_t *const iter_end, int &dataLength)
 {
     // std::cout << "Test: Processing a tdc data: " << std::endl;
     dataLength = 0;

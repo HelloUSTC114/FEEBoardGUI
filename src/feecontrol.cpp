@@ -19,10 +19,10 @@
 const int FEEControl::fPortBase = 1306; // Port Base for all fee
 const int FEEControl::fIPBase = 101;    // IP Base for all fee
 
-const int FEEControl::fMaxSaveEvents = 1000;                       // How many Events can be saved in one time
-const int FEEControl::fHGPointFactor = 1380;                       // How many HG points in one event, not so accurate
-const int FEEControl::fLGPointFactor = FEEControl::fHGPointFactor; // How many LG points in one event, not so accurate
-const int FEEControl::fTDCPointFactor = 136;                       // How many TDC points in one event, not so accurate
+const int FEEControl::fMaxSaveEvents = 1000;                       // How many Events can be saved in one time, must be multipliers of 20
+const int FEEControl::fHGPointFactor = 1380 * 2;                   // How many HG points in one event, not so accurate, *2 means how many Bytes
+const int FEEControl::fLGPointFactor = FEEControl::fHGPointFactor; // How many LG points in one event, not so accurate, *2 means how many Bytes
+const int FEEControl::fTDCPointFactor = 136 * 2;                   // How many TDC points in one event, not so accurate, *2 means how many Bytes
 
 WSADATA fWsaData; // Unused unimportant data, used to put inside class FEEControl, but win sock2.h is like a piece of shit, which is conflict with <TTree.h>, <zaber>
 using namespace std;
@@ -38,9 +38,14 @@ bool operator==(const FEEControl &a, const FEEControl &b)
 FEEControl::FEEControl(std::string ip, int port) : ip_address(ip), fPort(port)
 {
     fTestQueueData = new uint32_t[5000];
-    fHGQueueData = new uint32_t[fMaxSaveEvents * fHGPointFactor];
-    fLGQueueData = new uint32_t[fMaxSaveEvents * fLGPointFactor];
-    fTDCQueueData = new uint32_t[fMaxSaveEvents * fTDCPointFactor];
+    fHGQueueData = new uint32_t[fMaxSaveEvents * fHGPointFactor / 4];
+    fLGQueueData = new uint32_t[fMaxSaveEvents * fLGPointFactor / 4];
+    fTDCQueueData = new uint32_t[fMaxSaveEvents * fTDCPointFactor / 4];
+
+    fTestQueueDataU16 = new uint16_t[5000];
+    fHGQueueDataU16 = new uint16_t[fMaxSaveEvents * fHGPointFactor / 2];
+    fLGQueueDataU16 = new uint16_t[fMaxSaveEvents * fLGPointFactor / 2];
+    fTDCQueueDataU16 = new uint16_t[fMaxSaveEvents * fTDCPointFactor / 2];
 }
 
 FEEControl::FEEControl(int boardNo) : FEEControl()
@@ -61,6 +66,15 @@ FEEControl::~FEEControl()
     fHGQueueData = NULL;
     fLGQueueData = NULL;
     fTDCQueueData = NULL;
+
+    delete[] fTestQueueDataU16;
+    delete[] fHGQueueDataU16;
+    delete[] fLGQueueDataU16;
+    delete[] fTDCQueueDataU16;
+    fTestQueueDataU16 = NULL;
+    fHGQueueDataU16 = NULL;
+    fLGQueueDataU16 = NULL;
+    fTDCQueueDataU16 = NULL;
 }
 
 void FEEControl::GenerateIP(int boardNo, std::string &ip, int &port)
@@ -417,7 +431,7 @@ bool FEEControl::data_read(cmd_up cmd, int data_num, uint32_t *data_addr)
     {
         return false;
     }
-    if (!recv_data((char *)data_addr, data_num * sizeof(uint32_t)))
+    if (!recv_data((char *)data_addr, data_num * sizeof(uint8_t)))
     {
         return false;
     }
@@ -851,6 +865,8 @@ bool FEEControl::BoardExit()
     return 1;
 }
 
+#include <QtConcurrent/QtConcurrent>
+#include <General.h>
 bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
 {
     // test queue read
@@ -884,9 +900,15 @@ bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
     tdc_queue_length_read(fTDCQueueLengthMonitor);
 
     // Compare queue length with save array length, take smaller one as read length
-    fHGDataLength = (fHGQueueLengthMonitor > maxEvents * fHGPointFactor) ? maxEvents * fHGPointFactor : fHGQueueLengthMonitor;
-    fLGDataLength = (fLGQueueLengthMonitor > maxEvents * fLGPointFactor) ? maxEvents * fLGPointFactor : fLGQueueLengthMonitor;
-    fTDCDataLength = (fTDCQueueLengthMonitor > maxEvents * fTDCPointFactor) ? maxEvents * fTDCPointFactor : fTDCQueueLengthMonitor;
+    //! TODO: Change compared length. Length means read Nbytes from queue
+    fHGDataLength = (fHGQueueLengthMonitor > maxEvents * fHGPointFactor) ? maxEvents * fHGPointFactor : fHGQueueLengthMonitor / 55200 * 55200;
+    fLGDataLength = (fLGQueueLengthMonitor > maxEvents * fLGPointFactor) ? maxEvents * fLGPointFactor : fLGQueueLengthMonitor / 55200 * 55200;
+    fTDCDataLength = (fTDCQueueLengthMonitor > maxEvents * fTDCPointFactor) ? maxEvents * fTDCPointFactor : fTDCQueueLengthMonitor / 5440 * 5440;
+    // std::cout << fHGDataLength / 55200 << '\t' << fLGDataLength / 55200 << '\t' << fTDCDataLength / 5440 << std::endl;
+
+    // fHGDataLength = 55200;
+    // fLGDataLength = 55200;
+    // fTDCDataLength = 5440;
 
     if (!hg_data_read(fHGDataLength, fHGQueueData))
     {
@@ -895,6 +917,13 @@ bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
         fHGDataLength = 0;
         return false;
     }
+
+    // std::cout <<"HG Queue Data Test: " << std::endl;
+    // for(int i = 0; i < fHGDataLength; i++)
+    // {
+    //     std::cout << fHGQueueData[i] << '\t';
+    // }
+    // std::cout << std::endl;
 
     if (!lg_data_read(fLGDataLength, fLGQueueData))
     {
@@ -911,6 +940,14 @@ bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
         fTDCDataLength = 0;
         return false;
     }
+
+    // Convert uint32_t to uint16_t
+    QFuture<void> futureHG = QtConcurrent::run(UserDefine::ConvertUInt32ToUInt16s, fHGQueueData, fHGDataLength / 4, fHGQueueDataU16, &fHGDataLengthPoints);
+    QFuture<void> futureLG = QtConcurrent::run(UserDefine::ConvertUInt32ToUInt16s, fLGQueueData, fLGDataLength / 4, fLGQueueDataU16, &fLGDataLengthPoints);
+    QFuture<void> futureTDC = QtConcurrent::run(UserDefine::ConvertUInt32ToUInt16s, fTDCQueueData, fTDCDataLength / 4, fTDCQueueDataU16, &fTDCDataLengthPoints);
+    futureHG.waitForFinished();
+    futureLG.waitForFinished();
+    futureTDC.waitForFinished();
 
     fifoReadCount++;
     fDataFlag = 1;

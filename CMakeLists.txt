@@ -12,16 +12,17 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # User defined library option
-set(USE_VISA ON)
-set(USE_ZABER ON)
+set(USE_VISA OFF)
+set(USE_ZABER OFF)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Concurrent)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 find_package(ROOT REQUIRED COMPONENTS Core)
 
 include_directories("include/")
 
 # message(${VISA64} ${NIVISA64})
+#link_libraries(Concurrent)
 link_libraries(Ws2_32)
 link_libraries(
     ROOT::Core ROOT::Imt ROOT::RIO ROOT::Net ROOT::Hist ROOT::Graf ROOT::Graf3d ROOT::Gpad ROOT::ROOTDataFrame ROOT::Tree ROOT::TreePlayer ROOT::Rint ROOT::Postscript ROOT::Matrix ROOT::Physics ROOT::MathCore ROOT::Thread ROOT::ROOTVecOps
