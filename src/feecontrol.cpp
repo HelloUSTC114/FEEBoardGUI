@@ -19,7 +19,7 @@
 const int FEEControl::fPortBase = 1306; // Port Base for all fee
 const int FEEControl::fIPBase = 101;    // IP Base for all fee
 
-const int FEEControl::fMaxSaveEvents = 1000;                       // How many Events can be saved in one time, must be multipliers of 20
+const int FEEControl::fMaxSaveEvents = 3000;                       // How many Events can be saved in one time, must be multipliers of 20
 const int FEEControl::fHGPointFactor = 1380 * 2;                   // How many HG points in one event, not so accurate, *2 means how many Bytes
 const int FEEControl::fLGPointFactor = FEEControl::fHGPointFactor; // How many LG points in one event, not so accurate, *2 means how many Bytes
 const int FEEControl::fTDCPointFactor = 136 * 2;                   // How many TDC points in one event, not so accurate, *2 means how many Bytes
@@ -423,19 +423,34 @@ bool FEEControl::length_read(cmd_up cmd, int &len)
 
 bool FEEControl::data_read(cmd_up cmd, int data_num, uint32_t *data_addr)
 {
+    auto test1 = clock();
     if (!start_socket())
     {
         return false;
     }
+    auto test2 = clock();
+
     if (!send_cmd(cmd, (char *)(&data_num), sizeof(int) + 1))
     {
         return false;
     }
+    auto test3 = clock();
+
     if (!recv_data((char *)data_addr, data_num * sizeof(uint8_t)))
     {
         return false;
     }
+    auto test4 = clock();
+
     close_socket();
+    auto test5 = clock();
+    std::cout << test2 - test1 << '\t' << test3 - test2 << '\t' << test4 - test3 << '\t' << test5 - test4 << std::endl;
+    // std::cout << "Package size: " << (double)data_num / 1024.0 / 1024.0 << "MB" << std::endl;
+    // if(test4-test3)
+    // std::cout << "Network speed(Mb/s): " << data_num / (test4 - test3) / 1024 * 8 << std::endl;
+    // else
+    //     std::cout << "Network speed(Mb/s): " << 0 << std::endl;
+
     return true;
 }
 
@@ -529,7 +544,15 @@ bool FEEControl::RecvAll(char *buffer, int size)
 {
     while (size > 0)
     {
+        auto test3 = clock();
         int RecvSize = recv(fSock, buffer, size, 0);
+        auto test4 = clock();
+
+        // std::cout << "Package size: " << (double)RecvSize / 1024.0 / 1024.0 << "MB" << std::endl;
+        // if (test4 - test3)
+        //     std::cout << "Network speed(Mb/s): " << RecvSize / (test4 - test3) / 1024 * 8 << std::endl;
+        // else
+        //     std::cout << "Network speed(Mb/s): " << 0 << std::endl;
         if (RecvSize == SOCKET_ERROR)
             return false;
         size = size - RecvSize;
@@ -556,6 +579,28 @@ bool FEEControl::start_socket()
         cout << "Socket error." << endl;
         return false;
     }
+
+    /*
+    Add TCP protocol control
+    */
+    // set socket buffer length
+    int opt = 1;
+    int SendBufSize = 7944192;
+    int RecvBufSize = 7944192;
+    // int getSendBuf, getRecvBuf;
+    // socklen_t sendBufSizeLen = sizeof(getSendBuf);
+    // socklen_t RecvBufSizeLen = sizeof(getRecvBuf);
+    // getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *)&getSendBuf, &sendBufSizeLen);
+    // getsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *)&getRecvBuf, &RecvBufSizeLen);
+    // printf("send buffer size: %d, recv buffer size: %d\n", getSendBuf, getRecvBuf);
+
+    setsockopt(fSock, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt));
+    setsockopt(fSock, SOL_SOCKET, SO_SNDBUF, (char *)&SendBufSize, sizeof(int));
+    setsockopt(fSock, SOL_SOCKET, SO_RCVBUF, (char *)&RecvBufSize, sizeof(int));
+
+    // getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *)&getSendBuf, &sendBufSizeLen);
+    // getsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *)&getRecvBuf, &RecvBufSizeLen);
+    // printf("send buffer size: %d, recv buffer size: %d\n", getSendBuf, getRecvBuf);
 
     // Connect to the server
     sockaddr_in sockAddr;
@@ -854,6 +899,24 @@ int FEEControl::TestReg()
     return reg_test;
 }
 
+bool FEEControl::get_real_counter(uint32_t &count)
+{
+    static const int realAddr = 6;
+    int result = 0;
+    auto rtn = read_reg_test(realAddr, result);
+    count = (uint32_t)result;
+    return rtn;
+}
+
+bool FEEControl::get_live_counter(uint32_t &count)
+{
+    static const int liveAddr = 5;
+    int result = 0;
+    auto rtn = read_reg_test(liveAddr, result);
+    count = (uint32_t)result;
+    return rtn;
+}
+
 bool FEEControl::BoardExit()
 {
     // exit
@@ -876,6 +939,7 @@ bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
     fHGQueueLengthMonitor = 0;
     fLGQueueLengthMonitor = 0;
     fTDCQueueLengthMonitor = 0;
+    fReadGroupMonitor = 0;
 
     // Deside when to start read queue, break flag means force to stop loop
     while (!fBreakFlag)
@@ -898,18 +962,26 @@ bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
     hg_queue_length_read(fHGQueueLengthMonitor);
     lg_queue_length_read(fLGQueueLengthMonitor);
     tdc_queue_length_read(fTDCQueueLengthMonitor);
+    fReadGroupMonitor = fHGQueueLengthMonitor / 55200;
 
     // Compare queue length with save array length, take smaller one as read length
     //! TODO: Change compared length. Length means read Nbytes from queue
-    fHGDataLength = (fHGQueueLengthMonitor > maxEvents * fHGPointFactor) ? maxEvents * fHGPointFactor : fHGQueueLengthMonitor / 55200 * 55200;
-    fLGDataLength = (fLGQueueLengthMonitor > maxEvents * fLGPointFactor) ? maxEvents * fLGPointFactor : fLGQueueLengthMonitor / 55200 * 55200;
-    fTDCDataLength = (fTDCQueueLengthMonitor > maxEvents * fTDCPointFactor) ? maxEvents * fTDCPointFactor : fTDCQueueLengthMonitor / 5440 * 5440;
+    int nReadGroup = (fHGQueueLengthMonitor > maxEvents * fHGPointFactor) ? maxEvents * fHGPointFactor / 55200 : fHGQueueLengthMonitor / 55200;
+
+    fHGDataLength = nReadGroup * 55200;
+    fLGDataLength = nReadGroup * 55200;
+    fTDCDataLength = nReadGroup * 5440;
+
+    // fHGDataLength = (fHGQueueLengthMonitor > maxEvents * fHGPointFactor) ? maxEvents * fHGPointFactor : fHGQueueLengthMonitor / 55200 * 55200;
+    // fLGDataLength = (fLGQueueLengthMonitor > maxEvents * fLGPointFactor) ? maxEvents * fLGPointFactor : fLGQueueLengthMonitor / 55200 * 55200;
+    // fTDCDataLength = (fTDCQueueLengthMonitor > maxEvents * fTDCPointFactor) ? maxEvents * fTDCPointFactor : fTDCQueueLengthMonitor / 5440 * 5440;
     // std::cout << fHGDataLength / 55200 << '\t' << fLGDataLength / 55200 << '\t' << fTDCDataLength / 5440 << std::endl;
 
     // fHGDataLength = 55200;
     // fLGDataLength = 55200;
     // fTDCDataLength = 5440;
 
+    // auto test1 = clock();
     if (!hg_data_read(fHGDataLength, fHGQueueData))
     {
         cout << "HG queue read failed." << endl;
@@ -924,6 +996,8 @@ bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
     //     std::cout << fHGQueueData[i] << '\t';
     // }
     // std::cout << std::endl;
+    // auto test2 = clock();
+    // std::cout << "test2 - test1: " << test2 - test1 << '\t' << fHGDataLength << '\t' << (double)fHGDataLength / (test2 - test1) << std::endl;
 
     if (!lg_data_read(fLGDataLength, fLGQueueData))
     {
@@ -932,6 +1006,8 @@ bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
         fLGDataLength = 0;
         return false;
     }
+    // auto test3 = clock();
+    // std::cout << "test3 - test2: " << test3 - test2 << '\t' << fLGDataLength << '\t' << (double)fLGDataLength / (test3 - test2) << std::endl;
 
     if (!tdc_data_read(fTDCDataLength, fTDCQueueData))
     {
@@ -940,6 +1016,8 @@ bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
         fTDCDataLength = 0;
         return false;
     }
+    // auto test4 = clock();
+    // std::cout << "test4 - test3: " << test4 - test3 << '\t' << fTDCDataLength << '\t' << (double)fTDCDataLength / (test4 - test3) << std::endl;
 
     // Convert uint32_t to uint16_t
     QFuture<void> futureHG = QtConcurrent::run(UserDefine::ConvertUInt32ToUInt16s, fHGQueueData, fHGDataLength / 4, fHGQueueDataU16, &fHGDataLengthPoints);
@@ -948,6 +1026,9 @@ bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
     futureHG.waitForFinished();
     futureLG.waitForFinished();
     futureTDC.waitForFinished();
+
+    // auto test5 = clock();
+    // std::cout << "test5 - test4: " << test5 - test4 << std::endl;
 
     fifoReadCount++;
     fDataFlag = 1;

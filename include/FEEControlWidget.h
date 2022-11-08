@@ -42,7 +42,7 @@ class DAQRuning : public QObject
     Q_OBJECT
 signals:
     void DAQStopSignal(int nDAQLoop);
-    void UpdateDAQCount(int nDAQCount);
+    void UpdateDAQCount(int nDAQCount, int realCount, int liveCount);
 public slots:
     void startDAQ(FEEControlWin *w);
 
@@ -112,10 +112,10 @@ signals:
     void forceStopDAQSignal();            // DAQ Force stop signal, tell other class that DAQ is interrupted
 
 private slots:
-    void on_DAQStoped(int nDAQLoop);     // FEE DAQ Stop slot
-    void handle_ContinousDraw();         // Handle draw slot
-    void handle_DAQCount(int nDAQCount); // Handle DAQ Count
-    void update_DAQClock();              // Handle DAQ Clock
+    void on_DAQStoped(int nDAQLoop);                                   // FEE DAQ Stop slot
+    void handle_ContinousDraw();                                       // Handle draw slot
+    void handle_DAQCount(int nDAQCount, int realCount, int livecount); // Handle DAQ Count
+    void update_DAQClock();                                            // Handle DAQ Clock
 
 public slots:
     void handle_DAQRequest(UserDefine::DAQRequestInfo *); // Process DAQ signal

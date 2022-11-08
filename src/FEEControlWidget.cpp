@@ -69,13 +69,22 @@ void DAQRuning::startDAQ(FEEControlWin *w)
     bool loopFlag = JudgeLoopFlag(w, 0);
     for (nDAQLoop = 0; loopFlag; nDAQLoop++)
     {
+        // clock_t test1 = clock();
         auto rtnRead = gBoard->ReadFifo(w->fDAQBufferSleepms, w->fDAQBufferLeastEvents);
+        // clock_t test2 = clock();
         if (!rtnRead)
             break;
         nDAQEventCount += gDataManager->ProcessFEEData(gBoard);
-        emit UpdateDAQCount(gDataManager->GetHGTotalCount());
+        // clock_t test3 = clock();
+
+        uint32_t realCount = 0;
+        uint32_t liveCount = 0;
+        gBoard->get_real_counter(realCount);
+        gBoard->get_live_counter(liveCount);
+        emit UpdateDAQCount(gDataManager->GetHGTotalCount(), realCount, liveCount);
 
         loopFlag = JudgeLoopFlag(w, nDAQEventCount);
+        // std::cout << "Clocks: " << test2 - test1 << '\t' << test3 - test2 << std::endl;
     }
     emit DAQStopSignal(nDAQLoop);
 }
@@ -86,7 +95,7 @@ FEEControlWin::FEEControlWin(QWidget *parent)
     ui->setupUi(this);
 
     // FEE control Tab
-    ui->lineIP->setEnabled(false);
+    ui->lineIP->setEnabled(true);
     ui->boxPort->setEnabled(false);
 
     ui->grpFEEInfo->setEnabled(false);
@@ -560,7 +569,7 @@ void FEEControlWin::on_btnFileClose_clicked()
 }
 
 //! TODO: Add HG, LG, TDC data counter monitor in GUI
-void FEEControlWin::handle_DAQCount(int nCount)
+void FEEControlWin::handle_DAQCount(int nCount, int realCount, int liveCount)
 {
     // Update Transist count rate
     static QDateTime sLastTime = QDateTime::currentDateTime();
@@ -607,6 +616,27 @@ void FEEControlWin::handle_DAQCount(int nCount)
         else
             ui->pbarDAQ->setValue(percentCount > percentTime ? percentCount : percentTime);
     }
+
+    // Update real count and live count
+    static QDateTime sLastTestTime = QDateTime::currentDateTime();
+    static long sLastLiveCount = -1;
+    static long sLastRealCount = -1;
+    QDateTime testTime = QDateTime::currentDateTime();
+    double msToLastTest = (double)sLastTestTime.msecsTo(testTime);
+
+    ui->lineRealCount->setText(QString::number(realCount));
+    ui->lineLiveCount->setText(QString::number(liveCount));
+    if (sLastRealCount > 0)
+    {
+        ui->lineRealCR->setText(QString::number((realCount - sLastRealCount) * 1000.0 / msToLastTest));
+    }
+    if (sLastLiveCount > 0)
+    {
+        ui->lineLiveCR->setText(QString::number((liveCount - sLastLiveCount) * 1000.0 / msToLastTest));
+    }
+    sLastRealCount = realCount;
+    sLastLiveCount = liveCount;
+    sLastTestTime = testTime;
 }
 
 // Only used to show rough clock
@@ -621,9 +651,10 @@ void FEEControlWin::update_DAQClock()
     ui->lineTDCDAQCount->setText(QString::number(gDataManager->GetTDCTotalCount()));
 
     // Get queue length from FEEControl
-    ui->lineHGQueue->setText(QString::number(gBoard->GetHGQueueMonitor()));
-    ui->lineLGQueue->setText(QString::number(gBoard->GetLGQueueMonitor()));
-    ui->lineTDCQueue->setText(QString::number(gBoard->GetTDCQueueMonitor()));
+    // ui->lineHGQueue->setText(QString::number(gBoard->GetHGQueueMonitor()));
+    // ui->lineLGQueue->setText(QString::number(gBoard->GetLGQueueMonitor()));
+    // ui->lineTDCQueue->setText(QString::number(gBoard->GetTDCQueueMonitor()));
+    ui->lineUnreadCount->setText(QString::number(gBoard->GetQueueGroupMonitor() * 20));
 }
 
 void FEEControlWin::on_btnDAQStart_clicked()
