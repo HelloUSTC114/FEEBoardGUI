@@ -20,7 +20,8 @@ const int FEEControl::fPortBase = 1306; // Port Base for all fee
 const int FEEControl::fIPBase = 101;    // IP Base for all fee
 
 const int FEEControl::fMaxSaveEvents = 3000;                       // How many Events can be saved in one time, must be multipliers of 20
-const int FEEControl::fHGPointFactor = 1380 * 2;                   // How many HG points in one event, not so accurate, *2 means how many Bytes
+const int FEEControl::fRetrieveUnit = 10;                          // Retrieve unit, used to be 20
+const int FEEControl::fHGPointFactor = 176 * 2;                    // How many HG points in one event, not so accurate, *2 means how many Bytes, used to be 1380 * 2
 const int FEEControl::fLGPointFactor = FEEControl::fHGPointFactor; // How many LG points in one event, not so accurate, *2 means how many Bytes
 const int FEEControl::fTDCPointFactor = 136 * 2;                   // How many TDC points in one event, not so accurate, *2 means how many Bytes
 
@@ -38,14 +39,14 @@ bool operator==(const FEEControl &a, const FEEControl &b)
 FEEControl::FEEControl(std::string ip, int port) : ip_address(ip), fPort(port)
 {
     fTestQueueData = new uint32_t[5000];
-    fHGQueueData = new uint32_t[fMaxSaveEvents * fHGPointFactor / 4];
-    fLGQueueData = new uint32_t[fMaxSaveEvents * fLGPointFactor / 4];
-    fTDCQueueData = new uint32_t[fMaxSaveEvents * fTDCPointFactor / 4];
+    fHGQueueData = new uint32_t[fMaxSaveEvents * fHGPointFactor / sizeof(uint32_t)];
+    fLGQueueData = new uint32_t[fMaxSaveEvents * fLGPointFactor / sizeof(uint32_t)];
+    fTDCQueueData = new uint32_t[fMaxSaveEvents * fTDCPointFactor / sizeof(uint32_t)];
 
     fTestQueueDataU16 = new uint16_t[5000];
-    fHGQueueDataU16 = new uint16_t[fMaxSaveEvents * fHGPointFactor / 2];
-    fLGQueueDataU16 = new uint16_t[fMaxSaveEvents * fLGPointFactor / 2];
-    fTDCQueueDataU16 = new uint16_t[fMaxSaveEvents * fTDCPointFactor / 2];
+    fHGQueueDataU16 = new uint16_t[fMaxSaveEvents * fHGPointFactor / sizeof(uint16_t)];
+    fLGQueueDataU16 = new uint16_t[fMaxSaveEvents * fLGPointFactor / sizeof(uint16_t)];
+    fTDCQueueDataU16 = new uint16_t[fMaxSaveEvents * fTDCPointFactor / sizeof(uint16_t)];
 }
 
 FEEControl::FEEControl(int boardNo) : FEEControl()
@@ -964,24 +965,24 @@ bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
     hg_queue_length_read(fHGQueueLengthMonitor);
     lg_queue_length_read(fLGQueueLengthMonitor);
     tdc_queue_length_read(fTDCQueueLengthMonitor);
-    fReadGroupMonitor = fHGQueueLengthMonitor / 55200;
+    fReadGroupMonitor = fHGQueueLengthMonitor / (fHGPointFactor * fRetrieveUnit);
 
     // Compare queue length with save array length, take smaller one as read length
     //! TODO: Change compared length. Length means read Nbytes from queue
-    int nReadGroup = (fHGQueueLengthMonitor > maxEvents * fHGPointFactor) ? maxEvents * fHGPointFactor / 55200 : fHGQueueLengthMonitor / 55200;
+    int nReadGroup = (fHGQueueLengthMonitor > maxEvents * fHGPointFactor) ? maxEvents * fHGPointFactor / (fHGPointFactor * fRetrieveUnit) : fHGQueueLengthMonitor / (fHGPointFactor * fRetrieveUnit);
 
-    fHGDataLength = nReadGroup * 55200;
-    fLGDataLength = nReadGroup * 55200;
-    fTDCDataLength = nReadGroup * 5440;
+    fHGDataLength = nReadGroup * (fHGPointFactor * fRetrieveUnit);
+    fLGDataLength = nReadGroup * (fLGPointFactor * fRetrieveUnit);
+    fTDCDataLength = nReadGroup * (fTDCPointFactor * fRetrieveUnit);
 
-    // fHGDataLength = (fHGQueueLengthMonitor > maxEvents * fHGPointFactor) ? maxEvents * fHGPointFactor : fHGQueueLengthMonitor / 55200 * 55200;
-    // fLGDataLength = (fLGQueueLengthMonitor > maxEvents * fLGPointFactor) ? maxEvents * fLGPointFactor : fLGQueueLengthMonitor / 55200 * 55200;
-    // fTDCDataLength = (fTDCQueueLengthMonitor > maxEvents * fTDCPointFactor) ? maxEvents * fTDCPointFactor : fTDCQueueLengthMonitor / 5440 * 5440;
-    // std::cout << fHGDataLength / 55200 << '\t' << fLGDataLength / 55200 << '\t' << fTDCDataLength / 5440 << std::endl;
+    // fHGDataLength = (fHGQueueLengthMonitor > maxEvents * fHGPointFactor) ? maxEvents * fHGPointFactor : fHGQueueLengthMonitor / (fHGPointFactor * fRetrieveUnit) * (fHGPointFactor * fRetrieveUnit);
+    // fLGDataLength = (fLGQueueLengthMonitor > maxEvents * fLGPointFactor) ? maxEvents * fLGPointFactor : fLGQueueLengthMonitor / (fLGPointFactor * fRetrieveUnit) * (fLGPointFactor * fRetrieveUnit);
+    // fTDCDataLength = (fTDCQueueLengthMonitor > maxEvents * fTDCPointFactor) ? maxEvents * fTDCPointFactor : fTDCQueueLengthMonitor / (fTDCPointFactor * fRetrieveUnit) * (fTDCPointFactor * fRetrieveUnit);
+    // std::cout << fHGDataLength / (fHGPointFactor * fRetrieveUnit) << '\t' << fLGDataLength / (fLGPointFactor * fRetrieveUnit) << '\t' << fTDCDataLength / (fTDCPointFactor * fRetrieveUnit) << std::endl;
 
-    // fHGDataLength = 55200;
-    // fLGDataLength = 55200;
-    // fTDCDataLength = 5440;
+    // fHGDataLength = (fHGPointFactor * fRetrieveUnit);
+    // fLGDataLength = (fLGPointFactor * fRetrieveUnit);
+    // fTDCDataLength = (fTDCPointFactor * fRetrieveUnit);
 
     // auto test1 = clock();
     if (!hg_data_read(fHGDataLength, fHGQueueData))

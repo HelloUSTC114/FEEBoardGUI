@@ -250,6 +250,7 @@ private:
 
 public:
     static const int fMaxSaveEvents;  // Limit of save events
+    static const int fRetrieveUnit;   // How many events in one retrieve unit
     static const int fHGPointFactor;  // How many HG points in one event, not so accurate
     static const int fLGPointFactor;  // How many LG points in one event, not so accurate
     static const int fTDCPointFactor; // How many TDC points in one event, not so accurate

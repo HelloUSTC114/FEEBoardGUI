@@ -513,7 +513,7 @@ int DataManager::ProcessADCEvents(int adcNo, const uint16_t *src_data, int dataL
         totalEventCounter++;
         fADCEventCount[adcNo]++;
 
-        idx_search += idx_processed - 10; // skip data points, so as to save plenty of searching time
+        idx_search += idx_processed - 3; // skip data points, so as to save plenty of searching time
     }
 
     return totalEventCounter;
@@ -522,6 +522,48 @@ int DataManager::ProcessADCEvents(int adcNo, const uint16_t *src_data, int dataL
 #include <fstream>
 std::ofstream fout("test2.dat");
 
+bool DataManager::ProcessOneADCEvent(const uint16_t *const iter_first, const uint16_t *const iter_end, uint32_t &id, double *chArray, int &idx_processed)
+{
+    if ((iter_end - iter_first) < 175)
+    {
+        idx_processed = 0;
+        return false;
+    }
+
+    // Judge Head
+    if (*(iter_first) != 65535 || *(iter_first + 1) != 65535)
+    {
+        idx_processed = 2;
+        return false;
+    }
+    // Process trigger id
+    id = (*(iter_first + 2) << 16) + (*(iter_first + 3) & 0xffff);
+
+    // Judge whether data length
+    for (int i = 4; i < 10; i++)
+    {
+        if (*(iter_first + i) == 65535)
+        {
+            idx_processed = i;
+            return false;
+        }
+    }
+
+    // Find Start data
+    int idx_start = 7;
+
+    // Drop the 3rd data, for its deviation is large
+    for (int ch = 0; ch < N_BOARD_CHANNELS; ch++)
+    {
+        chArray[ch] = *(iter_first + idx_start + 5 * ch) + *(iter_first + idx_start + 5 * ch + 1) + *(iter_first + idx_start + 5 * ch + 3) + *(iter_first + idx_start + 5 * ch + 4);
+        chArray[ch] /= 4;
+    }
+    idx_processed = idx_start + 5 * N_BOARD_CHANNELS;
+    return true;
+}
+
+/*
+// Previous ADC Events Processor
 bool DataManager::ProcessOneADCEvent(const uint16_t *const iter_first, const uint16_t *const iter_end, uint32_t &id, double *chArray, int &idx_processed)
 {
     // Process trigger id
@@ -642,6 +684,7 @@ bool DataManager::ProcessOneADCEvent(const uint16_t *const iter_first, const uin
     }
     return true;
 }
+*/
 
 int DataManager::ProcessTDCEvents()
 {
