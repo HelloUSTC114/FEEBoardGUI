@@ -29,6 +29,15 @@ namespace UserDefine
     /// @param dst_data [IN] destination of UInt16 array
     /// @param dst_counts [OUT] how many numbers of UInt16 has been converted
     void ConvertUInt32ToUInt16s(uint32_t *src_data, int src_counts, uint16_t *dst_data, int *dst_counts);
+
+    /// @brief Get locak IP for this PC
+    /// @param gateIPList [OUT] Result for Network Gate IP list, first is Gate IP, second is Host IP
+    /// @return 0 means error, 1 means success
+    int GetGateIPList(std::vector<std::pair<std::string, std::string>> &gateIPList);
+
+    /// @brief Get first 3 ip parts in string form, such as "192.168.1.";
+    /// @return 
+    std::string GetIPPrefix();
 }
 
 #endif

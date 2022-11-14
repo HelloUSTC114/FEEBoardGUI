@@ -6,6 +6,12 @@
 #include <string>
 #include <sstream>
 
+// Socket and other APIs
+#include <WinSock2.h>
+#include <iphlpapi.h>
+#pragma comment(lib, "Ws2_32.lib")
+#pragma comment(lib, "Iphlpapi.lib")
+
 namespace UserDefine
 {
     std::stringstream gss;
@@ -137,5 +143,64 @@ namespace UserDefine
             dst_data[2 * i + 1] = (src_data[i] << 16) >> 16;
         }
         *dst_counts = 2 * src_counts;
+    }
+
+    int GetGateIPList(std::vector<std::pair<std::string, std::string>> &gateIPList)
+    {
+        gateIPList.clear();
+        // WSADATA wsaData = {0};
+        // if (WSAStartup(MAKEWORD(2, 1), &wsaData) != 0)
+        //     return kErrorWSAStartup;
+        // char buf[256];
+        // gethostname(buf, sizeof(buf));
+        // auto info = gethostbyname(buf);
+
+        // std::string localIP;
+        // localIP = inet_ntoa(*(struct in_addr *)*info->h_addr_list);
+
+        IP_ADAPTER_INFO pIpAdapterInfo[10];
+        unsigned long stSize = sizeof(IP_ADAPTER_INFO) * 10;
+        int nRel = GetAdaptersInfo(pIpAdapterInfo, &stSize);
+        if (nRel > 0)
+            return nRel;
+
+        auto iter = pIpAdapterInfo;
+        while (iter)
+        {
+            std::cout << "Ip Adapter: " << iter->Description << std::endl;
+            std::string sHostIP = iter->IpAddressList.IpAddress.String;
+            std::string sGateIP = iter->GatewayList.IpAddress.String;
+            std::cout << "Ip Address: " << sHostIP << std::endl;
+            std::cout << "Network Gate: " << sGateIP << std::endl;
+
+            if (sGateIP != "" && sGateIP != "0.0.0.0")
+            {
+                gateIPList.push_back({sGateIP, sHostIP});
+            }
+
+            std::cout << std::endl;
+            iter = iter->Next;
+        }
+
+        return 1;
+    }
+
+    std::string GetIPPrefix()
+    {
+        std::vector<std::pair<std::string, std::string>> list1;
+        auto rtn = GetGateIPList(list1);
+        if (rtn < 1)
+            return "";
+            
+        auto sIP = list1[0].first;
+        std::stringstream ss(sIP);
+        std::string sParsed, sTotal;
+        std::getline(ss, sParsed, '.');
+        sTotal += sParsed + ".";
+        std::getline(ss, sParsed, '.');
+        sTotal += sParsed + ".";
+        std::getline(ss, sParsed, '.');
+        sTotal += sParsed + ".";
+        return sTotal;
     }
 }

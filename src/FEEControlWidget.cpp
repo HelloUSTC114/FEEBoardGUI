@@ -77,11 +77,7 @@ void DAQRuning::startDAQ(FEEControlWin *w)
         nDAQEventCount += gDataManager->ProcessFEEData(gBoard);
         // clock_t test3 = clock();
 
-        uint32_t realCount = 0;
-        uint32_t liveCount = 0;
-        gBoard->get_real_counter(realCount);
-        gBoard->get_live_counter(liveCount);
-        emit UpdateDAQCount(gDataManager->GetHGTotalCount(), realCount, liveCount);
+        emit UpdateDAQCount(gDataManager->GetHGTotalCount());
 
         loopFlag = JudgeLoopFlag(w, nDAQEventCount);
         // std::cout << "Clocks: " << test2 - test1 << '\t' << test3 - test2 << std::endl;
@@ -95,13 +91,16 @@ FEEControlWin::FEEControlWin(QWidget *parent)
     ui->setupUi(this);
 
     // FEE control Tab
-    ui->lineIP->setEnabled(true);
+    ui->lineIP->setEnabled(false);
     ui->boxPort->setEnabled(false);
 
     ui->grpFEEInfo->setEnabled(false);
     ui->grpHVctrl->setEnabled(false);
     ui->grpTMea->setEnabled(false);
     ui->grpTMoni->setEnabled(false);
+
+    // Count Rate monitor
+    fCRClock.callOnTimeout(this, &FEEControlWin::RetrieveCountOnce);
 
     // FEE DAQ
     fDAQProcessor = new DAQRuning;
@@ -263,6 +262,12 @@ FEEControlWin::~FEEControlWin()
     fWinList.clear();
     // delete fdrawWin2;
 
+    // Stop all clocks
+    fOnceTimer.stop();
+    fDAQClock.stop();
+    fDrawerTimer.stop();
+    fCRClock.stop();
+
     delete ui;
 }
 
@@ -325,7 +330,7 @@ void FEEControlWin::PrintConnection(bool flag)
 
     ui->lblIPOut->setText(tr(gBoard->GetIP().c_str()));
     ui->lblPortOut->setText(QString::number(gBoard->GetPort()));
-    ui->lblSockOut->setText(QString::number(gBoard->GetSock()));
+    ui->lblBoardOut->setText(ui->boxPort->text());
 
     ui->brsMessage->setTextColor(QColor(0, 255, 0));
     ui->brsMessage->setFontWeight(QFont::Bold);
@@ -343,6 +348,9 @@ void FEEControlWin::ProcessConnect()
 
     // DAQ Control
     ui->grpDAQctrl->setEnabled(true);
+
+    // Count Rate monitor
+    fCRClock.start(1000);
 
     // tab FEE Control
     ui->grpFEEInfo->setEnabled(true);
@@ -479,6 +487,36 @@ void FEEControlWin::on_btnExit_clicked()
 }
 // FEE Control END
 
+// Count Rate Monitor
+void FEEControlWin::RetrieveCountOnce()
+{
+    // Update real count and live count
+    static QDateTime sLastTestTime = QDateTime::currentDateTime();
+    static long sLastLiveCount = -1;
+    static long sLastRealCount = -1;
+    QDateTime testTime = QDateTime::currentDateTime();
+    double msToLastTest = (double)sLastTestTime.msecsTo(testTime);
+
+    uint32_t realCount = 0;
+    uint32_t liveCount = 0;
+    gBoard->get_real_counter(realCount);
+    gBoard->get_live_counter(liveCount);
+
+    ui->lineRealCount->setText(QString::number(realCount));
+    ui->lineLiveCount->setText(QString::number(liveCount));
+    if (sLastRealCount > 0)
+    {
+        ui->lineRealCR->setText(QString::number((realCount - sLastRealCount) * 1000.0 / msToLastTest));
+    }
+    if (sLastLiveCount > 0)
+    {
+        ui->lineLiveCR->setText(QString::number((liveCount - sLastLiveCount) * 1000.0 / msToLastTest));
+    }
+    sLastRealCount = realCount;
+    sLastLiveCount = liveCount;
+    sLastTestTime = testTime;
+}
+
 // ROOT File Open, DAQ Control: Start, Stop
 void FEEControlWin::on_btnPath_clicked()
 {
@@ -569,7 +607,7 @@ void FEEControlWin::on_btnFileClose_clicked()
 }
 
 //! TODO: Add HG, LG, TDC data counter monitor in GUI
-void FEEControlWin::handle_DAQCount(int nCount, int realCount, int liveCount)
+void FEEControlWin::handle_DAQCount(int nCount)
 {
     // Update Transist count rate
     static QDateTime sLastTime = QDateTime::currentDateTime();
@@ -616,27 +654,6 @@ void FEEControlWin::handle_DAQCount(int nCount, int realCount, int liveCount)
         else
             ui->pbarDAQ->setValue(percentCount > percentTime ? percentCount : percentTime);
     }
-
-    // Update real count and live count
-    static QDateTime sLastTestTime = QDateTime::currentDateTime();
-    static long sLastLiveCount = -1;
-    static long sLastRealCount = -1;
-    QDateTime testTime = QDateTime::currentDateTime();
-    double msToLastTest = (double)sLastTestTime.msecsTo(testTime);
-
-    ui->lineRealCount->setText(QString::number(realCount));
-    ui->lineLiveCount->setText(QString::number(liveCount));
-    if (sLastRealCount > 0)
-    {
-        ui->lineRealCR->setText(QString::number((realCount - sLastRealCount) * 1000.0 / msToLastTest));
-    }
-    if (sLastLiveCount > 0)
-    {
-        ui->lineLiveCR->setText(QString::number((liveCount - sLastLiveCount) * 1000.0 / msToLastTest));
-    }
-    sLastRealCount = realCount;
-    sLastLiveCount = liveCount;
-    sLastTestTime = testTime;
 }
 
 // Only used to show rough clock

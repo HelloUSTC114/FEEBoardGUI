@@ -77,9 +77,11 @@ FEEControl::~FEEControl()
     fTDCQueueDataU16 = NULL;
 }
 
+#include "General.h"
 void FEEControl::GenerateIP(int boardNo, std::string &ip, int &port)
 {
-    ip = "192.168.1." + to_string(fIPBase + boardNo);
+    ip = UserDefine::GetIPPrefix() + to_string(fIPBase + boardNo);
+    // ip = "192.168.1." + to_string(fIPBase + boardNo);
     port = fPortBase + boardNo;
 }
 
