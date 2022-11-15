@@ -471,6 +471,9 @@
          </item>
          <item row="0" column="1">
           <widget class="QGroupBox" name="groupBox">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="title">
             <string>Bias DAC R Test</string>
            </property>
