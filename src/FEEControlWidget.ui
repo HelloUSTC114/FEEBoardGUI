@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1476</width>
+    <width>1002</width>
     <height>922</height>
    </rect>
   </property>
@@ -29,7 +29,7 @@
     <enum>Qt::DefaultContextMenu</enum>
    </property>
    <property name="currentIndex">
-    <number>1</number>
+    <number>0</number>
    </property>
    <property name="movable">
     <bool>false</bool>

@@ -91,6 +91,8 @@ FEEControlWin::FEEControlWin(QWidget *parent)
     ui->setupUi(this);
 
     // FEE control Tab
+    ui->btnExit->setEnabled(false);
+
     ui->lineIP->setEnabled(false);
     ui->boxPort->setEnabled(false);
 
@@ -345,6 +347,7 @@ void FEEControlWin::PrintConnection(bool flag)
 void FEEControlWin::ProcessConnect()
 {
     ui->btnConnect->setEnabled(false);
+    ui->btnExit->setEnabled(true);
 
     // DAQ Control
     ui->grpDAQctrl->setEnabled(true);
@@ -411,8 +414,52 @@ void FEEControlWin::ProcessConnect()
     }
 }
 
+void FEEControlWin::ProcessDisconnect()
+{
+    // Stop all clocks
+    fOnceTimer.stop();
+    fDAQClock.stop();
+    fDrawerTimer.stop();
+    fCRClock.stop();
+
+    ui->btnConnect->setEnabled(true);
+    ui->btnExit->setEnabled(false);
+
+    // DAQ Control
+    ui->grpDAQctrl->setEnabled(false);
+
+    // tab FEE Control
+    ui->grpFEEInfo->setEnabled(false);
+    ui->grpHVctrl->setEnabled(false);
+    ui->grpTMea->setEnabled(false);
+    ui->grpTMoni->setEnabled(false);
+
+    // other tabs
+    ui->tabCITIROC->setEnabled(false);
+
+    // Init File manager
+    if (!gDataManager->IsOpen())
+    {
+        // ui->grpDAQStart->setEnabled(false);
+        ui->grpDAQStart->setEnabled(false);
+        ui->btnDAQStop->setEnabled(false);
+    }
+    else
+    {
+        ui->grpDAQStart->setEnabled(false);
+        ui->btnDAQStop->setEnabled(false);
+    }
+
+    // Logic module
+    ui->btnSendLogic->setEnabled(false);
+
+    // Send Configuration button
+    ui->btnSendConfig->setEnabled(false);
+}
+
 void FEEControlWin::on_btnConnect_clicked()
 {
+    on_btnGenerateIP_clicked();
     std::string ip = ui->lineIP->text().toStdString();
     int port = ui->boxPort->value();
 
@@ -476,6 +523,7 @@ void FEEControlWin::on_btnGenerateIP_clicked()
 
 void FEEControlWin::on_btnExit_clicked()
 {
+    ProcessDisconnect();
     gBoard->BoardExit();
 
     ui->brsMessage->setTextColor(greenColor);

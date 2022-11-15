@@ -150,8 +150,8 @@ public:
     static const int fcgNChannels;     // N channels for one board
     static const int fcgNSamplePoints; // N sample points for one channel in hg/lg
     static double fgFreq;              // frequency MHz
-    static int fADCPointFactor;        // adc Point Factor
-    static int fTDCPointFactor;        // tdc Point Factor
+    static int fADCLengthFactor;        // adc Length Factor
+    static int fTDCLengthFactor;        // tdc Length Factor
 
     // Test functions
     void PrintHGBuffer();

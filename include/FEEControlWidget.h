@@ -133,6 +133,7 @@ private:
 
     void PrintConnection(bool flag); // Print Connection information
     void ProcessConnect();           // Process after successfully connected, send logic, send CITIROC config
+    void ProcessDisconnect();        // Process after Board Exit
     void PrintHV();                  // Print HV Information
     void PrintT();                   // Print Temerature information
     void PrintClock();               // Print Si570 clock frequency

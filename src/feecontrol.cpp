@@ -439,28 +439,28 @@ bool FEEControl::length_read(cmd_up cmd, int &len)
 
 bool FEEControl::data_read(cmd_up cmd, int data_num, uint32_t *data_addr)
 {
-    auto test1 = clock();
+    // auto test1 = clock();
     if (!start_socket())
     {
         return false;
     }
-    auto test2 = clock();
+    // auto test2 = clock();
 
     if (!send_cmd(cmd, (char *)(&data_num), sizeof(int) + 1))
     {
         return false;
     }
-    auto test3 = clock();
+    // auto test3 = clock();
 
     if (!recv_data((char *)data_addr, data_num * sizeof(uint8_t)))
     {
         return false;
     }
-    auto test4 = clock();
+    // auto test4 = clock();
 
     close_socket();
-    auto test5 = clock();
-    std::cout << test2 - test1 << '\t' << test3 - test2 << '\t' << test4 - test3 << '\t' << test5 - test4 << std::endl;
+    // auto test5 = clock();
+    // std::cout << test2 - test1 << '\t' << test3 - test2 << '\t' << test4 - test3 << '\t' << test5 - test4 << std::endl;
     // std::cout << "Package size: " << (double)data_num / 1024.0 / 1024.0 << "MB" << std::endl;
     // if(test4-test3)
     // std::cout << "Network speed(Mb/s): " << data_num / (test4 - test3) / 1024 * 8 << std::endl;

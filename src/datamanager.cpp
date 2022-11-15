@@ -15,8 +15,8 @@ using namespace std;
 
 double gEventADCThreshold = CONVERT_AMP_2_ADC(100);
 double DataManager::fgFreq = 433.995; // in unit of MHz, board TDC frequency
-int DataManager::fADCPointFactor = FEEControl::fHGPointFactor;
-int DataManager::fTDCPointFactor = FEEControl::fTDCPointFactor;
+int DataManager::fADCLengthFactor = FEEControl::fHGPointFactor / sizeof(uint16_t);
+int DataManager::fTDCLengthFactor = FEEControl::fTDCPointFactor / sizeof(uint16_t);
 
 double DataManager::ConvertTDC2Time(uint64_t tdc, double &coarseTime, double &fineTime)
 {
@@ -32,12 +32,12 @@ DataManager::DataManager()
     fPreviousData = new uint32_t[N_BOARD_CHANNELS * N_SAMPLE_POINTS];
     memset(fPreviousData, '\0', sizeof(uint32_t) * N_BOARD_CHANNELS * N_SAMPLE_POINTS);
 
-    fHGBuffer = new uint16_t[(int)(2.5 * fADCPointFactor / 2)];
-    fLGBuffer = new uint16_t[(int)(2.5 * fADCPointFactor / 2)];
-    fTDCBuffer = new uint16_t[(int)(2.5 * fTDCPointFactor / 2)];
-    memset(fHGBuffer, '\0', sizeof(uint16_t) * (int)(2.5 * fADCPointFactor / 2));
-    memset(fLGBuffer, '\0', sizeof(uint16_t) * (int)(2.5 * fADCPointFactor / 2));
-    memset(fTDCBuffer, '\0', sizeof(uint16_t) * (int)(2.5 * fTDCPointFactor / 2));
+    fHGBuffer = new uint16_t[(int)(2.5 * fADCLengthFactor)];
+    fLGBuffer = new uint16_t[(int)(2.5 * fADCLengthFactor)];
+    fTDCBuffer = new uint16_t[(int)(2.5 * fTDCLengthFactor)];
+    memset(fHGBuffer, '\0', sizeof(uint16_t) * (int)(2.5 * fADCLengthFactor));
+    memset(fLGBuffer, '\0', sizeof(uint16_t) * (int)(2.5 * fADCLengthFactor));
+    memset(fTDCBuffer, '\0', sizeof(uint16_t) * (int)(2.5 * fTDCLengthFactor));
 }
 
 DataManager::DataManager(string sInput) : DataManager()
@@ -415,7 +415,7 @@ int DataManager::ProcessADCEvents(int adcNo, const uint16_t *src_data, int dataL
         // std::cout << "Test: Processing Buffer: " << std::endl;
         // Copy the first left event into buffer
         // -- search first head
-        for (int idx_search = 0; idx_search < fADCPointFactor; idx_search++)
+        for (int idx_search = 0; idx_search < fTDCLengthFactor; idx_search++)
         {
             if (adcdata[idx_search] == 65535 && adcdata[idx_search + 1] == 65535)
             {
@@ -459,7 +459,7 @@ int DataManager::ProcessADCEvents(int adcNo, const uint16_t *src_data, int dataL
             bool dataflag = ProcessOneADCEvent(fADCBuffer[adcNo], fADCBuffer[adcNo] + fADCBufCount[adcNo], fADCid[adcNo], fADCamp[adcNo], idx_processed);
             if (dataflag)
             {
-                std::cout << "Warning: double data in ADC buffer " << adcNo << std::endl;
+                // std::cout << "Warning: double data in ADC buffer " << adcNo << std::endl;
                 // PrintHGBuffer();
                 // Fill Data
                 FillADCData(adcNo);
@@ -485,7 +485,7 @@ int DataManager::ProcessADCEvents(int adcNo, const uint16_t *src_data, int dataL
         // std::cout << "Test: Head found in source: " << head << std::endl;
 
         // if this event is the last, copy memory to buffer, and record buffer length, then break this process loop
-        if (head + fADCPointFactor > adcdatalength - 10)
+        if (head + fADCLengthFactor > adcdatalength - 10)
         {
             fADCBufCount[adcNo] = adcdatalength - head;
             memcpy(fADCBuffer[adcNo], adcdata + head, (adcdatalength - head) * sizeof(uint16_t));
@@ -497,12 +497,11 @@ int DataManager::ProcessADCEvents(int adcNo, const uint16_t *src_data, int dataL
 
         if (!dataflag)
         {
-            std::cout << "John Test: Error while Processing ADC: error in normal Processing" << std::endl;
-
             if (idx_processed == 0)
                 return totalEventCounter;
             else
             {
+                std::cout << "John Test: Error while Processing ADC: error in normal Processing" << std::endl;
                 idx_search += idx_processed;
                 continue;
             }
@@ -527,6 +526,7 @@ bool DataManager::ProcessOneADCEvent(const uint16_t *const iter_first, const uin
     if ((iter_end - iter_first) < 175)
     {
         idx_processed = 0;
+        // std::cout << "Error while processing ADC: only " << iter_end - iter_first << " points left." << std::endl;
         return false;
     }
 
@@ -534,6 +534,7 @@ bool DataManager::ProcessOneADCEvent(const uint16_t *const iter_first, const uin
     if (*(iter_first) != 65535 || *(iter_first + 1) != 65535)
     {
         idx_processed = 2;
+        std::cout << "Error while processing ADC: Cannot find head" << std::endl;
         return false;
     }
     // Process trigger id
@@ -544,6 +545,8 @@ bool DataManager::ProcessOneADCEvent(const uint16_t *const iter_first, const uin
     {
         if (*(iter_first + i) == 65535)
         {
+            std::cout << "Error while processing ADC: only " << i << " points between two heads." << std::endl;
+
             idx_processed = i;
             return false;
         }
@@ -555,7 +558,26 @@ bool DataManager::ProcessOneADCEvent(const uint16_t *const iter_first, const uin
     // Drop the 3rd data, for its deviation is large
     for (int ch = 0; ch < N_BOARD_CHANNELS; ch++)
     {
-        chArray[ch] = *(iter_first + idx_start + 5 * ch) + *(iter_first + idx_start + 5 * ch + 1) + *(iter_first + idx_start + 5 * ch + 3) + *(iter_first + idx_start + 5 * ch + 4);
+        // double mean = *(iter_first + idx_start + 5 * ch) + *(iter_first + idx_start + 5 * ch + 1) + *(iter_first + idx_start + 5 * ch + 3) + *(iter_first + idx_start + 5 * ch + 4);
+        // mean /= 4;
+        double mean = TMath::Mean(iter_first + idx_start + 5 * ch, iter_first + idx_start + 5 * ch + 5);
+
+        // Get Max deviation index
+        uint16_t dataMax = 0;
+        double devMax = 0;
+        // std::cout << "John Test: channel: " << ch << '\t';
+        for (int i = 0; i < 5; i++)
+        {
+            auto data = *(iter_first + idx_start + 5 * ch + i);
+            auto dev = TMath::Abs(data - mean);
+            devMax = (devMax > dev) ? devMax : dev;
+            dataMax = (devMax > dev) ? dataMax : data;
+            // std::cout << data << '-' << dev << '\t';
+        }
+        // std::cout << "Max: " << dataMax << '-' << devMax << std::endl;
+
+        // Subtract the max deviation data
+        chArray[ch] = 5 * mean - dataMax;
         chArray[ch] /= 4;
     }
     idx_processed = idx_start + 5 * N_BOARD_CHANNELS;
@@ -690,6 +712,13 @@ int DataManager::ProcessTDCEvents()
 {
     const uint16_t *tdcdata = fFEECurrentProcessing->GetTDCFIFOData();
     int tdcdatalength = fFEECurrentProcessing->GetTDCDataLength();
+    // for (int i = 0; i < tdcdatalength; i++)
+    // {
+    //     std::cout << tdcdata[i] << '\t';
+    //     if (i % 20 == 19)
+    //         std::cout << std::endl;
+    // }
+    // std::cout << tdcdatalength << std::endl;
     return ProcessTDCEvents(tdcdata, tdcdatalength);
 }
 
@@ -701,11 +730,13 @@ int DataManager::ProcessTDCEvents(const uint16_t *src_data, int dataLength)
     int headFirst = 0, headLast = 0, totalEventCounter = 0;
 
     // if there're points left in buffer, concatenate this new data with buffer inside
+    static int bufferProcessCounter = 0;
     if (fTDCBufCount > 0)
     {
+        // std::cout << "TDC Buffer Counter: " << bufferProcessCounter++ << std::endl;
         // Copy the first left event into buffer
         // -- search first head
-        for (int idx_search = 0; idx_search < fTDCPointFactor; idx_search++)
+        for (int idx_search = 0; idx_search < fTDCLengthFactor + 1; idx_search++)
         {
             if (tdcdata[idx_search] == 65535 && tdcdata[idx_search + 1] == 65535)
             {
@@ -713,6 +744,12 @@ int DataManager::ProcessTDCEvents(const uint16_t *src_data, int dataLength)
                 break;
             }
         }
+        if (headFirst == fTDCLengthFactor + 1)
+        {
+            std::cout << "Error: cannot find head in first event!" << std::endl;
+            return 0;
+        }
+
         memcpy(fTDCBuffer + fTDCBufCount, tdcdata, headFirst * sizeof(uint16_t));
         fTDCBufCount += headFirst;
 
@@ -721,18 +758,28 @@ int DataManager::ProcessTDCEvents(const uint16_t *src_data, int dataLength)
         if (dataflag)
         {
             // Fill Data
-            // std::cout << "Test: Fill Data in buffer: " << fTDCEventCount << std::endl;
+            // std::cout << "Test: Fill Data in buffer: " << fTDCEventCount << '-' << fTDCid << std::endl;
             FillTDCData();
             totalEventCounter++;
             fTDCEventCount++;
+        }
+        else
+        {
+            std::cout << "Error: Invalid TDC Data in buffer processing!" << std::endl;
         }
         fTDCBufCount = 0;
     }
 
     // Watch out, here, if (head1, head2, id1, id2) is (65535, 65535,65535, 65535), the first head1, head2 will be recongnized normally
+    // std::cout << "Head First: " << headFirst << '\t' << tdcdata[headFirst] << '\t' << tdcdata[headFirst + 1] << std::endl;
     for (int idx_search = headFirst; idx_search < tdcdatalength - 1; idx_search++)
     {
-        bool flagHead = tdcdata[idx_search] == 65535 && tdcdata[idx_search + 1] == 65535;
+        bool flagHead = (tdcdata[idx_search] == 65535 && tdcdata[idx_search + 1] == 65535);
+        if (!flagHead && (idx_search == headFirst) && (headFirst != 0))
+        {
+            std::cout << "Error while process first head." << std::endl;
+        }
+
         if (!flagHead)
             continue;
 
@@ -740,7 +787,7 @@ int DataManager::ProcessTDCEvents(const uint16_t *src_data, int dataLength)
         // std::cout << "Test: found Head in source: " << head << '\t' << tdcdata[idx_search] << std::endl;
 
         // if this event is the last, copy memory to buffer, and record buffer length, then break this process loop
-        if (head + fTDCPointFactor > tdcdatalength)
+        if (head + fTDCLengthFactor > tdcdatalength)
         {
             fTDCBufCount = tdcdatalength - head;
             memcpy(fTDCBuffer, tdcdata + head, (tdcdatalength - head) * sizeof(uint16_t));
@@ -757,12 +804,17 @@ int DataManager::ProcessTDCEvents(const uint16_t *src_data, int dataLength)
             else
             {
                 idx_search += idx_processed;
+                std::cout << "Error: Invalid TDC Data in normal processing!" << std::endl;
                 continue;
             }
         }
 
         // Fill Data
         // std::cout << "Test: Fill Data: " << fTDCEventCount << std::endl;
+        // if (idx_search == headFirst)
+        // {
+        //     std::cout << "Test: Fill First head: " << fTDCEventCount << '-' << fTDCid << std::endl;
+        // }
         FillTDCData();
         totalEventCounter++;
         fTDCEventCount++;
@@ -786,17 +838,17 @@ bool DataManager::ProcessOneTDCEvent(const uint16_t *const iter_first, const uin
     dataLength = 0;
     int inputLength = (int)(iter_end - iter_first);
 
-    // Process data in buffer requires inputlength == fTDCPointFactor, else set it as failure
-    if (inputLength < fTDCPointFactor || inputLength == fTDCPointFactor + 1)
+    // Process data in buffer requires inputlength == fTDCLengthFactor, else set it as failure
+    if (inputLength < fTDCLengthFactor || inputLength == fTDCLengthFactor + 1)
     {
-        std::cout << "Error in processign one data: input length is too short." << inputLength << std::endl;
+        std::cout << "Error in processing one TDC data: input length too short." << inputLength << std::endl;
         return false;
     }
 
-    bool flagBufferData = (inputLength == fTDCPointFactor); // Judge whether is processing buffer data
+    bool flagBufferData = (inputLength == fTDCLengthFactor); // Judge whether is processing buffer data
     if (!flagBufferData)
     {
-        bool flagNextHeadValid = (*(iter_first + fTDCPointFactor) != 65535) || (*(iter_first + fTDCPointFactor + 1) != 65535);
+        bool flagNextHeadValid = (*(iter_first + fTDCLengthFactor) != 65535) || (*(iter_first + fTDCLengthFactor + 1) != 65535);
         if (flagNextHeadValid)
         {
             for (auto iter = iter_first + 2; iter != iter_end - 1; iter++)
@@ -823,7 +875,8 @@ bool DataManager::ProcessOneTDCEvent(const uint16_t *const iter_first, const uin
             fTDCTime[N_BOARD_CHANNELS - ch] += (temp << ((4 - (i + 1)) * 16));
         }
     }
-    dataLength = fTDCPointFactor;
+    dataLength = fTDCLengthFactor;
+    // std::cout << "Test: TDC Data Length: " << dataLength << std::endl;
     return true;
 }
 
