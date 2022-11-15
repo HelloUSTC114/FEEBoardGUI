@@ -826,11 +826,6 @@ int FEEControlWin::GetSelectLogic()
     return fpbtngrpLogic->checkedId();
 }
 
-void FEEControlWin::on_btnToCITIROC_clicked()
-{
-    ui->tabTotal->setCurrentIndex(1);
-}
-
 void FEEControlWin::on_btnCITIROC_Path_clicked()
 {
     sCITIROC_Config_Path = QFileDialog::getExistingDirectory(this, tr("Choosing CITIROC Configuration File Path"), QDir::currentPath() + "/../MuonTestControl/Configuration/");
@@ -1340,6 +1335,12 @@ void FEEControlWin::on_btnAllSetMask_clicked()
     fChannelMasks = 0xffffffff;
     PrintMaskToScreen();
 }
+
+void FEEControlWin::on_btnSignalProbe_clicked()
+{
+    gBoard->send_ch_probe((char)ui->boxProbeCh->value());
+}
+
 // FEE Mask Control END
 
 void FEEControlWin::on_btnClearDraw_clicked()

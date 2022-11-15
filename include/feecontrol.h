@@ -94,6 +94,7 @@ public:
     bool sipm_temp_read(double *temp);
     bool logic_select(int select_data);
     bool send_ch_masks(uint32_t mask_num);
+    bool send_ch_probe(char channel);
     bool write_reg_test(int addr, int wr_data);
     bool clean_queue(int queue_id);
 

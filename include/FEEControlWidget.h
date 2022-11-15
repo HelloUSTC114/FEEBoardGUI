@@ -227,7 +227,6 @@ private slots:
     void on_btnDAQStop_clicked();
 
     // FEE CITIROC Configuration
-    void on_btnToCITIROC_clicked();
     void on_btnCITIROC_Path_clicked();
     void on_btnCITIROC_scFile_clicked();
     void on_btnCITIROC_pbFile_clicked();
@@ -244,6 +243,7 @@ private slots:
     void handle_ScanCheckboxMask();
     void on_btnClearMask_clicked();
     void on_btnAllSetMask_clicked();
+    void on_btnSignalProbe_clicked();
 
     // Draw Control
     void on_btnStartDraw_clicked();

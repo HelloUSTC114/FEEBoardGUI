@@ -319,6 +319,19 @@ bool FEEControl::send_ch_masks(uint32_t mask_num)
     return true;
 }
 
+bool FEEControl::send_ch_probe(char channel)
+{
+    if (channel < 0 || channel > 31)
+        return false;
+    int reg_addr = 53, reg_wr_data = 1 << channel;
+    if (!write_reg_test(reg_addr, reg_wr_data))
+    {
+        std::cout << "Error while setting signal probe." << std::endl;
+        return false;
+    }
+    return true;
+}
+
 bool FEEControl::write_reg_test(int addr, int wr_data)
 {
     return reg_write(up_writeRegTest, addr, wr_data);
