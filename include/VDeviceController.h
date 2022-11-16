@@ -15,7 +15,8 @@ public:
     static DeviceDAQConnector *Instance();
     ~DeviceDAQConnector();
     bool IsOccupied() { return fOccupied; };
-    void SetBreak() { fBreakFlag = 1; };
+    void SetBreak() { fManualForceBreak = 1; };
+    void ClearBreak() { fManualForceBreak = 0; };
 
     bool TryTestPrepare(); // connect DAQ signals inside FEEControlWidget and slots in this class
     void TestStop();       // Disconnect singlas and slots
@@ -26,7 +27,7 @@ private:
     void DisconnectSlots();
 
     volatile bool fOccupied = 0;
-    volatile bool fBreakFlag = 0;
+    volatile bool fManualForceBreak = 0;
     volatile bool fLastLoopFlag = 0;
 
     int fDAQhandle = 0;
@@ -46,6 +47,8 @@ public slots:
 private slots:
     void handle_DAQStart();
     void handle_DAQDone();
+
+    void handle_ForceStopDAQ();
 };
 
 #define gDAQConnector (DeviceDAQConnector::Instance())

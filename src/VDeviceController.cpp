@@ -25,6 +25,7 @@ void DeviceDAQConnector::ConnectSlots()
     connect(gFEEControlWin, &FEEControlWin::stopDAQSignal, this, &DeviceDAQConnector::handle_DAQDone);
 
     connect(gFEEControlWin, &FEEControlWin::forceStopDAQSignal, this, &DeviceDAQConnector::forceStopDAQSignal);
+    connect(gFEEControlWin, &FEEControlWin::forceStopDAQSignal, this, &DeviceDAQConnector::handle_ForceStopDAQ);
 
     connect(this, &DeviceDAQConnector::DirectRequestForWidgetDAQ, gFEEControlWin, &FEEControlWin::handle_DAQRequest);
 }
@@ -35,9 +36,9 @@ void DeviceDAQConnector::DisconnectSlots()
     disconnect(gFEEControlWin, &FEEControlWin::stopDAQSignal, this, &DeviceDAQConnector::handle_DAQDone);
 
     disconnect(gFEEControlWin, &FEEControlWin::forceStopDAQSignal, this, &DeviceDAQConnector::forceStopDAQSignal);
+    disconnect(gFEEControlWin, &FEEControlWin::forceStopDAQSignal, this, &DeviceDAQConnector::handle_ForceStopDAQ);
 
     disconnect(this, &DeviceDAQConnector::DirectRequestForWidgetDAQ, gFEEControlWin, &FEEControlWin::handle_DAQRequest);
-
 }
 
 bool DeviceDAQConnector::TryTestPrepare()
@@ -56,7 +57,7 @@ bool DeviceDAQConnector::TryTestPrepare()
 void DeviceDAQConnector::TestStop()
 {
     DisconnectSlots();
-    fBreakFlag = 0;
+    fManualForceBreak = 0;
     fLastLoopFlag = 0;
     fOccupied = 0;
     fDAQhandle = 0;
@@ -64,9 +65,9 @@ void DeviceDAQConnector::TestStop()
 
 void DeviceDAQConnector::handle_DAQDone()
 {
-    if (fBreakFlag)
+    if (fManualForceBreak)
     {
-        std::cout << "Warning: Force to break device loop." << std::endl;
+        std::cout << "Warning: Force to break device loop manually." << std::endl;
         TestStop();
         return;
     }
@@ -104,6 +105,11 @@ void DeviceDAQConnector::handle_DAQRequest(int deviceHandle, UserDefine::DAQRequ
     // timer.singleShot(1000, gFEEControlWin, SIGNAL(stopDAQSignal()));
     // _sleep(1000);
     // emit gFEEControlWin->stopDAQSignal();
+}
+
+void DeviceDAQConnector::handle_ForceStopDAQ()
+{
+    TestStop();
 }
 
 //! \class VDeviceController
@@ -160,6 +166,7 @@ bool VDeviceController::StartTest()
         TestStop();
         return false;
     }
+    gDAQConnector->ClearBreak(); // Clear all manually break flag
     if (!gDAQConnector->TryTestPrepare())
     {
         std::cout << "Warning: DAQ is running, device abort" << std::endl;
