@@ -44,7 +44,8 @@ bool DAQRuning::JudgeLoopFlag(FEEControlWin *w, int nEventCount)
     // (w->fDAQSettingTime >= QTime::fromMSecsSinceStartOfDay(w->fDAQStartTime.msecsTo(QTime::currentTime())));
 
     bool nEventFlag = (w->fDAQSettingCount < 0 || nEventCount < w->fDAQSettingCount);
-    bool loopFlag = w->fDAQRuningFlag && nEventFlag && timeFlag;
+    bool connectionFlag = w->IsConnected();
+    bool loopFlag = w->fDAQRuningFlag && nEventFlag && timeFlag && connectionFlag;
     return loopFlag;
 }
 
@@ -89,6 +90,11 @@ FEEControlWin::FEEControlWin(QWidget *parent)
     : QWidget(parent), ui(new Ui::FEEControlWin)
 {
     ui->setupUi(this);
+
+#ifdef USE_FEE_CONTROL_MONITOR
+    // Connection Process
+    connect(gFEEMonitor, &QtUserConnectionMonitor::connectionBroken, this, &FEEControlWin::handle_connectionBroken);
+#endif
 
     // FEE control Tab
     ui->btnExit->setEnabled(false);
@@ -332,7 +338,7 @@ void FEEControlWin::PrintConnection(bool flag)
 
     ui->lblIPOut->setText(tr(gBoard->GetIP().c_str()));
     ui->lblPortOut->setText(QString::number(gBoard->GetPort()));
-    ui->lblBoardOut->setText(ui->boxPort->text());
+    ui->lblBoardOut->setText(QString::number(fCurrentBoardNo));
 
     ui->brsMessage->setTextColor(QColor(0, 255, 0));
     ui->brsMessage->setFontWeight(QFont::Bold);
@@ -348,6 +354,7 @@ void FEEControlWin::ProcessConnect()
 {
     ui->btnConnect->setEnabled(false);
     ui->btnExit->setEnabled(true);
+    ui->lblLED->setStyleSheet("background-color:rgb(0,255,0)");
 
     // DAQ Control
     ui->grpDAQctrl->setEnabled(true);
@@ -416,6 +423,8 @@ void FEEControlWin::ProcessConnect()
 
 void FEEControlWin::ProcessDisconnect()
 {
+    ui->lblLED->setStyleSheet("background-color:rgb(255,0,0)");
+    fConnected = false;
     // Stop all clocks
     fOnceTimer.stop();
     fDAQClock.stop();
@@ -457,13 +466,21 @@ void FEEControlWin::ProcessDisconnect()
     ui->btnSendConfig->setEnabled(false);
 }
 
+void FEEControlWin::handle_connectionBroken(int boardNo)
+{
+    if (boardNo == fCurrentBoardNo)
+        ProcessDisconnect();
+}
+
 void FEEControlWin::on_btnConnect_clicked()
 {
-    on_btnGenerateIP_clicked();
-    std::string ip = ui->lineIP->text().toStdString();
-    int port = ui->boxPort->value();
+    // on_btnGenerateIP_clicked();
+    // std::string ip = ui->lineIP->text().toStdString();
+    // int port = ui->boxPort->value();
+    // gBoard->InitPort(ip, port);
 
-    gBoard->InitPort(ip, port);
+    fCurrentBoardNo = ui->boxBoardNo->value();
+    gBoard->InitPort(fCurrentBoardNo);
     ui->brsMessage->setTextColor(QColor(0, 0, 0));
     ui->brsMessage->setFontWeight(QFont::Bold);
     ui->brsMessage->append("Try to connect: ");

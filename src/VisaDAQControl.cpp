@@ -8,6 +8,9 @@
 #include <iostream>
 #include <string>
 
+// Qt
+#include <QPalette>
+
 VisaDAQControlWin *VisaDAQControlWin::Instance()
 {
     static VisaDAQControlWin *instance = new VisaDAQControlWin;
@@ -30,7 +33,7 @@ VisaDAQControlWin::VisaDAQControlWin(QWidget *parent) : QMainWindow(parent),
     // connect(&fThread1, &QThread::finished, fDAQControl, &QObject::deleteLater);
 
     // Test tab
-    ui->tabTestChoosen->setCurrentIndex(1);
+    ui->tabTestChoosen->setCurrentIndex(0);
 }
 
 VisaDAQControlWin::~VisaDAQControlWin()
@@ -90,27 +93,53 @@ bool VisaDAQControlWin::GenerateAmpList()
     return rtn;
 }
 
-bool VisaDAQControlWin::GenerateChList()
+bool VisaDAQControlWin::GenerateChListVB()
 {
-    ui->listCh->clear();
+    ui->listChVB->clear();
     std::vector<double> temp;
-    bool rtn = UserDefine::ParseLine(ui->lineSelectChannel->text().toStdString(), temp);
+    bool rtn = UserDefine::ParseLine(ui->lineSelectChannelVB->text().toStdString(), temp);
     if (!rtn)
         return rtn;
 
-    fChList.clear();
+    fChListVB.clear();
     for (int i = 0; i < temp.size(); i++)
     {
         if (temp[i] >= 0 && temp[i] < 32)
         {
-            fChList.push_back(temp[i]);
+            fChListVB.push_back(temp[i]);
         }
     }
 
-    for (int i = 0; i < fChList.size(); i++)
+    for (int i = 0; i < fChListVB.size(); i++)
     {
-        QString temp = "Channel: " + QString::number(fChList[i]);
-        ui->listCh->addItem(temp);
+        QString temp = "Channel: " + QString::number(fChListVB[i]);
+        ui->listChVB->addItem(temp);
+    }
+
+    return rtn;
+}
+
+bool VisaDAQControlWin::GenerateChListNL()
+{
+    ui->listChNL->clear();
+    std::vector<double> temp;
+    bool rtn = UserDefine::ParseLine(ui->lineSelectChannelNL->text().toStdString(), temp);
+    if (!rtn)
+        return rtn;
+
+    fChListNL.clear();
+    for (int i = 0; i < temp.size(); i++)
+    {
+        if (temp[i] >= 0 && temp[i] < 32)
+        {
+            fChListNL.push_back(temp[i]);
+        }
+    }
+
+    for (int i = 0; i < fChListNL.size(); i++)
+    {
+        QString temp = "Channel: " + QString::number(fChListNL[i]);
+        ui->listChNL->addItem(temp);
     }
 
     return rtn;
@@ -184,30 +213,56 @@ bool VisaDAQControlWin::SetAmpType(int type)
     return true;
 }
 
-void VisaDAQControlWin::on_btnGenerateList_clicked()
+void VisaDAQControlWin::on_btnGenerateListVB_clicked()
 {
-    GenerateGainList();
+    // GenerateGainList();
     GenerateBiasList();
-    GenerateAmpList();
-    GenerateChList();
+    // GenerateAmpList();
+    GenerateChListVB();
 }
 
-void VisaDAQControlWin::ClearList()
+void VisaDAQControlWin::ClearListVB()
+{
+    // ui->listAmp->clear();
+    // ui->listGain->clear();
+    ui->listBias->clear();
+    ui->listChVB->clear();
+
+    // fGainList.clear();
+    fBiasList.clear();
+    // fAmpList.clear();
+    fChListVB.clear();
+}
+
+void VisaDAQControlWin::on_btnGenerateListNL_clicked()
+{
+    GenerateGainList();
+    // GenerateBiasList();
+    GenerateAmpList();
+    GenerateChListNL();
+}
+
+void VisaDAQControlWin::ClearListNL()
 {
     ui->listAmp->clear();
     ui->listGain->clear();
-    ui->listBias->clear();
-    ui->listCh->clear();
+    // ui->listBias->clear();
+    ui->listChNL->clear();
 
     fGainList.clear();
-    fBiasList.clear();
+    // fBiasList.clear();
     fAmpList.clear();
-    fChList.clear();
+    fChListNL.clear();
 }
 
-void VisaDAQControlWin::on_btnClearList_clicked()
+void VisaDAQControlWin::on_btnClearListVB_clicked()
 {
-    ClearList();
+    ClearListVB();
+}
+
+void VisaDAQControlWin::on_btnClearListNL_clicked()
+{
+    ClearListNL();
 }
 
 void VisaDAQControlWin::on_boxHGLG_currentIndexChanged(int index)
@@ -311,8 +366,8 @@ bool VisaDAQControl::ProcessDeviceHandle(int deviceHandle)
     if (status != 0)
         return false;
 
-    auto rtn1 = gFEEControlWin->Modify_SP_CITIROC_HGAmp(CombineChDAC(gVisaDAQWin->GetSelectedChannels(), gain));
-    auto rtn2 = gFEEControlWin->Modify_SP_CITIROC_LGAmp(CombineChDAC(gVisaDAQWin->GetSelectedChannels(), gain));
+    auto rtn1 = gFEEControlWin->Modify_SP_CITIROC_HGAmp(CombineChDAC(gVisaDAQWin->GetSelectedChannelsNL(), gain));
+    auto rtn2 = gFEEControlWin->Modify_SP_CITIROC_LGAmp(CombineChDAC(gVisaDAQWin->GetSelectedChannelsNL(), gain));
 
     _sleep(500);
     // if (gainType == 0)
@@ -379,12 +434,12 @@ void VisaDAQControlWin::StartDAC_V_Test()
     handleDACV = 0;
     ui->listBias->setCurrentRow(handleDACV);
 
-    int chTemp = ui->listCh->currentRow();
+    int chTemp = ui->listChVB->currentRow();
     std::cout << chTemp << std::endl;
     handleDACVch = (chTemp > 31 || chTemp < 0) ? 0 : chTemp;
-    ui->listCh->setCurrentRow(handleDACVch);
-    ui->lineChMea->setText(QString::number(fChList[handleDACVch]));
-    ui->listCh->setEnabled(0);
+    ui->listChVB->setCurrentRow(handleDACVch);
+    ui->lineChMea->setText(QString::number(fChListVB[handleDACVch]));
+    ui->listChVB->setEnabled(0);
     ui->btnStartVTest->setEnabled(0);
     ui->btnNextChReady->setEnabled(0);
 
@@ -398,7 +453,7 @@ void VisaDAQControlWin::StopDAC_V_Test()
     fDACVTestBreakFlag = 0;
 
     // disconnect(&fTimer, &QTimer::timeout, this, &VisaDAQControlWin::handle_DACVTest);
-    ui->listCh->setEnabled(1);
+    ui->listChVB->setEnabled(1);
     ui->btnStartVTest->setEnabled(1);
     ui->btnNextChReady->setEnabled(1);
     fTimer.stop();
@@ -425,7 +480,7 @@ void VisaDAQControlWin::handle_DACVTest()
             std::cout << "John Test: totally got " << result << " points" << std::endl;
         }
         ui->listBias->setCurrentRow(handleDACV);
-        DACVfuture = QtConcurrent::run(ProcessVoltageTest, fChList[handleDACVch], fBiasList[handleDACV++], ui->boxVSamplePoints->value(), sFolder);
+        DACVfuture = QtConcurrent::run(ProcessVoltageTest, fChListVB[handleDACVch], fBiasList[handleDACV++], ui->boxVSamplePoints->value(), sFolder);
         std::cout << "Test" << std::endl;
 
         if (!fDACVTestBreakFlag)
@@ -545,12 +600,12 @@ double VoltageTest_Previous(int nSamplePoints, std::string fileName, std::string
 void VisaDAQControlWin::on_btnNextChReady_clicked()
 {
     handleDACVch++;
-    if (handleDACVch >= fChList.size())
+    if (handleDACVch >= fChListVB.size())
     {
         handleDACVch = 0;
     }
-    ui->lineChMea->setText(QString::number(fChList[handleDACVch]));
-    ui->listCh->setCurrentRow(handleDACVch);
+    ui->lineChMea->setText(QString::number(fChListVB[handleDACVch]));
+    ui->listChVB->setCurrentRow(handleDACVch);
     if (!handleDACVch)
         return;
     StartDAC_V_Test();

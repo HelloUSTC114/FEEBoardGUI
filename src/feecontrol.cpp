@@ -371,7 +371,8 @@ bool FEEControl::HV_config(void)
             return false;
         }
 
-        if (recv(fSock, HV_reply, 50, 0) <= 0)
+        // if (recv(fSock, HV_reply, 50, 0) <= 0)
+        if (!RecvAll(HV_reply, 50))
         {
             cout << "receive error." << endl;
             close_socket();
@@ -545,11 +546,19 @@ bool FEEControl::recv_data(char *buffer, int size)
 
 bool FEEControl::SendAll(char *buffer, int size)
 {
+    if (!fConnectionFlag)
+        return false;
     while (size > 0)
     {
         int SendSize = send(fSock, buffer, size, 0);
         if (SendSize == SOCKET_ERROR)
+        {
+#ifdef USE_FEE_CONTROL_MONITOR
+            gFEEMonitor->ProcessConnectionBroken(fBoardNum);
+#endif
+            fConnectionFlag = false;
             return false;
+        }
         size = size - SendSize;
         buffer += SendSize;
     }
@@ -558,11 +567,13 @@ bool FEEControl::SendAll(char *buffer, int size)
 
 bool FEEControl::RecvAll(char *buffer, int size)
 {
+    if (!fConnectionFlag)
+        return false;
     while (size > 0)
     {
-        auto test3 = clock();
+        // auto test3 = clock();
         int RecvSize = recv(fSock, buffer, size, 0);
-        auto test4 = clock();
+        // auto test4 = clock();
 
         // std::cout << "Package size: " << (double)RecvSize / 1024.0 / 1024.0 << "MB" << std::endl;
         // if (test4 - test3)
@@ -570,7 +581,13 @@ bool FEEControl::RecvAll(char *buffer, int size)
         // else
         //     std::cout << "Network speed(Mb/s): " << 0 << std::endl;
         if (RecvSize == SOCKET_ERROR)
+        {
+#ifdef USE_FEE_CONTROL_MONITOR
+            gFEEMonitor->ProcessConnectionBroken(fBoardNum);
+#endif
+            fConnectionFlag = false;
             return false;
+        }
         size = size - RecvSize;
         buffer += RecvSize;
     }
@@ -727,14 +744,16 @@ int FEEControl::HVSend(string scmd)
     InitCMD(byte_num);
     *cmd = up_configC11204;
     strcat(cmd, input_cmd);
-    if (send(fSock, cmd, byte_num, 0) <= 0)
+    // if (send(fSock, cmd, byte_num, 0) <= 0)
+    if (!SendAll(cmd, byte_num))
     {
         cout << "send error." << endl;
         close_socket();
         return EXIT_FAILURE;
     }
 
-    if (recv(fSock, reply, 50, 0) <= 0)
+    // if (recv(fSock, reply, 50, 0) <= 0)
+    if (!RecvAll(reply, 50))
     {
         cout << "receive error." << endl;
         close_socket();
@@ -853,9 +872,15 @@ bool FEEControl::TestConnect()
     }
     auto rtn = read_reg_test(reg_addr_test, reg_test);
     if (!rtn)
+    {
+        fConnectionFlag = false;
         return false;
-
-    return (reg_test == wr_data_test);
+    }
+    if (reg_test == wr_data_test)
+        fConnectionFlag = true;
+    else
+        fConnectionFlag = false;
+    return fConnectionFlag;
 }
 
 double FEEControl::ReadFreq()
@@ -1369,3 +1394,11 @@ void HVStatus::Print()
     printf("output voltage monitor: %f\n", OV_moni);
     printf("output current monitor: %f\n\n", OC_moni);
 }
+
+#ifdef USE_FEE_CONTROL_MONITOR
+QtUserConnectionMonitor *QtUserConnectionMonitor::Instance()
+{
+    static QtUserConnectionMonitor *instance = new QtUserConnectionMonitor;
+    return instance;
+}
+#endif

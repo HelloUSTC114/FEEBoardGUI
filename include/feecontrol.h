@@ -137,7 +137,7 @@ public:
     // HV Control END
 
     // Other Board Status Monitor
-    bool TestConnect();             // Test connnection of board
+    bool TestConnect();             // Test connnection of board, Warning: Only chance to set connection flag as true
     int BoardCheck();               // Check HV, citiroc, ad9635, si570, fifo information
     bool ReadTemp();                // Read temperature
     int TestReg();                  // Test Register
@@ -204,6 +204,7 @@ private:
     static const int fIPBase;
     int fPort;
     int fBoardNum = 0;
+    volatile bool fConnectionFlag = 0;
     unsigned __int64 fSock; // SOCKET fSock, only not include <winsock2.h> in this file
 
     // Socket Init & Close
@@ -289,6 +290,26 @@ class FEEList
 private:
     std::vector<FEEControl *> fBoardList;
 };
+
+#define USE_FEE_CONTROL_MONITOR
+#ifdef USE_FEE_CONTROL_MONITOR
+#include <QObject>
+class QtUserConnectionMonitor : public QObject
+{
+    Q_OBJECT
+signals:
+    void connectionBroken(int boardNo);
+
+public:
+    static QtUserConnectionMonitor *Instance();
+    void ProcessConnectionBroken(int boardNo) { emit connectionBroken(boardNo); }
+
+private:
+    QtUserConnectionMonitor() = default;
+};
+#define gFEEMonitor (QtUserConnectionMonitor::Instance())
+
+#endif
 
 #endif
 // FEECONTROL_H

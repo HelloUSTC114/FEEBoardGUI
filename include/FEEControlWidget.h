@@ -62,6 +62,7 @@ public:
 
     //! TODO: In the future, this class should adapt to several boards connections.
     bool TryConnect(std::string sIP, int port);
+    bool IsConnected() { return fConnected; }
 
     /// @brief Try to start DAQ Process
     /// @param sPath SaveFile Folder Path
@@ -112,6 +113,8 @@ signals:
     void forceStopDAQSignal();            // DAQ Force stop signal, tell other class that DAQ is interrupted
 
 private slots:
+    void handle_connectionBroken(int boardNo); // Handle Connection broken situation
+
     void on_DAQStoped(int nDAQLoop);     // FEE DAQ Stop slot
     void handle_ContinousDraw();         // Handle draw slot
     void handle_DAQCount(int nDAQCount); // Handle DAQ Count
@@ -129,7 +132,8 @@ private:
     Ui::FEEControlWin *ui;
 
     // FEE Board
-    bool fConnected = false; // Whether board is connected
+    volatile bool fConnected = false;  // Whether board is connected
+    int fCurrentBoardNo = -1; // Current board number
 
     void PrintConnection(bool flag); // Print Connection information
     void ProcessConnect();           // Process after successfully connected, send logic, send CITIROC config

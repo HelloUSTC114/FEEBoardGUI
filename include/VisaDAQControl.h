@@ -60,7 +60,8 @@ public:
     // FEE Board
     std::string GetAmpType();
     bool SetAmpType(int type);
-    const std::vector<int> &GetSelectedChannels() { return fChList; }
+    const std::vector<int> &GetSelectedChannelsVB() { return fChListVB; }
+    const std::vector<int> &GetSelectedChannelsNL() { return fChListNL; }
 
     // DAQ & FEE Control Parser
     bool ParseHandle(int deviceHandle, double &amp, double &gain, int &gainType, UserDefine::DAQRequestInfo &daq);
@@ -76,8 +77,10 @@ public:
 
 private slots:
 
-    void on_btnGenerateList_clicked();
-    void on_btnClearList_clicked();
+    void on_btnGenerateListVB_clicked();
+    void on_btnGenerateListNL_clicked();
+    void on_btnClearListVB_clicked();
+    void on_btnClearListNL_clicked();
 
     void on_boxHGLG_currentIndexChanged(int index);
 
@@ -121,12 +124,15 @@ private:
     void GenerateGainList();
     void GenerateBiasList();
     bool GenerateAmpList();
-    bool GenerateChList();
-    void ClearList();
+    bool GenerateChListVB();
+    bool GenerateChListNL();
+    void ClearListVB();
+    void ClearListNL();
     std::vector<int> fGainList;
     std::vector<int> fBiasList;
     std::vector<double> fAmpList;
-    std::vector<int> fChList;
+    std::vector<int> fChListVB;
+    std::vector<int> fChListNL;
     const int fDefaultGain = 30;
     const int fDefaultBias = 100;
     int fHGLGflag = 0;
