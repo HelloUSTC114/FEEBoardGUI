@@ -856,10 +856,18 @@ void FEEControlWin::on_DAQStoped(int nDAQLoop)
     emit stopDAQSignal();
 }
 
+void FEEControlWin::StopDAQ()
+{
+    if (fDAQRuningFlag)
+    {
+        fDAQRuningFlag = 0;
+        gBoard->SetFifoReadBreak();
+    }
+}
+
 void FEEControlWin::on_btnDAQStop_clicked()
 {
-    fDAQRuningFlag = 0;
-    gBoard->SetFifoReadBreak();
+    StopDAQ();
     emit forceStopDAQSignal();
 }
 

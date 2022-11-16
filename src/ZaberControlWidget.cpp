@@ -359,6 +359,7 @@ bool ZaberControlWidget::GetPositionList(int deviceHandle, double &pos)
         return false;
     }
     pos = fPosList[deviceHandle];
+    ui->listPosition->setCurrentRow(deviceHandle);
     return true;
 }
 

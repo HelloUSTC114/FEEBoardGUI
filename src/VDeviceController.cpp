@@ -41,6 +41,12 @@ void DeviceDAQConnector::DisconnectSlots()
     disconnect(this, &DeviceDAQConnector::DirectRequestForWidgetDAQ, gFEEControlWin, &FEEControlWin::handle_DAQRequest);
 }
 
+void DeviceDAQConnector::SetBreak()
+{
+    gFEEControlWin->StopDAQ();
+    fManualForceBreak = 1;
+}
+
 bool DeviceDAQConnector::TryTestPrepare()
 {
     if (gFEEControlWin->IsDAQRunning())
@@ -65,12 +71,12 @@ void DeviceDAQConnector::TestStop()
 
 void DeviceDAQConnector::handle_DAQDone()
 {
-    if (fManualForceBreak)
-    {
-        std::cout << "Warning: Force to break device loop manually." << std::endl;
-        TestStop();
-        return;
-    }
+    // if (fManualForceBreak)
+    // {
+    //     std::cout << "Warning: Force to break device loop manually." << std::endl;
+    //     TestStop();
+    //     return;
+    // }
     if (fLastLoopFlag)
     {
         emit LastDAQDone(fDAQhandle++);
@@ -155,6 +161,9 @@ void VDeviceController::handle_ForceStopDAQ()
 
 bool VDeviceController::StartTest()
 {
+    QPrivateSignal signal;
+    emit deviceStarted(signal);
+
     if (fOccupied)
     {
         std::cout << "Warning: Device is occupied, abort" << std::endl;
@@ -194,6 +203,9 @@ void VDeviceController::TestStop()
     fStopFlag = 0;
     std::cout << "Occupied Flag: " << fOccupied << std::endl;
     fLastLoopFlag = 0;
+
+    QPrivateSignal signal;
+    emit deviceStoped(signal);
 }
 
 void VDeviceController::ConnectSlots()

@@ -15,7 +15,7 @@ public:
     static DeviceDAQConnector *Instance();
     ~DeviceDAQConnector();
     bool IsOccupied() { return fOccupied; };
-    void SetBreak() { fManualForceBreak = 1; };
+    void SetBreak(); // Force DAQ Stop
     void ClearBreak() { fManualForceBreak = 0; };
 
     bool TryTestPrepare(); // connect DAQ signals inside FEEControlWidget and slots in this class
@@ -36,7 +36,7 @@ signals:
     void DAQDone(int daqHandle); // Whole process is controlled by device controller
     void LastDAQDone(int daqHandle);
 
-    void forceStopDAQSignal(); // DAQ Force stop signal, tell other class that DAQ is interrupted
+    void forceStopDAQSignal(); // emit DAQ Force stop signal from  FEEControlWin, tell other class that DAQ is interrupted
 
     void DirectRequestForWidgetDAQ(UserDefine::DAQRequestInfo *daq); // DAQ Request signal
 
@@ -48,7 +48,7 @@ private slots:
     void handle_DAQStart();
     void handle_DAQDone();
 
-    void handle_ForceStopDAQ();
+    void handle_ForceStopDAQ(); // handle stop signal from FEEControlWin
 };
 
 #define gDAQConnector (DeviceDAQConnector::Instance())
@@ -66,10 +66,13 @@ signals:
     void RequestForLastDAQ(int daqHandle, UserDefine::DAQRequestInfo *daq);
     void RequestForForceStop();
 
+    void deviceStarted(QPrivateSignal);
+    void deviceStoped(QPrivateSignal);
+
 public slots:
     virtual void handle_DAQDone(int daqHandle);
     virtual void handle_LastDAQDone(int daqHandle);
-    virtual void handle_ForceStopDAQ();
+    virtual void handle_ForceStopDAQ(); // handle stop signal from FEEControlWin
 
 protected:
     volatile int fDeviceHandle = 0;

@@ -72,6 +72,7 @@ public:
     /// @param msBufferSleep FEE board buffer reading waiting time (in ms)
     /// @return whether DAQ start Successfully
     bool TryStartDAQ(std::string sPath, std::string sFileName, int nDAQCount = -1, QTime DAQTime = {0, 0, 0}, int msBufferSleep = 200, int leastBufferEvent = 30, bool clearBeforeDAQ = 1);
+    void StopDAQ();
     bool IsDAQRunning() { return fDAQIsRunning; }
     QString GetPath() { return fsFilePath; }
     QString GetFileName() { return fsFileName; }
