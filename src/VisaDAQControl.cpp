@@ -34,6 +34,9 @@ VisaDAQControlWin::VisaDAQControlWin(QWidget *parent) : QMainWindow(parent),
 
     // Test tab
     ui->tabTestChoosen->setCurrentIndex(0);
+
+    ui->tabNLTest->setEnabled(false);
+    ui->tabVBTest->setEnabled(false);
 }
 
 VisaDAQControlWin::~VisaDAQControlWin()
@@ -481,9 +484,9 @@ void VisaDAQControlWin::handle_DACVTest()
         }
         ui->listBias->setCurrentRow(handleDACV);
         DACVfuture = QtConcurrent::run(ProcessVoltageTest, fChListVB[handleDACVch], fBiasList[handleDACV++], ui->boxVSamplePoints->value(), sFolder);
-        std::cout << "Test" << std::endl;
 
         if (!fDACVTestBreakFlag)
+            // std::cout << "Test" << std::endl;
             fTimer.singleShot(ui->boxVSamplePoints->value() * 50, this, &VisaDAQControlWin::handle_DACVTest);
         else
             StopDAC_V_Test();
@@ -609,4 +612,70 @@ void VisaDAQControlWin::on_btnNextChReady_clicked()
     if (!handleDACVch)
         return;
     StartDAC_V_Test();
+}
+
+void VisaDAQControlWin::on_btnAFGConnect_clicked()
+{
+    std::string sDeviceName = "TCPIP::" + ui->lineAFGIP->text().toStdString() + "::INSTR";
+    gAFGVisa->TryConnectDevice(sDeviceName);
+    if (gAFGVisa->IsConnected())
+    {
+        ui->lblAFGLED->setStyleSheet("background-color:rgb(0,255,0)");
+        fAFGReady = 1;
+    }
+    else
+    {
+        ui->lblAFGLED->setStyleSheet("background-color:rgb(255,0,0)");
+        fAFGReady = 0;
+    }
+}
+
+void VisaDAQControlWin::on_btnAgiConnect_clicked()
+{
+    std::string sDeviceName = "TCPIP::" + ui->lineAgiIP->text().toStdString() + "::INSTR";
+    gAgi1344Visa->TryConnectDevice(sDeviceName);
+    if (gAgi1344Visa->IsConnected())
+    {
+        ui->lblAgiLED->setStyleSheet("background-color:rgb(0,255,0)");
+        fAgiReady = 1;
+    }
+    else
+    {
+        ui->lblAgiLED->setStyleSheet("background-color:rgb(255,0,0)");
+        fAgiReady = 0;
+    }
+}
+
+void VisaDAQControlWin::on_btnFEEConnect_clicked()
+{
+    if (gFEEControlWin->IsConnected())
+    {
+        ui->lblFEELED->setStyleSheet("background-color:rgb(0,255,0)");
+        fFEEReady = 1;
+    }
+    else
+    {
+        ui->lblFEELED->setStyleSheet("background-color:rgb(255,0,0)");
+        fFEEReady = 0;
+    }
+}
+
+void VisaDAQControlWin::on_btnDeviceCheck_clicked()
+{
+    if (!fFEEReady)
+        on_btnFEEConnect_clicked();
+    if (!fAFGReady)
+        on_btnAFGConnect_clicked();
+    if (!fAgiReady)
+        on_btnAgiConnect_clicked();
+    if (!fFEEReady)
+        return;
+    if (fAFGReady)
+        ui->tabNLTest->setEnabled(true);
+    if (fAgiReady)
+        ui->tabVBTest->setEnabled(true);
+}
+
+void VisaDAQControlWin::on_btnDACVPath_clicked()
+{
 }

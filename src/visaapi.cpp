@@ -53,7 +53,17 @@ std::stringstream VisaAPI::gss;
 VisaAPI::~VisaAPI()
 {
     std::cout << "Destructor" << std::endl;
-    CloseDevice();
+    if (fDeviceOpenFlag)
+        CloseDevice();
+}
+
+bool VisaAPI::TryConnectDevice(std::string sDeviceName)
+{
+    if (!fDeviceOpenFlag)
+    {
+        return OpenDevice(sDeviceName);
+    }
+    return false;
 }
 
 void VisaAPI::InitDevice()
@@ -148,9 +158,15 @@ bool VisaAPI::OpenDevice(std::string sDeviceName)
     ReadBuf();
 
     if (status == VI_SUCCESS)
+    {
+        fDeviceOpenFlag = true;
         return true;
+    }
     else
+    {
+        fDeviceOpenFlag = false;
         return false;
+    }
 }
 
 int VisaAPI::WriteCMD(std::string sCmd)
@@ -225,10 +241,13 @@ int VisaAPI::ProcessError(ViStatus status)
     return 1;
 }
 
-const std::string AFGVisaAPI::sDeviceName = "TCPIP::192.168.1.177::INSTR";
-AFGVisaAPI::AFGVisaAPI() : VisaAPI(sDeviceName.c_str())
+// const std::string AFGVisaAPI::fDeviceName = "TCPIP::192.168.1.177::INSTR";
+// const std::string AFGVisaAPI::fDeviceName = "TCPIP::192.168.124.5::INSTR";
+// AFGVisaAPI::AFGVisaAPI() : VisaAPI(fDeviceName.c_str())
+AFGVisaAPI::AFGVisaAPI() : VisaAPI()
 {
-    std::cout << "Constructing: AFG " << std::endl;
+    // std::cout << "Constructing: AFG " << std::endl;
+    // TryConnectDevice(fDeviceName.c_str());
 }
 
 AFGVisaAPI *AFGVisaAPI::Instance()
@@ -389,9 +408,10 @@ int AFGVisaAPI::SetWaveForm(AFGWaveform wave)
     return 0;
 }
 
-const std::string Agi344VisaAPI::sDeviceName = "TCPIP::192.168.1.178::INSTR";
-// const std::string Agi344VisaAPI::sDeviceName = "USB::0x0957::0x0618::MY51520158::INSTR";
-Agi344VisaAPI::Agi344VisaAPI() : VisaAPI(sDeviceName.c_str())
+// const std::string Agi344VisaAPI::fDeviceName = "TCPIP::192.168.1.178::INSTR";
+// const std::string Agi344VisaAPI::fDeviceName = "USB::0x0957::0x0618::MY51520158::INSTR";
+// Agi344VisaAPI::Agi344VisaAPI() : VisaAPI(fDeviceName.c_str())
+Agi344VisaAPI::Agi344VisaAPI() : VisaAPI()
 {
 }
 

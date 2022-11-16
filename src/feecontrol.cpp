@@ -646,6 +646,10 @@ bool FEEControl::start_socket()
         cout << "Connect error." << endl;
         fSockInitFlag = 0;
         close_socket();
+#ifdef USE_FEE_CONTROL_MONITOR
+        gFEEMonitor->ProcessConnectionBroken(fBoardNum);
+#endif
+        fConnectionFlag = false;
         return false;
     }
     fSockInitFlag = true;
@@ -862,6 +866,7 @@ char *FEEControl::InitCMD(int length)
 
 bool FEEControl::TestConnect()
 {
+    fConnectionFlag = true;
     // reg test
     int reg_test, reg_addr_test = 59, wr_data_test = 0xf;
     wr_data_test = 0x1;

@@ -294,6 +294,7 @@ private:
 #define USE_FEE_CONTROL_MONITOR
 #ifdef USE_FEE_CONTROL_MONITOR
 #include <QObject>
+#include <iostream>
 class QtUserConnectionMonitor : public QObject
 {
     Q_OBJECT
@@ -302,7 +303,11 @@ signals:
 
 public:
     static QtUserConnectionMonitor *Instance();
-    void ProcessConnectionBroken(int boardNo) { emit connectionBroken(boardNo); }
+    void ProcessConnectionBroken(int boardNo)
+    {
+        std::cout << "Error! Connection Broken." << std::endl;
+        emit connectionBroken(boardNo);
+    }
 
 private:
     QtUserConnectionMonitor() = default;

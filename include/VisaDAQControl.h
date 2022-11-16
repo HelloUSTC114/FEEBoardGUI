@@ -104,6 +104,16 @@ private slots:
 
     void on_btnNextChReady_clicked();
 
+    void on_btnAFGConnect_clicked();
+
+    void on_btnAgiConnect_clicked();
+
+    void on_btnFEEConnect_clicked();
+
+    void on_btnDeviceCheck_clicked();
+
+    void on_btnDACVPath_clicked();
+
 private:
     explicit VisaDAQControlWin(QWidget *parent = nullptr);
 
@@ -148,6 +158,11 @@ private:
     int handleDACV = 0;
     int handleDACVch = 0;
     volatile bool fDACVTestBreakFlag = 0;
+
+    // Device Status
+    bool fAgiReady = 0;
+    bool fAFGReady = 0;
+    bool fFEEReady = 0;
 };
 
 #endif // VISADAQCONTROL_H

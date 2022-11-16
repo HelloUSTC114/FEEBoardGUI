@@ -32,8 +32,12 @@ std::string ConvertAFGFreqUnit(AFGFreqUnit unit);
 class VisaAPI
 {
 public:
+    VisaAPI() = default;
     VisaAPI(std::string sDeviceName);
     ~VisaAPI();
+
+    bool TryConnectDevice(std::string sDeviceName);
+    bool IsConnected() { return fDeviceOpenFlag; };
 
 #ifdef VISAAPI_CXX
     int ProcessError(ViStatus status);
@@ -60,6 +64,8 @@ protected:
     void CloseDevice();
     static std::stringstream gss;
 #endif
+private:
+    bool fDeviceOpenFlag = 0;
 };
 
 #define gAFGVisa (AFGVisaAPI::Instance())
@@ -79,7 +85,7 @@ public:
     int SetFreq(int ch, double freq); // set channel Frequency
 
 private:
-    const static std::string sDeviceName;
+    std::string fDeviceName;
 };
 
 #define gAgi1344Visa (Agi344VisaAPI::Instance())
@@ -103,7 +109,7 @@ public:
     void Measure34410(std::vector<double> &vResult);
 
 private:
-    const static std::string sDeviceName;
+    std::string fDeviceName;
     int fNPoints = 50;
 };
 
