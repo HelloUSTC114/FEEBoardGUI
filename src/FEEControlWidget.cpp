@@ -395,7 +395,7 @@ void FEEControlWin::ProcessConnect()
     PrintT();
 
     // Select Default Logic
-    SelectLogic(2);
+    SelectLogic(1);
     on_btnAllSetMask_clicked();
     on_btnSendLogic_clicked();
     on_btnMask_clicked();

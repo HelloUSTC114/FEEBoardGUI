@@ -415,7 +415,7 @@ int DataManager::ProcessADCEvents(int adcNo, const uint16_t *src_data, int dataL
         // std::cout << "Test: Processing Buffer: " << std::endl;
         // Copy the first left event into buffer
         // -- search first head
-        for (int idx_search = 0; idx_search < fTDCLengthFactor; idx_search++)
+        for (int idx_search = 0; idx_search < fADCLengthFactor; idx_search++)
         {
             if (adcdata[idx_search] == 65535 && adcdata[idx_search + 1] == 65535)
             {
@@ -437,7 +437,7 @@ int DataManager::ProcessADCEvents(int adcNo, const uint16_t *src_data, int dataL
         }
         else
         {
-            std::cout << "John Test: Error while Processing ADC: error inside Manager buffer" << std::endl;
+            std::cout << "Error while Processing ADC: error inside Manager buffer" << std::endl;
         }
 
         // Judge whether contains 2 heads
@@ -468,7 +468,7 @@ int DataManager::ProcessADCEvents(int adcNo, const uint16_t *src_data, int dataL
             }
             else
             {
-                std::cout << "John Test: Error while Processing ADC: error for 2nd data inside Manager buffer" << std::endl;
+                std::cout << "Error while Processing ADC: error for 2nd data inside Manager buffer" << std::endl;
             }
         }
         fADCBufCount[adcNo] = 0;
@@ -501,7 +501,7 @@ int DataManager::ProcessADCEvents(int adcNo, const uint16_t *src_data, int dataL
                 return totalEventCounter;
             else
             {
-                std::cout << "John Test: Error while Processing ADC: error in normal Processing" << std::endl;
+                std::cout << "Error while Processing ADC: error in normal Processing" << std::endl;
                 idx_search += idx_processed;
                 continue;
             }
@@ -526,7 +526,7 @@ bool DataManager::ProcessOneADCEvent(const uint16_t *const iter_first, const uin
     if ((iter_end - iter_first) < 175)
     {
         idx_processed = 0;
-        // std::cout << "Error while processing ADC: only " << iter_end - iter_first << " points left." << std::endl;
+        std::cout << "Error while processing ADC: only " << iter_end - iter_first << " points left." << std::endl;
         return false;
     }
 
