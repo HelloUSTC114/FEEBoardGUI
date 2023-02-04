@@ -20,9 +20,11 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 find_package(ROOT REQUIRED COMPONENTS Core)
 
 include_directories("include/")
+file(GLOB sources ${PROJECT_SOURCE_DIR}/src/*.cpp ${PROJECT_SOURCE_DIR}/src/*.ui)
+file(GLOB headers ${PROJECT_SOURCE_DIR}/include/*.h)
 
 # message(${VISA64} ${NIVISA64})
-#link_libraries(Concurrent)
+# link_libraries(Concurrent)
 link_libraries(Ws2_32)
 link_libraries(Iphlpapi)
 link_libraries(
@@ -32,33 +34,37 @@ link_libraries(
 set(PROJECT_SOURCES
     main.cpp
 
-    include/FEEControlWidget.h
-    src/FEEControlWidget.ui
-    src/FEEControlWidget.cpp
+    ${sources}
+    ${headers}
 
-    include/feecontrol.h
-    src/feecontrol.cpp
+    # include/FEEControlWidget.h
+    # src/FEEControlWidget.ui
+    # src/FEEControlWidget.cpp
 
-    include/datamanager.h
-    src/datamanager.cpp
+    # include/feecontrol.h
+    # src/feecontrol.cpp
 
-    include/configfileparser.h
-    src/configfileparser.cpp
+    # include/datamanager.h
+    # src/datamanager.cpp
 
-    include/ROOTDraw.h
-    src/ROOTDraw.cpp
-    src/ROOTDraw.ui
+    # include/configfileparser.h
+    # src/configfileparser.cpp
 
-    include/VDeviceController.h
-    src/VDeviceController.cpp
+    # include/ROOTDraw.h
+    # src/ROOTDraw.cpp
+    # src/ROOTDraw.ui
 
-    include/General.h
-    src/General.cpp
+    # include/VDeviceController.h
+    # src/VDeviceController.cpp
+
+    # include/General.h
+    # src/General.cpp
 )
 
 # User define ZABER Motion Control lib
 if(USE_ZABER)
     include_directories("C:/lib/Zaber/include")
+    include_directories("include/Zaber")
     find_library(ZMLLIB_d zml.lib "C:/Program\ Files/Zaber\ Motion\ Library/lib")
     find_library(ZMLLIB zml.lib "C:/lib/Zaber/lib")
     link_libraries(debug ${ZMLLIB_d}
@@ -66,12 +72,12 @@ if(USE_ZABER)
 
     set(PROJECT_SOURCES ${PROJECT_SOURCES}
 
-        include/ZaberControlWidget.h
-        src/ZaberControlWidget.cpp
-        src/ZaberControlWidget.ui
+        include/Zaber/ZaberControlWidget.h
+        src/Zaber/ZaberControlWidget.cpp
+        src/Zaber/ZaberControlWidget.ui
 
-        include/ZaberConnectionManager.h
-        src/ZaberConnectionManager.cpp
+        include/Zaber/ZaberConnectionManager.h
+        src/Zaber/ZaberConnectionManager.cpp
     )
     add_definitions(-DUSE_ZABER_MOTION)
 endif()
@@ -79,6 +85,7 @@ endif()
 # User define VISA Control lib
 if(USE_VISA)
     include_directories("C:/Program\ Files/IVI Foundation/VISA/Win64/Include")
+    include_directories("include/Visa")
 
     find_library(NIVISA64 nivisa64.lib "C:/Program\ Files/IVI\ Foundation/VISA/Win64/Lib_x64/msc")
     find_library(VISA64 visa64.lib "C:/Program\ Files/IVI\ Foundation/VISA/Win64/Lib_x64/msc")
@@ -86,12 +93,12 @@ if(USE_VISA)
 
     set(PROJECT_SOURCES ${PROJECT_SOURCES}
 
-        include/visaapi.h
-        src/visaapi.cpp
+        include/Visa/visaapi.h
+        src/Visa/visaapi.cpp
 
-        include/VisaDAQControl.h
-        src/VisaDAQControl.cpp
-        src/VisaDAQControl.ui
+        include/Visa/VisaDAQControl.h
+        src/Visa/VisaDAQControl.cpp
+        src/Visa/VisaDAQControl.ui
     )
     add_definitions(-DUSE_VISA_CONTROL)
 endif()

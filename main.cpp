@@ -19,7 +19,10 @@
 #include "configfileparser.h"
 #include "ROOTDraw.h"
 #include "VDeviceController.h"
+
+#ifdef USE_VISA_CONTROL
 #include "VisaDAQControl.h"
+#endif
 
 int main(int argc, char *argv[])
 {
