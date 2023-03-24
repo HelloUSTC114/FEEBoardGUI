@@ -30,6 +30,8 @@ int main(int argc, char *argv[])
     new TApplication("QTCanvas Demo", &argc, argv);
 
     {
+        // auto win = new ROOTDraw(0);
+        // win->show();
         gFEEControlWin->show();
         // gVisaDAQWin->show();
         return qapp.exec();

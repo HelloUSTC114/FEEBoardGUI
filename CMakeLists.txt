@@ -29,6 +29,7 @@ link_libraries(Ws2_32)
 link_libraries(Iphlpapi)
 link_libraries(
     ROOT::Core ROOT::Imt ROOT::RIO ROOT::Net ROOT::Hist ROOT::Graf ROOT::Graf3d ROOT::Gpad ROOT::ROOTDataFrame ROOT::Tree ROOT::TreePlayer ROOT::Rint ROOT::Postscript ROOT::Matrix ROOT::Physics ROOT::MathCore ROOT::Thread ROOT::ROOTVecOps
+    ROOT::Spectrum
 )
 
 set(PROJECT_SOURCES

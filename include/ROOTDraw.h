@@ -17,6 +17,7 @@ class QButtonGroup;
 
 class TObject;
 class TCanvas;
+class TH1;
 
 class PlotWindow;
 
@@ -114,6 +115,14 @@ namespace Ui
     class ROOTDraw;
 }
 
+struct PeakFitValue
+{
+    double first = 0;  // mean value
+    double second = 0; // constant value
+    double sigma = 0;  // sigma value
+    PeakFitValue(double x, double y, double z) : first(x), second(y), sigma(z){};
+};
+
 class FEEControlWin;
 class ROOTDraw : public QMainWindow
 {
@@ -131,6 +140,14 @@ public:
     bool SetDrawOption(int option);
     int GetDrawChannel();
     bool SetDrawChannel(int ch);
+
+    /// @brief Find Peaks for histogram hInput
+    /// @param hInput [IN] input histogram
+    /// @param outPeaks [OUT] Output peaks, <x,y,z> means <mean, constant, sigma>
+    /// @param nRebins [IN] how many times for rebin, N means hInput->Rebin(2^N), set default as 0, which means hInput->Rebin(1);
+    /// @param maxPeakSigma [IN] Useful for adjust Peak finding progress
+    /// @return [OUT] How many peaks have been found
+    static int FindPeaks(TH1 *hInput, std::vector<PeakFitValue> &outPeaks, int nRebins = 0, double maxPeakSigma = 10);
 
 public:
 private:
@@ -152,12 +169,15 @@ private:
     void DrawFiberSingle(); //
     void closeEvent(QCloseEvent *event);
 
+    void EnableFitPeaks(bool flag = 1);
+
 private slots:
     // Slots:
     void on_btnFileChoose_clicked();
     void on_btnFileDraw_clicked();
     void on_btnFileClose_2_clicked();
     void on_boxFiberCh_2_textChanged(const QString &arg1);
+    void on_btnFitPeaks_clicked();
 };
 
 #endif // ROOTDRAW_H

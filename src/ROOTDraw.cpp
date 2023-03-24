@@ -511,6 +511,81 @@ ROOTDraw::ROOTDraw(ROOTDraw &item) : fWinID(item.fWinID + 1), QMainWindow((QWidg
     Setup();
 }
 
+#include <TH1.h>
+#include <TSpectrum.h>
+#include <TF1.h>
+int ROOTDraw::FindPeaks(TH1 *hInput, std::vector<PeakFitValue> &outPeaks, int nRebins, double maxPeakSigma)
+{
+    static TSpectrum *sp = new TSpectrum;
+    if (nRebins > 0)
+        hInput->Rebin(2 ^ nRebins);
+
+    sp->Search(hInput, maxPeakSigma);
+    hInput->Draw();
+    sp->Draw("same");
+
+    std::vector<PeakFitValue> tempPeaks;
+    for (int i = 0; i < sp->GetNPeaks(); i++)
+        tempPeaks.push_back(PeakFitValue(sp->GetPositionX()[i], sp->GetPositionY()[i], 0));
+    std::sort(tempPeaks.begin(), tempPeaks.end(), [](const PeakFitValue &temp1, const PeakFitValue &temp2)
+              { return temp1.first < temp2.first; });
+
+    if (tempPeaks.size() <= 1)
+    {
+        std::cout << "Error: only found 1 peak. return false." << std::endl;
+        return 0;
+    }
+
+    for (int peakNo = 0; peakNo < tempPeaks.size(); peakNo++)
+    {
+        double dev2Next = 0;
+        if (peakNo == 0)
+        {
+            dev2Next = tempPeaks[1].first - tempPeaks[0].first;
+        }
+        else
+        {
+            dev2Next = tempPeaks[peakNo].first - tempPeaks[peakNo - 1].first;
+        }
+
+        double currentPeak = tempPeaks[peakNo].first;
+        static int count = 0;
+        auto f0 = new TF1(Form("gausn%d", count++), "gausn", 0, 65536);
+        TF1 &f = *f0;
+        if (peakNo == 0)
+            hInput->Fit(&f, "", "", currentPeak - dev2Next * 0.3, currentPeak + dev2Next * 0.3);
+        else
+            hInput->Fit(&f, "+", "", currentPeak - dev2Next * 0.3, currentPeak + dev2Next * 0.3);
+        double fitCurrentPeak = f.GetParameter(1);
+        double fitPeakAmplitude = f.GetParameter(0);
+        if (fitCurrentPeak <= currentPeak - dev2Next * 0.3 || fitCurrentPeak >= currentPeak + dev2Next * 0.3)
+        {
+            tempPeaks[peakNo].first = -1;
+            tempPeaks[peakNo].second = -1;
+            std::cout << "Error: Peak " << peakNo << " is out of range: [" << currentPeak - dev2Next * 0.3 << ", " << currentPeak + dev2Next * 0.3 << "]. Return false." << std::endl;
+            //            return 0;
+        }
+        else
+        {
+            tempPeaks[peakNo].first = fitCurrentPeak;
+            tempPeaks[peakNo].second = fitPeakAmplitude;
+            tempPeaks[peakNo].sigma = f.GetParameter(2);
+        }
+    }
+
+    // Process
+    outPeaks.clear();
+    for (int i = 0; i < tempPeaks.size(); i++)
+    {
+        if (tempPeaks[i].first > 0)
+        {
+            outPeaks.push_back(tempPeaks[i]);
+        }
+    }
+
+    return outPeaks.size();
+}
+
 void ROOTDraw::Setup()
 {
     ui->setupUi(this);
@@ -528,11 +603,38 @@ void ROOTDraw::Setup()
 
     // Draw control;
     connect(fpbtngrpDrawOption, SIGNAL(buttonClicked(int)), this, SLOT(on_btnFileDraw_clicked()));
+
+    // Set Table head
+    QTableWidgetItem *headerItem;
+    QStringList headerText;
+    headerText << "Peak No."
+               << "ADC Value"
+               << "Count"
+               << "Sigma"
+               << "Dev from pre";
+    ui->tablePeaks->setColumnCount(headerText.count());
+    for (int i = 0; i < ui->tablePeaks->columnCount(); i++)
+    {
+        headerItem = new QTableWidgetItem(headerText.at(i));
+        QFont font = headerItem->font();
+        font.setBold(true);
+        font.setPointSize(8);
+        headerItem->setFont(font);
+        ui->tablePeaks->setHorizontalHeaderItem(i, headerItem);
+    }
+    ui->tablePeaks->verticalHeader()->setVisible(false);
+    ui->tablePeaks->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    EnableFitPeaks(0);
 }
 
 void ROOTDraw::closeEvent(QCloseEvent *event)
 {
     fPlotWin->closeEvent(event);
+}
+
+void ROOTDraw::EnableFitPeaks(bool flag)
+{
+    ui->grpPeakStat->setEnabled(flag);
 }
 
 void ROOTDraw::Update()
@@ -616,16 +718,82 @@ void ROOTDraw::on_btnFileDraw_clicked()
     // gReadManager->DrawHG(GetDrawChannel());
     gReadManager->Draw(GetDrawChannel(), (DrawOption)GetDrawOption());
     // std::cout << "Test: Drawed" << std::endl;
+    EnableFitPeaks(true);
     Update();
 }
 
 void ROOTDraw::on_btnFileClose_2_clicked()
 {
     gReadManager->Close();
+    EnableFitPeaks(false);
     Update();
 }
 
 void ROOTDraw::on_boxFiberCh_2_textChanged(const QString &arg1)
 {
     on_btnFileDraw_clicked();
+}
+void ROOTDraw::on_btnFitPeaks_clicked()
+{
+    if (fCanvasOccupied)
+        return;
+
+    std::string sHistoName = Form("hHG%d", GetDrawChannel());
+    auto h = (TH1 *)gFile->Get(sHistoName.c_str());
+    if (!h)
+    {
+        std::cout << "Error: Cannot find Histogram: " << std::endl;
+        return;
+    }
+    std::vector<PeakFitValue> peakArray;
+    FindPeaks(h, peakArray, ui->boxRebin->value(), ui->lineSigmaInput->text().toDouble());
+    Update();
+
+    ui->tablePeaks->clearContents();
+    if (peakArray.size() < 2)
+    {
+        std::cout << "Error: Cannot find enough peaks." << std::endl;
+        return;
+    }
+
+    std::vector<double> devArray;
+    ui->tablePeaks->setRowCount(peakArray.size());
+    for (int peak = 0; peak < peakArray.size(); peak++)
+    {
+        QTableWidgetItem *item;
+
+        item = new QTableWidgetItem(QString::number(peak));
+        ui->tablePeaks->setItem(peak, 0, item);
+
+        item = new QTableWidgetItem(QString::number(peakArray[peak].first));
+        ui->tablePeaks->setItem(peak, 1, item);
+
+        item = new QTableWidgetItem(QString::number(peakArray[peak].sigma));
+        ui->tablePeaks->setItem(peak, 3, item);
+
+        item = new QTableWidgetItem(QString::number(peakArray[peak].second));
+        ui->tablePeaks->setItem(peak, 2, item);
+
+        item = new QTableWidgetItem;
+        if (peak > 0)
+        {
+            double dev = peakArray[peak].first - peakArray[peak - 1].first;
+            devArray.push_back(dev);
+            item->setText(QString::number(dev));
+        }
+        ui->tablePeaks->setItem(peak, 4, item);
+    }
+
+    if (devArray.size() < 4)
+    {
+        std::cout << "Warning: Count of peaks is too small to evaluate mean gain";
+        ui->lineGainOutput->setText(QString::number(0));
+        ui->lineSPE->setText(QString::number(0));
+        ui->linePed->setText(QString::number(0));
+        return;
+    }
+    double gain = (devArray[1] + devArray[2] + devArray[3]) / 3.0;
+    ui->lineGainOutput->setText(QString::number(gain));
+    ui->lineSPE->setText(QString::number(peakArray[1].first));
+    ui->linePed->setText(QString::number(peakArray[0].first));
 }
