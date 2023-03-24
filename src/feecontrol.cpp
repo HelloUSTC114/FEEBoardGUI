@@ -1,46 +1,90 @@
-#include "../include/feecontrol.h"
+// QT
+#include <QMutex>
+
+// C++ STL
 #include <WinSock2.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
 
+// User define
+#include "../include/feecontrol.h"
 #include "configfileparser.h"
-
-WSADATA fWsaData; // Unused unimportant data, used to put inside class FEEControl, but win sock2.h is like a piece of shit, which is conflict with <TTree.h>, <zaber>
 
 #pragma comment(lib, "Ws2_32.lib")
 
 #define SIZE_STR 150
-// #define fPortBase 1306
 
-const int FEEControl::fPortBase = 1306;
+const int FEEControl::fPortBase = 1306; // Port Base for all fee
+const int FEEControl::fIPBase = 101;    // IP Base for all fee
 
+const int FEEControl::fMaxSaveEvents = 3000;                       // How many Events can be saved in one time, must be multipliers of 20
+const int FEEControl::fRetrieveUnit = 10;                          // Retrieve unit, used to be 20
+const int FEEControl::fHGPointFactor = 176 * 2;                    // How many HG points in one event, not so accurate, *2 means how many Bytes, used to be 1380 * 2
+const int FEEControl::fLGPointFactor = FEEControl::fHGPointFactor; // How many LG points in one event, not so accurate, *2 means how many Bytes
+const int FEEControl::fTDCPointFactor = 136 * 2;                   // How many TDC points in one event, not so accurate, *2 means how many Bytes
+
+WSADATA fWsaData; // Unused unimportant data, used to put inside class FEEControl, but win sock2.h is like a piece of shit, which is conflict with <TTree.h>, <zaber>
 using namespace std;
+QMutex mutex;
+
+bool operator==(const FEEControl &a, const FEEControl &b)
+{
+    bool flag1 = a.GetIP() == b.GetIP();
+    bool flag2 = a.GetPort() == b.GetPort();
+    return flag1 && flag2;
+}
 
 FEEControl::FEEControl(std::string ip, int port) : ip_address(ip), fPort(port)
 {
-    fifoData = new uint32_t[MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH];
+    fTestQueueData = new uint32_t[5000];
+    fHGQueueData = new uint32_t[fMaxSaveEvents * fHGPointFactor / sizeof(uint32_t)];
+    fLGQueueData = new uint32_t[fMaxSaveEvents * fLGPointFactor / sizeof(uint32_t)];
+    fTDCQueueData = new uint32_t[fMaxSaveEvents * fTDCPointFactor / sizeof(uint32_t)];
+
+    fTestQueueDataU16 = new uint16_t[5000];
+    fHGQueueDataU16 = new uint16_t[fMaxSaveEvents * fHGPointFactor / sizeof(uint16_t)];
+    fLGQueueDataU16 = new uint16_t[fMaxSaveEvents * fLGPointFactor / sizeof(uint16_t)];
+    fTDCQueueDataU16 = new uint16_t[fMaxSaveEvents * fTDCPointFactor / sizeof(uint16_t)];
 }
 
 FEEControl::FEEControl(int boardNo) : FEEControl()
 {
-    // Test whether arrays are malloced
-    std::cout << fifoData[0] << std::endl;
+    // John Test: Test whether arrays are malloced
+    std::cout << fTestQueueData[0] << std::endl;
 
     InitPort(boardNo);
 }
 
 FEEControl::~FEEControl()
 {
-    delete[] fifoData;
-    fifoData = NULL;
+    delete[] fTestQueueData;
+    delete[] fHGQueueData;
+    delete[] fLGQueueData;
+    delete[] fTDCQueueData;
+    fTestQueueData = NULL;
+    fHGQueueData = NULL;
+    fLGQueueData = NULL;
+    fTDCQueueData = NULL;
+
+    delete[] fTestQueueDataU16;
+    delete[] fHGQueueDataU16;
+    delete[] fLGQueueDataU16;
+    delete[] fTDCQueueDataU16;
+    fTestQueueDataU16 = NULL;
+    fHGQueueDataU16 = NULL;
+    fLGQueueDataU16 = NULL;
+    fTDCQueueDataU16 = NULL;
 }
 
+#include "General.h"
 void FEEControl::GenerateIP(int boardNo, std::string &ip, int &port)
 {
-    ip = "192.168.1." + to_string(101 + boardNo);
+    ip = UserDefine::GetIPPrefix() + to_string(fIPBase + boardNo);
+    // ip = "192.168.1." + to_string(fIPBase + boardNo);
     port = fPortBase + boardNo;
+    std::cout << "IP & Port Generated." << std::endl << "IP: " << ip << '\t' << "Port: " << port << std::endl;
 }
 
 void FEEControl::InitPort(std::string ip, int port)
@@ -114,7 +158,7 @@ bool FEEControl::citiroc1a_configure(const char *sc_file_name, const char *probe
     {
         return false;
     }
-    if (!send_cmd(up_configCitiroc, str_out, strlen(str_out) + 2))
+    if (!send_cmd(up_configCitiroc, str_out, (int)strlen(str_out) + 2))
     {
         return false;
     }
@@ -262,7 +306,7 @@ bool FEEControl::logic_select(int select_data)
     return true;
 }
 
-bool FEEControl::set_channel_mask(uint32_t mask_num)
+bool FEEControl::send_ch_masks(uint32_t mask_num)
 {
     if (!start_socket())
     {
@@ -273,6 +317,19 @@ bool FEEControl::set_channel_mask(uint32_t mask_num)
         return false;
     }
     close_socket();
+    return true;
+}
+
+bool FEEControl::send_ch_probe(char channel)
+{
+    if (channel < 0 || channel > 31)
+        return false;
+    int reg_addr = 53, reg_wr_data = 1 << channel;
+    if (!write_reg_test(reg_addr, reg_wr_data))
+    {
+        std::cout << "Error while setting signal probe." << std::endl;
+        return false;
+    }
     return true;
 }
 
@@ -310,12 +367,13 @@ bool FEEControl::HV_config(void)
             return false;
         }
 
-        if (!send_cmd(up_configC11204, input_cmd, strlen(input_cmd) + 2))
+        if (!send_cmd(up_configC11204, input_cmd, (int)strlen(input_cmd) + 2))
         {
             return false;
         }
 
-        if (recv(fSock, HV_reply, 50, 0) <= 0)
+        // if (recv(fSock, HV_reply, 50, 0) <= 0)
+        if (!RecvAll(HV_reply, 50))
         {
             cout << "receive error." << endl;
             close_socket();
@@ -383,19 +441,34 @@ bool FEEControl::length_read(cmd_up cmd, int &len)
 
 bool FEEControl::data_read(cmd_up cmd, int data_num, uint32_t *data_addr)
 {
+    // auto test1 = clock();
     if (!start_socket())
     {
         return false;
     }
+    // auto test2 = clock();
+
     if (!send_cmd(cmd, (char *)(&data_num), sizeof(int) + 1))
     {
         return false;
     }
-    if (!recv_data((char *)data_addr, data_num * sizeof(uint32_t)))
+    // auto test3 = clock();
+
+    if (!recv_data((char *)data_addr, data_num * sizeof(uint8_t)))
     {
         return false;
     }
+    // auto test4 = clock();
+
     close_socket();
+    // auto test5 = clock();
+    // std::cout << test2 - test1 << '\t' << test3 - test2 << '\t' << test4 - test3 << '\t' << test5 - test4 << std::endl;
+    // std::cout << "Package size: " << (double)data_num / 1024.0 / 1024.0 << "MB" << std::endl;
+    // if(test4-test3)
+    // std::cout << "Network speed(Mb/s): " << data_num / (test4 - test3) / 1024 * 8 << std::endl;
+    // else
+    //     std::cout << "Network speed(Mb/s): " << 0 << std::endl;
+
     return true;
 }
 
@@ -448,7 +521,7 @@ bool FEEControl::send_cmd(cmd_up input_cmd, char *arg, int size)
         //     *(cmd + i) = *(arg + i - 1);
         // }
 
-        // ! TODO: Test this block
+        //! TODO: Test this block
 
         memcpy(cmd + 1, arg, size - 1);
     }
@@ -474,11 +547,19 @@ bool FEEControl::recv_data(char *buffer, int size)
 
 bool FEEControl::SendAll(char *buffer, int size)
 {
+    if (!fConnectionFlag)
+        return false;
     while (size > 0)
     {
         int SendSize = send(fSock, buffer, size, 0);
         if (SendSize == SOCKET_ERROR)
+        {
+#ifdef USE_FEE_CONTROL_MONITOR
+            gFEEMonitor->ProcessConnectionBroken(fBoardNum);
+#endif
+            fConnectionFlag = false;
             return false;
+        }
         size = size - SendSize;
         buffer += SendSize;
     }
@@ -487,11 +568,27 @@ bool FEEControl::SendAll(char *buffer, int size)
 
 bool FEEControl::RecvAll(char *buffer, int size)
 {
+    if (!fConnectionFlag)
+        return false;
     while (size > 0)
     {
+        // auto test3 = clock();
         int RecvSize = recv(fSock, buffer, size, 0);
+        // auto test4 = clock();
+
+        // std::cout << "Package size: " << (double)RecvSize / 1024.0 / 1024.0 << "MB" << std::endl;
+        // if (test4 - test3)
+        //     std::cout << "Network speed(Mb/s): " << RecvSize / (test4 - test3) / 1024 * 8 << std::endl;
+        // else
+        //     std::cout << "Network speed(Mb/s): " << 0 << std::endl;
         if (RecvSize == SOCKET_ERROR)
+        {
+#ifdef USE_FEE_CONTROL_MONITOR
+            gFEEMonitor->ProcessConnectionBroken(fBoardNum);
+#endif
+            fConnectionFlag = false;
             return false;
+        }
         size = size - RecvSize;
         buffer += RecvSize;
     }
@@ -500,7 +597,7 @@ bool FEEControl::RecvAll(char *buffer, int size)
 
 bool FEEControl::start_socket()
 {
-
+    mutex.lock();
     if (WSAStartup(MAKEWORD(2, 2), &fWsaData) != 0)
     {
         fSockInitFlag = false;
@@ -517,6 +614,28 @@ bool FEEControl::start_socket()
         return false;
     }
 
+    /*
+    Add TCP protocol control
+    */
+    // set socket buffer length
+    int opt = 1;
+    int SendBufSize = 7944192;
+    int RecvBufSize = 7944192;
+    // int getSendBuf, getRecvBuf;
+    // socklen_t sendBufSizeLen = sizeof(getSendBuf);
+    // socklen_t RecvBufSizeLen = sizeof(getRecvBuf);
+    // getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *)&getSendBuf, &sendBufSizeLen);
+    // getsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *)&getRecvBuf, &RecvBufSizeLen);
+    // printf("send buffer size: %d, recv buffer size: %d\n", getSendBuf, getRecvBuf);
+
+    setsockopt(fSock, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt));
+    setsockopt(fSock, SOL_SOCKET, SO_SNDBUF, (char *)&SendBufSize, sizeof(int));
+    setsockopt(fSock, SOL_SOCKET, SO_RCVBUF, (char *)&RecvBufSize, sizeof(int));
+
+    // getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *)&getSendBuf, &sendBufSizeLen);
+    // getsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *)&getRecvBuf, &RecvBufSizeLen);
+    // printf("send buffer size: %d, recv buffer size: %d\n", getSendBuf, getRecvBuf);
+
     // Connect to the server
     sockaddr_in sockAddr;
     memset(&sockAddr, 0, sizeof(sockAddr));
@@ -527,7 +646,11 @@ bool FEEControl::start_socket()
     {
         cout << "Connect error." << endl;
         fSockInitFlag = 0;
-        closesocket(fSock);
+        close_socket();
+#ifdef USE_FEE_CONTROL_MONITOR
+        gFEEMonitor->ProcessConnectionBroken(fBoardNum);
+#endif
+        fConnectionFlag = false;
         return false;
     }
     fSockInitFlag = true;
@@ -538,6 +661,7 @@ void FEEControl::close_socket()
 {
     closesocket(fSock);
     WSACleanup();
+    mutex.unlock();
 }
 
 void FEEControl::str_process(char *in_str, char *out_str)
@@ -559,10 +683,9 @@ int FEEControl::hexToDec(char *source)
 {
     int sum = 0;
     int t = 1;
-    int i, len;
 
-    len = strlen(source);
-    for (i = len - 1; i >= 0; i--)
+    int len = (int)strlen(source);
+    for (int i = len - 1; i >= 0; i--)
     {
         sum += t * getIndexOfSigns(*(source + i));
         t *= 16;
@@ -626,17 +749,19 @@ int FEEControl::HVSend(string scmd)
     InitCMD(byte_num);
     *cmd = up_configC11204;
     strcat(cmd, input_cmd);
-    if (send(fSock, cmd, byte_num, 0) <= 0)
+    // if (send(fSock, cmd, byte_num, 0) <= 0)
+    if (!SendAll(cmd, byte_num))
     {
         cout << "send error." << endl;
-        closesocket(fSock);
+        close_socket();
         return EXIT_FAILURE;
     }
 
-    if (recv(fSock, reply, 50, 0) <= 0)
+    // if (recv(fSock, reply, 50, 0) <= 0)
+    if (!RecvAll(reply, 50))
     {
         cout << "receive error." << endl;
-        closesocket(fSock);
+        close_socket();
         return EXIT_FAILURE;
     }
 
@@ -726,7 +851,7 @@ char *FEEControl::InitCMD(int length)
 //     {
 //         cout << "Connect error." << endl;
 //         fSockInitFlag = 0;
-//         closesocket(fSock);
+//         close_socket();
 //         return EXIT_FAILURE;
 //     }
 //     fSockInitFlag = EXIT_SUCCESS;
@@ -742,8 +867,9 @@ char *FEEControl::InitCMD(int length)
 
 bool FEEControl::TestConnect()
 {
+    fConnectionFlag = true;
     // reg test
-    int reg_test, reg_addr_test = 50, wr_data_test = 0xf;
+    int reg_test, reg_addr_test = 59, wr_data_test = 0xf;
     wr_data_test = 0x1;
     if (!write_reg_test(reg_addr_test, wr_data_test))
     {
@@ -752,9 +878,15 @@ bool FEEControl::TestConnect()
     }
     auto rtn = read_reg_test(reg_addr_test, reg_test);
     if (!rtn)
+    {
+        fConnectionFlag = false;
         return false;
-
-    return (reg_test == wr_data_test);
+    }
+    if (reg_test == wr_data_test)
+        fConnectionFlag = true;
+    else
+        fConnectionFlag = false;
+    return fConnectionFlag;
 }
 
 double FEEControl::ReadFreq()
@@ -763,13 +895,13 @@ double FEEControl::ReadFreq()
     double freq;
     si570_get(freq);
     printf("\nThe output clock frequency of the Si570 is %.4f.\n", freq);
-    if (!si570_set(320))
-    {
-        cout << "Si570 set failed." << endl;
-        return -1;
-    }
-    si570_get(freq);
-    printf("The output clock frequency of the Si570 is %.4f.\n\n", freq);
+    // if (!si570_set(320))
+    // {
+    //     cout << "Si570 set failed." << endl;
+    //     return -1;
+    // }
+    // si570_get(freq);
+    // printf("The output clock frequency of the Si570 is %.4f.\n\n", freq);
     return freq;
 }
 
@@ -802,7 +934,7 @@ bool FEEControl::ReadTemp()
 int FEEControl::TestReg()
 {
     // reg test
-    int reg_test, reg_addr_test = 50, wr_data_test = 0xf;
+    int reg_test, reg_addr_test = 59, wr_data_test = 0xf;
     read_reg_test(reg_addr_test, reg_test);
     printf("\nThe value of test reg %2d is %02x.\n", reg_addr_test, reg_test);
     if (!write_reg_test(reg_addr_test, wr_data_test))
@@ -812,6 +944,24 @@ int FEEControl::TestReg()
     }
 
     return reg_test;
+}
+
+bool FEEControl::get_real_counter(uint32_t &count)
+{
+    static const int realAddr = 6;
+    int result = 0;
+    auto rtn = read_reg_test(realAddr, result);
+    count = (uint32_t)result;
+    return rtn;
+}
+
+bool FEEControl::get_live_counter(uint32_t &count)
+{
+    static const int liveAddr = 5;
+    int result = 0;
+    auto rtn = read_reg_test(liveAddr, result);
+    count = (uint32_t)result;
+    return rtn;
 }
 
 bool FEEControl::BoardExit()
@@ -825,36 +975,112 @@ bool FEEControl::BoardExit()
     return 1;
 }
 
-// int FEEControl::ReadFifo(int sleepms)
-// {
-//     // test fifo read
-//     int read_num = MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH; // the read_num must be Integer multiple of 5, and no more than MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH
+#include <QtConcurrent/QtConcurrent>
+#include <General.h>
+bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
+{
+    // test queue read
+    int maxEvents = (int)(0.9 * fMaxSaveEvents);
+    int nEvents = leastNEvents > (maxEvents) ? maxEvents : leastNEvents;
 
-//     int fifo_length = hg_fifo_length_read();
-//     while (2 * fifo_length < read_num && !fBreakFlag)
-//     {
-//         //        printf("Data in fifo is insufficient, waiting 2s. Fifo length: %d\n", 2 * fifo_length);
-//         //         return -1;
-//         fifo_length = hg_fifo_length_read();
-//         // cout << "There are not enough numbers in fifo. waiting 0.2s" << endl;
-//         // cout << "fifo_length: " << fifo_length << endl;
-//         // Sleep(1); // Sleep 1 ms
-//         Sleep(sleepms); // Sleep 1 ms
-//     }
-//     fBreakFlag = 0;
+    fHGQueueLengthMonitor = 0;
+    fLGQueueLengthMonitor = 0;
+    fTDCQueueLengthMonitor = 0;
+    fReadGroupMonitor = 0;
 
-//     if (hg_fifo_read(read_num, fifoData) < 0)
-//     {
-//         cout << "fifo read failed." << endl;
-//         fDataFlag = 0;
-//         fDataLength = 0;
-//         return -1;
-//     }
-//     fifoReadCount++;
-//     fDataFlag = 1;
-//     fDataLength = fifo_length;
-//     return fifo_length;
-// }
+    // Deside when to start read queue, break flag means force to stop loop
+    while (!fBreakFlag)
+    {
+        if (!hg_queue_length_read(fHGQueueLengthMonitor))
+            break;
+        if (!lg_queue_length_read(fLGQueueLengthMonitor))
+            break;
+        if (!tdc_queue_length_read(fTDCQueueLengthMonitor))
+            break;
+        // std::cout << "hg length: " << fHGQueueLengthMonitor << std::endl;
+        if (fHGQueueLengthMonitor > nEvents * fHGPointFactor)
+            break;
+
+        Sleep(sleepms);
+    }
+    fBreakFlag = 0; // Set break flag to zero, regardless of whether is break.
+
+    // Judge read length
+    hg_queue_length_read(fHGQueueLengthMonitor);
+    lg_queue_length_read(fLGQueueLengthMonitor);
+    tdc_queue_length_read(fTDCQueueLengthMonitor);
+    fReadGroupMonitor = fHGQueueLengthMonitor / (fHGPointFactor * fRetrieveUnit);
+
+    // Compare queue length with save array length, take smaller one as read length
+    //! TODO: Change compared length. Length means read Nbytes from queue
+    int nReadGroup = (fHGQueueLengthMonitor > maxEvents * fHGPointFactor) ? maxEvents * fHGPointFactor / (fHGPointFactor * fRetrieveUnit) : fHGQueueLengthMonitor / (fHGPointFactor * fRetrieveUnit);
+
+    fHGDataLength = nReadGroup * (fHGPointFactor * fRetrieveUnit);
+    fLGDataLength = nReadGroup * (fLGPointFactor * fRetrieveUnit);
+    fTDCDataLength = nReadGroup * (fTDCPointFactor * fRetrieveUnit);
+
+    // fHGDataLength = (fHGQueueLengthMonitor > maxEvents * fHGPointFactor) ? maxEvents * fHGPointFactor : fHGQueueLengthMonitor / (fHGPointFactor * fRetrieveUnit) * (fHGPointFactor * fRetrieveUnit);
+    // fLGDataLength = (fLGQueueLengthMonitor > maxEvents * fLGPointFactor) ? maxEvents * fLGPointFactor : fLGQueueLengthMonitor / (fLGPointFactor * fRetrieveUnit) * (fLGPointFactor * fRetrieveUnit);
+    // fTDCDataLength = (fTDCQueueLengthMonitor > maxEvents * fTDCPointFactor) ? maxEvents * fTDCPointFactor : fTDCQueueLengthMonitor / (fTDCPointFactor * fRetrieveUnit) * (fTDCPointFactor * fRetrieveUnit);
+    // std::cout << fHGDataLength / (fHGPointFactor * fRetrieveUnit) << '\t' << fLGDataLength / (fLGPointFactor * fRetrieveUnit) << '\t' << fTDCDataLength / (fTDCPointFactor * fRetrieveUnit) << std::endl;
+
+    // fHGDataLength = (fHGPointFactor * fRetrieveUnit);
+    // fLGDataLength = (fLGPointFactor * fRetrieveUnit);
+    // fTDCDataLength = (fTDCPointFactor * fRetrieveUnit);
+
+    // auto test1 = clock();
+    if (!hg_data_read(fHGDataLength, fHGQueueData))
+    {
+        cout << "HG queue read failed." << endl;
+        fDataFlag = 0;
+        fHGDataLength = 0;
+        return false;
+    }
+
+    // std::cout <<"HG Queue Data Test: " << std::endl;
+    // for(int i = 0; i < fHGDataLength; i++)
+    // {
+    //     std::cout << fHGQueueData[i] << '\t';
+    // }
+    // std::cout << std::endl;
+    // auto test2 = clock();
+    // std::cout << "test2 - test1: " << test2 - test1 << '\t' << fHGDataLength << '\t' << (double)fHGDataLength / (test2 - test1) << std::endl;
+
+    if (!lg_data_read(fLGDataLength, fLGQueueData))
+    {
+        cout << "LG queue read failed." << endl;
+        fDataFlag = 0;
+        fLGDataLength = 0;
+        return false;
+    }
+    // auto test3 = clock();
+    // std::cout << "test3 - test2: " << test3 - test2 << '\t' << fLGDataLength << '\t' << (double)fLGDataLength / (test3 - test2) << std::endl;
+
+    if (!tdc_data_read(fTDCDataLength, fTDCQueueData))
+    {
+        cout << "TDC queue read failed." << endl;
+        fDataFlag = 0;
+        fTDCDataLength = 0;
+        return false;
+    }
+    // auto test4 = clock();
+    // std::cout << "test4 - test3: " << test4 - test3 << '\t' << fTDCDataLength << '\t' << (double)fTDCDataLength / (test4 - test3) << std::endl;
+
+    // Convert uint32_t to uint16_t
+    QFuture<void> futureHG = QtConcurrent::run(UserDefine::ConvertUInt32ToUInt16s, fHGQueueData, fHGDataLength / 4, fHGQueueDataU16, &fHGDataLengthPoints);
+    QFuture<void> futureLG = QtConcurrent::run(UserDefine::ConvertUInt32ToUInt16s, fLGQueueData, fLGDataLength / 4, fLGQueueDataU16, &fLGDataLengthPoints);
+    QFuture<void> futureTDC = QtConcurrent::run(UserDefine::ConvertUInt32ToUInt16s, fTDCQueueData, fTDCDataLength / 4, fTDCQueueDataU16, &fTDCDataLengthPoints);
+    futureHG.waitForFinished();
+    futureLG.waitForFinished();
+    futureTDC.waitForFinished();
+
+    // auto test5 = clock();
+    // std::cout << "test5 - test4: " << test5 - test4 << std::endl;
+
+    fifoReadCount++;
+    fDataFlag = 1;
+    return true;
+}
 
 int FEEControl::SendConfig(ConfigFileParser *parser)
 {
@@ -873,7 +1099,7 @@ int FEEControl::SendConfig(ConfigFileParser *parser)
     if (!SendAll(cmd, byte_num))
     {
         cout << "send error." << endl;
-        closesocket(fSock);
+        close_socket();
         return EXIT_FAILURE;
     }
 
@@ -907,7 +1133,6 @@ bool FEEControl::GetMask(int ch, uint32_t reg)
 
 bool FEEControl::hg_fifo_read(int read_num, int loop_times, const char *hg_file_name)
 {
-    read_num = read_num > MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH ? MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH : read_num;
     int i, j, queue_num, fifo_num;
     for (i = 0; i < loop_times; i++)
     {
@@ -931,7 +1156,7 @@ bool FEEControl::hg_fifo_read(int read_num, int loop_times, const char *hg_file_
             printf("hg_queue_num:%5d, hg_fifo_num:%3d, loop times:%3d\n", queue_num, fifo_num, i);
         }
 
-        if (!hg_data_read(read_num, fifoData))
+        if (!hg_data_read(read_num, fHGQueueData))
         {
             cout << "hg data read failed." << endl;
             return false;
@@ -958,7 +1183,7 @@ bool FEEControl::hg_fifo_read(int read_num, int loop_times, const char *hg_file_
         while (j < read_num)
         {
             // fprintf(fp,"%f\n",queue_data[j]/32.768-1000);
-            fprintf(fp, "%d\n", fifoData[j]);
+            fprintf(fp, "%d\n", fHGQueueData[j]);
             j++;
         }
         fclose(fp);
@@ -968,7 +1193,6 @@ bool FEEControl::hg_fifo_read(int read_num, int loop_times, const char *hg_file_
 
 bool FEEControl::lg_fifo_read(int read_num, int loop_times, const char *lg_file_name)
 {
-    read_num = read_num > MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH ? MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH : read_num;
     int i, j, queue_num, fifo_num;
     for (i = 0; i < loop_times; i++)
     {
@@ -992,7 +1216,7 @@ bool FEEControl::lg_fifo_read(int read_num, int loop_times, const char *lg_file_
             printf("lg_queue_num:%5d, lg_fifo_num:%3d, loop times:%3d\n", queue_num, fifo_num, i);
         }
 
-        if (!lg_data_read(read_num, fifoData))
+        if (!lg_data_read(read_num, fLGQueueData))
         {
             cout << "lg data read failed." << endl;
             return false;
@@ -1019,7 +1243,7 @@ bool FEEControl::lg_fifo_read(int read_num, int loop_times, const char *lg_file_
         while (j < read_num)
         {
             // fprintf(fp,"%f\n",queue_data[j]/32.768-1000);
-            fprintf(fp, "%d\n", fifoData[j]);
+            fprintf(fp, "%d\n", fLGQueueData[j]);
             j++;
         }
         fclose(fp);
@@ -1029,7 +1253,6 @@ bool FEEControl::lg_fifo_read(int read_num, int loop_times, const char *lg_file_
 
 bool FEEControl::test_fifo_read(int read_num, int loop_times, const char *test_file_name)
 {
-    read_num = read_num > MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH ? MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH : read_num;
     int i, j, queue_num, fifo_num;
     for (i = 0; i < loop_times; i++)
     {
@@ -1053,7 +1276,7 @@ bool FEEControl::test_fifo_read(int read_num, int loop_times, const char *test_f
             printf("test_queue_num:%5d, test_fifo_num:%3d, loop times:%3d\n", queue_num, fifo_num, i);
         }
 
-        if (!test_data_read(read_num, fifoData))
+        if (!test_data_read(read_num, fTestQueueData))
         {
             cout << "test data read failed." << endl;
             return false;
@@ -1080,7 +1303,7 @@ bool FEEControl::test_fifo_read(int read_num, int loop_times, const char *test_f
         while (j < read_num)
         {
             // fprintf(fp,"%f\n",queue_data[j]/32.768-1000);
-            fprintf(fp, "%d\n", fifoData[j]);
+            fprintf(fp, "%d\n", fTestQueueData[j]);
             j++;
         }
         fclose(fp);
@@ -1090,7 +1313,6 @@ bool FEEControl::test_fifo_read(int read_num, int loop_times, const char *test_f
 
 bool FEEControl::tdc_fifo_read(int read_num, int loop_times, const char *tdc_file_name)
 {
-    read_num = read_num > MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH ? MUON_TEST_CONTROL_FIFO_BUFFER_LENGTH : read_num;
     int i, j, queue_num, fifo_num;
     for (i = 0; i < loop_times; i++)
     {
@@ -1114,7 +1336,7 @@ bool FEEControl::tdc_fifo_read(int read_num, int loop_times, const char *tdc_fil
             printf("tdc_queue_num:%5d, tdc_fifo_num:%3d, loop times:%3d\n", queue_num, fifo_num, i);
         }
 
-        if (!tdc_data_read(read_num, fifoData))
+        if (!tdc_data_read(read_num, fTDCQueueData))
         {
             cout << "tdc data read failed." << endl;
             return false;
@@ -1141,7 +1363,7 @@ bool FEEControl::tdc_fifo_read(int read_num, int loop_times, const char *tdc_fil
         while (j < read_num)
         {
             // fprintf(fp,"%f\n",queue_data[j]/32.768-1000);
-            fprintf(fp, "%d\n", fifoData[j]);
+            fprintf(fp, "%d\n", fTDCQueueData[j]);
             j++;
         }
         fclose(fp);
@@ -1178,3 +1400,11 @@ void HVStatus::Print()
     printf("output voltage monitor: %f\n", OV_moni);
     printf("output current monitor: %f\n\n", OC_moni);
 }
+
+#ifdef USE_FEE_CONTROL_MONITOR
+QtUserConnectionMonitor *QtUserConnectionMonitor::Instance()
+{
+    static QtUserConnectionMonitor *instance = new QtUserConnectionMonitor;
+    return instance;
+}
+#endif

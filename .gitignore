@@ -12,7 +12,8 @@ build/
 
 Data/
 
-Data*
+Data*.root
+Data*.txt
 
 *.autosave
 # Prerequisites
@@ -49,3 +50,5 @@ Data*
 *.app
 
 .*
+
+test.cpp
