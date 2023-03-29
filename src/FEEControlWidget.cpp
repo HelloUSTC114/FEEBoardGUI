@@ -495,6 +495,180 @@ void FEEControlWin::on_btnConnect_clicked()
     }
 }
 
+void FEEControlWin::ClearList()
+{
+    ui->listGain->clear();
+    ui->listBias->clear();
+    ui->listCh->clear();
+
+    fGainList.clear();
+    fBiasList.clear();
+    fChList.clear();
+}
+
+#include "General.h"
+void FEEControlWin::GenerateGainList()
+{
+    ui->listGain->clear();
+    std::vector<double> temp;
+    bool rtn = UserDefine::ParseLine(ui->lineCITIROCGain->text().toStdString(), temp);
+    if (!rtn)
+    {
+        fGainList.clear();
+        fGainList.push_back(fDefaultGain);
+    }
+
+    fGainList.clear();
+    for (int i = 0; i < temp.size(); i++)
+    {
+        if (temp[i] >= 0 && temp[i] < 64)
+        {
+            fGainList.push_back(temp[i]);
+        }
+    }
+    for (int i = 0; i < fGainList.size(); i++)
+    {
+        QString temp = QString::number(fGainList[i]);
+        ui->listGain->addItem(temp);
+    }
+    return;
+}
+
+void FEEControlWin::GenerateBiasList()
+{
+    ui->listBias->clear();
+    std::vector<double> temp;
+    bool rtn = UserDefine::ParseLine(ui->lineCITIROCBias->text().toStdString(), temp);
+    if (!rtn)
+    {
+        fBiasList.clear();
+        fBiasList.push_back(fDefaultBias);
+    }
+
+    fBiasList.clear();
+    for (int i = 0; i < temp.size(); i++)
+    {
+        if (temp[i] >= 0 && temp[i] < 256)
+        {
+            fBiasList.push_back(temp[i]);
+        }
+    }
+    for (int i = 0; i < fBiasList.size(); i++)
+    {
+        QString temp = QString::number(fBiasList[i]);
+        ui->listBias->addItem(temp);
+    }
+    return;
+}
+
+void FEEControlWin::GenerateChList()
+{
+    ui->listCh->clear();
+    std::vector<double> temp;
+    bool rtn = UserDefine::ParseLine(ui->lineSelectChannel->text().toStdString(), temp);
+    if (!rtn)
+        return;
+
+    fChList.clear();
+    for (int i = 0; i < temp.size(); i++)
+    {
+        if (temp[i] >= 0 && temp[i] < 32)
+        {
+            fChList.push_back(temp[i]);
+        }
+    }
+
+    for (int i = 0; i < fChList.size(); i++)
+    {
+        QString temp = "Channel: " + QString::number(fChList[i]);
+        ui->listCh->addItem(temp);
+    }
+
+    return;
+}
+
+void FEEControlWin::GenerateLoopOrder()
+{
+    int idxGain = ui->cbbGain->currentIndex();
+    int idxBias = ui->cbbBias->currentIndex();
+    int idxCh = ui->cbbCh->currentIndex();
+    if (ui->cbbCh->currentIndex() == 3)
+    {
+        fChAttendLoop = 0;
+        if (idxGain <= idxBias)
+        {
+            fGainLoopOrder = 1;
+            fBiasLoopOrder = 2;
+        }
+        else
+        {
+            fGainLoopOrder = 2;
+            fBiasLoopOrder = 1;
+        }
+        fChLoopOrder = 0;
+        ui->cbbGain->setCurrentIndex(fLoopOrder[0] - 1);
+        ui->cbbBias->setCurrentIndex(fLoopOrder[1] - 1);
+        QString temp = "Channels do not change, change [Gain,Bias] as: [" + QString::number(fGainLoopOrder) + "," + QString::number(fBiasLoopOrder) + "].";
+        ui->lblLoopOrder->setText(temp);
+    }
+    else
+    {
+        fChAttendLoop = 1;
+
+        std::vector<std::pair<int, int>> tempOrderArray;
+        tempOrderArray.push_back(std::pair<int, int>(0, idxGain));
+        tempOrderArray.push_back(std::pair<int, int>(1, idxBias));
+        tempOrderArray.push_back(std::pair<int, int>(2, idxCh));
+        std::sort(tempOrderArray.begin(), tempOrderArray.end(), [](const std::pair<int, int> &temp1, const std::pair<int, int> &temp2)
+                  { return temp1.second < temp2.second; });
+        for (int i = 0; i < 3; i++)
+        {
+            int loopIdx = tempOrderArray[i].first;
+            std::cout << loopIdx << '\t' << tempOrderArray[i].second << '\t' << i + 1 << std::endl;
+            fLoopOrder[loopIdx] = i + 1;
+        }
+        ui->cbbGain->setCurrentIndex(fLoopOrder[0] - 1);
+        ui->cbbBias->setCurrentIndex(fLoopOrder[1] - 1);
+        ui->cbbCh->setCurrentIndex(fLoopOrder[2] - 1);
+
+        QString temp = "Change [Gain,Bias,Channel] as: [" + QString::number(fGainLoopOrder) + "," + QString::number(fBiasLoopOrder) + "," + QString::number(fChLoopOrder) + "].";
+        ui->lblLoopOrder->setText(temp);
+    }
+
+    for (int i = 0; i < 3; i++)
+    {
+        fLoopOrderMap[fLoopOrder[i]] = &(fList[i]); // fLoopOrder & fList are combined
+    }
+}
+
+void FEEControlWin::ParseDAQCount(int daqCount, int &idxGain, int &idxBias, int &idxCh)
+{
+    if (!fChAttendLoop)
+    {
+        fCurrentIndexMap[0] = -1;
+        // int firstLoopTotal = fLoopOrderMap[1]->size();
+        int firstLoopTotal = fLoopOrderMap[1]->size();
+        fCurrentIndexMap[1] = daqCount % firstLoopTotal;
+        fCurrentIndexMap[2] = daqCount / firstLoopTotal;
+    }
+    else
+    {
+        int firstLoopTotal = fLoopOrderMap[1]->size();
+        int secondLoopTotal = fLoopOrderMap[2]->size();
+        fCurrentIndexMap[1] = daqCount % firstLoopTotal;
+        fCurrentIndexMap[2] = (daqCount / firstLoopTotal) % secondLoopTotal;
+        fCurrentIndexMap[3] = daqCount / (firstLoopTotal * secondLoopTotal);
+    }
+    idxGain = fCurrentIndexMap[fLoopOrder[0]];
+    idxBias = fCurrentIndexMap[fLoopOrder[1]];
+    idxCh = fCurrentIndexMap[fLoopOrder[2]];
+
+    ui->listGain->setCurrentRow(idxGain);
+    ui->listBias->setCurrentRow(idxBias);
+    ui->listCh->setCurrentRow(idxCh);
+    std::cout << idxGain << '\t' << idxBias << '\t' << idxCh << std::endl;
+}
+
 void FEEControlWin::on_btnHVON_clicked()
 {
     gBoard->HVON();
@@ -1450,4 +1624,20 @@ void FEEControlWin::on_btnZaberControl_clicked()
 #ifdef USE_ZABER_MOTION
     gZaberWindow->show();
 #endif
+}
+
+//
+void FEEControlWin::on_btnGenerateList_clicked()
+{
+    GenerateGainList();
+    GenerateBiasList();
+    GenerateChList();
+
+    GenerateLoopOrder();
+}
+
+void FEEControlWin::on_btnTest_clicked()
+{
+    int t1, t2, t3;
+    ParseDAQCount(ui->boxTest->value(), t1, t2, t3);
 }

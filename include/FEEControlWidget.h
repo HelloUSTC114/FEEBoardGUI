@@ -11,6 +11,7 @@
 // C++ STL
 #include <string>
 #include <vector>
+#include <map>
 
 namespace UserDefine
 {
@@ -133,8 +134,8 @@ private:
     Ui::FEEControlWin *ui;
 
     // FEE Board
-    volatile bool fConnected = false;  // Whether board is connected
-    int fCurrentBoardNo = -1; // Current board number
+    volatile bool fConnected = false; // Whether board is connected
+    int fCurrentBoardNo = -1;         // Current board number
 
     void PrintConnection(bool flag); // Print Connection information
     void ProcessConnect();           // Process after successfully connected, send logic, send CITIROC config
@@ -215,6 +216,30 @@ private:
     ROOTDraw *fdrawWin = NULL;        //
     QButtonGroup *fpbtngrpDrawOption; // Draw option button group
 
+    // Timer & Test List
+    // List Control
+    std::vector<int> fList[3];
+    std::vector<int> &fGainList = fList[0];
+    std::vector<int> &fBiasList = fList[1];
+    std::vector<int> &fChList = fList[2];
+    const int fDefaultGain = 30;
+    const int fDefaultBias = 100;
+    void ClearList();
+    void GenerateGainList();
+    void GenerateBiasList();
+    void GenerateChList();
+
+    // Loop order control
+    bool fChAttendLoop = 0;
+    int fLoopOrder[3]{1, 2, 0}; // Gain, Bias, Channel list order
+    int &fGainLoopOrder = fLoopOrder[0];
+    int &fBiasLoopOrder = fLoopOrder[1];
+    int &fChLoopOrder = fLoopOrder[2];
+    std::map<int, std::vector<int> *> fLoopOrderMap; // <order number, loop vector>
+    std::map<int, int> fCurrentIndexMap;             // Save current index for each loop
+    void GenerateLoopOrder();
+    void ParseDAQCount(int daqCount, int &idxGain, int &idxBias, int &idxCh);
+
 private slots:
     // FEE Board Control
     void on_btnConnect_clicked();
@@ -266,6 +291,8 @@ private slots:
     // Window buttons
     void on_btnVISAControl_clicked();
     void on_btnZaberControl_clicked();
+    void on_btnGenerateList_clicked();
+    void on_btnTest_clicked();
 };
 #define gFEEControlWin (FEEControlWin::Instance())
 

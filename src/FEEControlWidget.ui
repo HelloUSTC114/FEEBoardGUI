@@ -1209,7 +1209,7 @@
          <item row="0" column="0">
           <widget class="QLabel" name="label_40">
            <property name="text">
-            <string>Amp Gain:</string>
+            <string>Amp Gain: (HG &amp; LG)</string>
            </property>
           </widget>
          </item>
@@ -1299,17 +1299,17 @@
         </layout>
        </widget>
       </item>
-      <item row="1" column="0" colspan="2">
-       <widget class="QLabel" name="lblLoopOrder">
-        <property name="text">
-         <string>Use Combo box to define loop order.</string>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="2">
        <widget class="QPushButton" name="btnGenerateList">
         <property name="text">
          <string>Generate Lists &amp;&amp; Order</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="3">
+       <widget class="QLabel" name="lblLoopOrder">
+        <property name="text">
+         <string>Use Combo box to define loop order.</string>
         </property>
        </widget>
       </item>
@@ -1451,6 +1451,32 @@
        </widget>
       </item>
      </layout>
+    </widget>
+    <widget class="QPushButton" name="btnTest">
+     <property name="geometry">
+      <rect>
+       <x>260</x>
+       <y>680</y>
+       <width>75</width>
+       <height>24</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Test Button</string>
+     </property>
+    </widget>
+    <widget class="QSpinBox" name="boxTest">
+     <property name="geometry">
+      <rect>
+       <x>80</x>
+       <y>680</y>
+       <width>42</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="maximum">
+      <number>999999999</number>
+     </property>
     </widget>
    </widget>
   </widget>
