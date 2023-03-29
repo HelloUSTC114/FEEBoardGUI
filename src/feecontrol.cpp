@@ -84,7 +84,8 @@ void FEEControl::GenerateIP(int boardNo, std::string &ip, int &port)
     ip = UserDefine::GetIPPrefix() + to_string(fIPBase + boardNo);
     // ip = "192.168.1." + to_string(fIPBase + boardNo);
     port = fPortBase + boardNo;
-    std::cout << "IP & Port Generated." << std::endl << "IP: " << ip << '\t' << "Port: " << port << std::endl;
+    std::cout << "IP & Port Generated." << std::endl
+              << "IP: " << ip << '\t' << "Port: " << port << std::endl;
 }
 
 void FEEControl::InitPort(std::string ip, int port)
@@ -303,6 +304,7 @@ bool FEEControl::logic_select(int select_data)
         return false;
     }
     close_socket();
+    fLogicSelceted = select_data;
     return true;
 }
 

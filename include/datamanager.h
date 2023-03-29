@@ -5,6 +5,7 @@
 #define N_SAMPLE_POINTS 40
 
 #include <string>
+#include <QDateTime>
 
 class TTree;
 class TBranch;
@@ -12,6 +13,8 @@ class TFile;
 class FEEControl;
 class TH1S;
 class TH1I;
+class TDatime;
+class TString;
 
 //! \enum define which data should be drawn, usful only in class DataManager Draw function, and class ReadManager Draw function
 enum DrawOption
@@ -30,6 +33,12 @@ public:
 
     bool Init(std::string s = "data.root");
     void Close();
+
+    bool SetBoardNo(int boardno);
+    bool SetDAQDatime(const QDateTime &inputDT);
+    bool SetDAQTemp(const double *tempArray);
+    bool SetCITIROCConfig(std::string sConfig);
+    bool SetSelectedLogic(int logic);
 
     /// @brief Process fifo data form FEE board
     /// @param fee to be processed board
@@ -58,6 +67,19 @@ public:
 
 private:
 public:
+    // Event Head
+    TDatime *fDAQDatime = NULL;
+    bool fDatimeFlag = 0;
+    TString *fTemp[4]{0, 0, 0, 0};
+    bool fTFlag = 0;
+    TString *fBoardNo = NULL;
+    bool fBoardFlag = 0;
+    TString *fConfig = NULL;
+    bool fConfigFlag = 0;
+    TString *fSelectedLogic = NULL;
+    bool fLogicFlag = 0;
+
+    // Event Body
     TFile *fFile = NULL;
     TTree *fTree = NULL;
     TTree *fTrees[3]{NULL, NULL, NULL};
@@ -150,8 +172,8 @@ public:
     static const int fcgNChannels;     // N channels for one board
     static const int fcgNSamplePoints; // N sample points for one channel in hg/lg
     static double fgFreq;              // frequency MHz
-    static int fADCLengthFactor;        // adc Length Factor
-    static int fTDCLengthFactor;        // tdc Length Factor
+    static int fADCLengthFactor;       // adc Length Factor
+    static int fTDCLengthFactor;       // tdc Length Factor
 
     // Test functions
     void PrintHGBuffer();

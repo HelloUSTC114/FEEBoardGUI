@@ -115,6 +115,50 @@ void DataManager::Close()
         fLGTree->Write();
         fTDCTree->Write();
     }
+
+    if (fDatimeFlag)
+    {
+        fFile->WriteObject(fDAQDatime, "DAQDatime");
+        delete fDAQDatime;
+        fDAQDatime = NULL;
+        fDatimeFlag = 0;
+    }
+
+    if (fTFlag)
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            fFile->WriteObject(fTemp[i], Form("Temp%d", i));
+            delete fTemp[i];
+            fTemp[i] = NULL;
+        }
+        fTFlag = 0;
+    }
+
+    if (fBoardFlag)
+    {
+        fFile->WriteObject(fBoardNo, "BoardNo");
+        delete fBoardNo;
+        fBoardNo = NULL;
+        fBoardFlag = 0;
+    }
+
+    if (fConfigFlag)
+    {
+        fFile->WriteObject(fConfig, "Config");
+        delete fConfig;
+        fConfig = NULL;
+        fConfigFlag = 0;
+    }
+
+    if (fLogicFlag)
+    {
+        fFile->WriteObject(fSelectedLogic, "Logic");
+        delete fSelectedLogic;
+        fSelectedLogic = NULL;
+        fLogicFlag = 0;
+    }
+
     fFile->Close();
 
     delete fFile;
@@ -128,6 +172,63 @@ void DataManager::Close()
     memset(fTDCHist, '\0', N_BOARD_CHANNELS * sizeof(TH1S *));
 
     ClearBuffer();
+}
+
+bool DataManager::SetBoardNo(int boardno)
+{
+    if (fBoardFlag)
+        return false;
+
+    fBoardFlag = 1;
+    fBoardNo = new TString(to_string(boardno).c_str());
+    return true;
+}
+
+bool DataManager::SetDAQDatime(const QDateTime &inputDT)
+{
+    if (fDatimeFlag)
+        return false;
+
+    fDAQDatime = new TDatime;
+    auto dat = inputDT.date();
+    auto tim = inputDT.time();
+    fDAQDatime->Set(dat.year(), dat.month(), dat.day(), tim.hour(), tim.minute(), tim.second());
+
+    fDatimeFlag = 1;
+    return true;
+}
+
+bool DataManager::SetDAQTemp(const double *tempArray)
+{
+    if (fTFlag)
+        return false;
+
+    fTFlag = 1;
+    for (int i = 0; i < 4; i++)
+    {
+        fTemp[i] = new TString(to_string(tempArray[i]).c_str());
+    }
+    return true;
+}
+
+bool DataManager::SetCITIROCConfig(std::string sConfig)
+{
+    if (fConfigFlag)
+        return false;
+
+    fConfigFlag = 1;
+    fConfig = new TString(sConfig.c_str());
+    return true;
+}
+
+bool DataManager::SetSelectedLogic(int logic)
+{
+    if (fLogicFlag)
+        return false;
+
+    fLogicFlag = 1;
+    fSelectedLogic = new TString(to_string(logic).c_str());
+    return true;
 }
 
 bool DataManager::Draw(int ch, DrawOption option)
@@ -884,6 +985,7 @@ bool DataManager::ProcessOneTDCEvent(const uint16_t *const iter_first, const uin
 #include <iostream>
 #include <time.h>
 #include <TF1.h>
+#include "datamanager.h"
 
 ReadManager::ReadManager()
 {

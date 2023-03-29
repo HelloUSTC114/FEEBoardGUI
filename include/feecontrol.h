@@ -153,6 +153,8 @@ public:
     inline std::string GetIP() const { return ip_address; };
     inline int GetPort() const { return fPort; };
     inline unsigned __int64 GetSock() { return fSock; };
+    inline int GetBoardNo() const { return fBoardNum; };
+    inline int GetLastLogic() { return fLogicSelceted; }
     static void GenerateIP(int boardNo, std::string &ip, int &port);
     static int GetPortBase() { return fPortBase; };
     // Inside Info END
@@ -209,6 +211,9 @@ private:
 
     // Socket Init & Close
     bool fSockInitFlag = 0;
+
+    // Logic Select
+    int fLogicSelceted = 0;
 
     // command, data address
     char cmd[MUON_TEST_CONTROL_SOCKET_MAX_LOAD_LENGTH];   // Useful for all commands, initiate at construction

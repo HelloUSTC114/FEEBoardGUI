@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1002</width>
-    <height>922</height>
+    <width>1008</width>
+    <height>931</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -22,14 +22,14 @@
      <x>30</x>
      <y>30</y>
      <width>631</width>
-     <height>861</height>
+     <height>881</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
     <enum>Qt::DefaultContextMenu</enum>
    </property>
    <property name="currentIndex">
-    <number>1</number>
+    <number>2</number>
    </property>
    <property name="movable">
     <bool>false</bool>
@@ -1126,14 +1126,341 @@
      </layout>
     </widget>
    </widget>
+   <widget class="QWidget" name="tabTimer">
+    <attribute name="title">
+     <string>Timer</string>
+    </attribute>
+    <widget class="QGroupBox" name="groupBox_4">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>551</width>
+       <height>361</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>CITIROC Setting Lists</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_27">
+      <item row="2" column="2">
+       <widget class="QFrame" name="frame_15">
+        <layout class="QGridLayout" name="gridLayout_20">
+         <item row="2" column="0">
+          <widget class="QLineEdit" name="lineSelectChannel">
+           <property name="text">
+            <string>[0:1:31]</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_33">
+           <property name="text">
+            <string>Channels</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QListWidget" name="listCh"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QComboBox" name="cbbCh">
+           <property name="editable">
+            <bool>false</bool>
+           </property>
+           <property name="currentIndex">
+            <number>3</number>
+           </property>
+           <item>
+            <property name="text">
+             <string>1</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>2</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>3</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Combine 32 Ch</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="0" column="0" colspan="2">
+       <widget class="QLabel" name="label_41">
+        <property name="text">
+         <string>Input Format: &quot;[start:step:end]&quot;, or, &quot;e1, e2, e3, ...&quot;</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QWidget" name="widget_11" native="true">
+        <layout class="QGridLayout" name="gridLayout_26">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_40">
+           <property name="text">
+            <string>Amp Gain:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QListWidget" name="listGain"/>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLineEdit" name="lineCITIROCGain">
+           <property name="text">
+            <string>30</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QComboBox" name="cbbGain">
+           <property name="editable">
+            <bool>false</bool>
+           </property>
+           <property name="currentText">
+            <string>1</string>
+           </property>
+           <item>
+            <property name="text">
+             <string>1</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>2</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>3</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QWidget" name="widget_14" native="true">
+        <layout class="QGridLayout" name="gridLayout_21">
+         <item row="3" column="0">
+          <widget class="QListWidget" name="listBias"/>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLineEdit" name="lineCITIROCBias">
+           <property name="text">
+            <string>100</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_34">
+           <property name="text">
+            <string>Bias Voltage:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QComboBox" name="cbbBias">
+           <property name="editable">
+            <bool>false</bool>
+           </property>
+           <property name="currentIndex">
+            <number>1</number>
+           </property>
+           <item>
+            <property name="text">
+             <string>1</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>2</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>3</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="2">
+       <widget class="QLabel" name="lblLoopOrder">
+        <property name="text">
+         <string>Use Combo box to define loop order.</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QPushButton" name="btnGenerateList">
+        <property name="text">
+         <string>Generate Lists &amp;&amp; Order</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+    <widget class="QGroupBox" name="groupBox_11">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>410</y>
+       <width>551</width>
+       <height>161</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Timer Setting</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_30">
+      <item row="0" column="1">
+       <widget class="QFrame" name="frame_4">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_28">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_48">
+           <property name="text">
+            <string>DAQ Conuter: (Loops)</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLCDNumber" name="lcdLoopCounter">
+           <property name="segmentStyle">
+            <enum>QLCDNumber::Filled</enum>
+           </property>
+           <property name="value" stdset="0">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="intValue" stdset="0">
+            <number>0</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QFrame" name="frame_7">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_29">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_42">
+           <property name="text">
+            <string>DAQ Time:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1" colspan="2">
+          <widget class="QTimeEdit" name="timeDAQInLoop">
+           <property name="displayFormat">
+            <string>HH:mm:ss</string>
+           </property>
+           <property name="time">
+            <time>
+             <hour>0</hour>
+             <minute>0</minute>
+             <second>0</second>
+            </time>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_47">
+           <property name="text">
+            <string>Loop Time:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1" colspan="2">
+          <widget class="QTimeEdit" name="timeLoop">
+           <property name="displayFormat">
+            <string>HH:mm:ss</string>
+           </property>
+           <property name="time">
+            <time>
+             <hour>0</hour>
+             <minute>0</minute>
+             <second>0</second>
+            </time>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QPushButton" name="btnStartLoop">
+           <property name="text">
+            <string>Start Timer</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1" colspan="2">
+          <widget class="QPushButton" name="btnStopLoop">
+           <property name="text">
+            <string>Stop Timer</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QFrame" name="frame_8">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_31">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_49">
+           <property name="text">
+            <string>Countdown: (s)</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLCDNumber" name="lcdCountDown"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </widget>
   </widget>
   <widget class="QFrame" name="frame_6">
    <property name="geometry">
     <rect>
-     <x>660</x>
+     <x>670</x>
      <y>20</y>
      <width>331</width>
-     <height>871</height>
+     <height>891</height>
     </rect>
    </property>
    <property name="frameShape">

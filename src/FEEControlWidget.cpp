@@ -622,6 +622,16 @@ bool FEEControlWin::GenerateROOTFile()
     ui->brsMessage->append(tr("File Name: ") + fsFileNameTotal);
 
     bool rtn = gDataManager->Init((fsFilePath + "/" + fsFileNameTotal).toStdString());
+    gDataManager->SetBoardNo(gBoard->GetBoardNo());
+    gDataManager->SetCITIROCConfig(gParser->GetString());
+    gDataManager->SetDAQDatime(fFileTimeStamp);
+    gDataManager->SetSelectedLogic(gBoard->GetLastLogic());
+
+    gBoard->ReadTemp();
+    double temp[4];
+    gBoard->GetTemp(temp);
+    gDataManager->SetDAQTemp(temp);
+
     if (!rtn)
     {
         ui->brsMessage->setTextColor(redColor);
