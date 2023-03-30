@@ -690,6 +690,7 @@ void FEEControlWin::UpdateCountDown()
 void FEEControlWin::StartDAQInLoop()
 {
     ui->lcdLoopCounter->display(fLoopCounter);
+    on_btnTMon_clicked();
     // std::cout << "John: Only for Test: Simulation: start DAQ." << std::endl;
 
     // Change CITIROC Setting
@@ -718,7 +719,8 @@ void FEEControlWin::StartDAQInLoop()
     }
 
     // Start DAQ
-    // on_btnDAQStart_clicked();
+//     on_btnDAQStart_clicked();
+     QTimer::singleShot(15*1000, this, SLOT(on_btnDAQStart_clicked()));
 
     fLoopCounter++;
 }
@@ -1731,7 +1733,7 @@ void FEEControlWin::on_btnStartLoop_clicked()
     auto timeLoop = ui->timeLoop->time();
     auto timeDAQ = ui->timeDAQInLoop->time();
     // if loop time is less than daq time+10s, set loop time as daq time + 10s
-    double secondAdd = 10;
+    double secondAdd = 30;
     // double secondAdd = 0;
     if (timeDAQ.msecsSinceStartOfDay() < 10 * 1000)
     {
