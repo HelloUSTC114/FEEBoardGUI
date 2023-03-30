@@ -236,6 +236,10 @@ FEEControlWin::FEEControlWin(QWidget *parent)
     connect(fpbtngrpDrawOption, SIGNAL(buttonClicked(int)), this, SLOT(handle_DrawOption_Changed()));
     connect(ui->boxDrawCh, SIGNAL(textChanged(QString)), this, SLOT(handle_DrawOption_Changed()));
 
+    // Timer Control
+    connect(&fDAQControlTimer, SIGNAL(timeout()), this, SLOT(handle_LoopTimer()));
+    connect(&fDAQCountDownTimer, SIGNAL(timeout()), this, SLOT(handle_CountDownTimer()));
+
     // End
     // show();
     ui->tabTotal->setCurrentIndex(0);
@@ -624,7 +628,7 @@ void FEEControlWin::GenerateLoopOrder()
         for (int i = 0; i < 3; i++)
         {
             int loopIdx = tempOrderArray[i].first;
-            std::cout << loopIdx << '\t' << tempOrderArray[i].second << '\t' << i + 1 << std::endl;
+            // std::cout << loopIdx << '\t' << tempOrderArray[i].second << '\t' << i + 1 << std::endl;
             fLoopOrder[loopIdx] = i + 1;
         }
         ui->cbbGain->setCurrentIndex(fLoopOrder[0] - 1);
@@ -639,25 +643,33 @@ void FEEControlWin::GenerateLoopOrder()
     {
         fLoopOrderMap[fLoopOrder[i]] = &(fList[i]); // fLoopOrder & fList are combined
     }
+    fLoopOrderGeneratedFlag = 1;
+
+    // Clear Loop Counter display
+    on_btnClearCounter_clicked();
 }
 
 void FEEControlWin::ParseDAQCount(int daqCount, int &idxGain, int &idxBias, int &idxCh)
 {
+    if (!fLoopOrderGeneratedFlag)
+        return;
     if (!fChAttendLoop)
     {
         fCurrentIndexMap[0] = -1;
         // int firstLoopTotal = fLoopOrderMap[1]->size();
         int firstLoopTotal = fLoopOrderMap[1]->size();
+        int secondLoopTotal = fLoopOrderMap[2]->size();
         fCurrentIndexMap[1] = daqCount % firstLoopTotal;
-        fCurrentIndexMap[2] = daqCount / firstLoopTotal;
+        fCurrentIndexMap[2] = (daqCount / firstLoopTotal) % secondLoopTotal;
     }
     else
     {
         int firstLoopTotal = fLoopOrderMap[1]->size();
         int secondLoopTotal = fLoopOrderMap[2]->size();
+        int thirdLoopTotal = fLoopOrderMap[3]->size();
         fCurrentIndexMap[1] = daqCount % firstLoopTotal;
         fCurrentIndexMap[2] = (daqCount / firstLoopTotal) % secondLoopTotal;
-        fCurrentIndexMap[3] = daqCount / (firstLoopTotal * secondLoopTotal);
+        fCurrentIndexMap[3] = (daqCount / (firstLoopTotal * secondLoopTotal)) % thirdLoopTotal;
     }
     idxGain = fCurrentIndexMap[fLoopOrder[0]];
     idxBias = fCurrentIndexMap[fLoopOrder[1]];
@@ -666,7 +678,49 @@ void FEEControlWin::ParseDAQCount(int daqCount, int &idxGain, int &idxBias, int 
     ui->listGain->setCurrentRow(idxGain);
     ui->listBias->setCurrentRow(idxBias);
     ui->listCh->setCurrentRow(idxCh);
-    std::cout << idxGain << '\t' << idxBias << '\t' << idxCh << std::endl;
+}
+
+void FEEControlWin::UpdateCountDown()
+{
+    QTime time;
+    time = QTime::fromMSecsSinceStartOfDay(fDAQControlTimer.remainingTime());
+    ui->lcdCountDown->display(time.toString("HH:mm:ss"));
+}
+
+void FEEControlWin::StartDAQInLoop()
+{
+    ui->lcdLoopCounter->display(fLoopCounter);
+    // std::cout << "John: Only for Test: Simulation: start DAQ." << std::endl;
+
+    // Change CITIROC Setting
+    int idxGain, idxBias, idxCh;
+    ParseDAQCount(fLoopCounter, idxGain, idxBias, idxCh);
+
+    if (!fChAttendLoop)
+    {
+        std::vector<std::pair<int, int>> vBias;
+        std::vector<std::pair<int, int>> vGain;
+
+        for (int i = 0; i < fChList.size(); i++)
+        {
+            vBias.push_back(std::pair<int, int>(fChList[i], fBiasList[idxBias]));
+            vGain.push_back(std::pair<int, int>(fChList[i], fGainList[idxGain]));
+        }
+        Modify_SP_CITIROC_BiasDAC(vBias);
+        Modify_SP_CITIROC_HGAmp(vGain);
+        Modify_SP_CITIROC_LGAmp(vGain);
+    }
+    else
+    {
+        Modify_SP_CITIROC_BiasDAC(fChList[idxCh], fBiasList[idxBias]);
+        Modify_SP_CITIROC_HGAmp(fChList[idxCh], fGainList[idxBias]);
+        Modify_SP_CITIROC_LGAmp(fChList[idxCh], fGainList[idxBias]);
+    }
+
+    // Start DAQ
+    // on_btnDAQStart_clicked();
+
+    fLoopCounter++;
 }
 
 void FEEControlWin::on_btnHVON_clicked()
@@ -1204,6 +1258,20 @@ bool FEEControlWin::Modify_SP_CITIROC_HGAmp(const std::vector<std::pair<int, int
     return true;
 }
 
+bool FEEControlWin::Modify_SP_CITIROC_HGAmp(int ch, int dac)
+{
+    if (!gParser->sConfigValidate())
+        return false;
+    if (ch < 0 || ch > 32)
+        return false;
+    if (dac < 0 || dac > 63)
+        return false;
+    gParser->Set_AMP_HG_DAC(ch, dac);
+    SendCITIROCConfig();
+    PrintToScreen();
+    return true;
+}
+
 bool FEEControlWin::Modify_SP_CITIROC_LGAmp(const std::vector<std::pair<int, int>> &vStatus)
 {
     if (!gParser->sConfigValidate())
@@ -1219,6 +1287,20 @@ bool FEEControlWin::Modify_SP_CITIROC_LGAmp(const std::vector<std::pair<int, int
         gParser->Set_AMP_LG_DAC(ch, amp);
     }
 
+    SendCITIROCConfig();
+    PrintToScreen();
+    return true;
+}
+
+bool FEEControlWin::Modify_SP_CITIROC_LGAmp(int ch, int dac)
+{
+    if (!gParser->sConfigValidate())
+        return false;
+    if (ch < 0 || ch > 32)
+        return false;
+    if (dac < 0 || dac > 63)
+        return false;
+    gParser->Set_AMP_LG_DAC(ch, dac);
     SendCITIROCConfig();
     PrintToScreen();
     return true;
@@ -1640,4 +1722,66 @@ void FEEControlWin::on_btnTest_clicked()
 {
     int t1, t2, t3;
     ParseDAQCount(ui->boxTest->value(), t1, t2, t3);
+}
+
+void FEEControlWin::on_btnStartLoop_clicked()
+{
+    if (IsDAQRunning())
+        return;
+    auto timeLoop = ui->timeLoop->time();
+    auto timeDAQ = ui->timeDAQInLoop->time();
+    // if loop time is less than daq time+10s, set loop time as daq time + 10s
+    double secondAdd = 10;
+    // double secondAdd = 0;
+    if (timeDAQ.msecsSinceStartOfDay() < 10 * 1000)
+    {
+        timeDAQ = QTime::fromMSecsSinceStartOfDay(10 * 1000);
+        ui->timeDAQInLoop->setTime(timeDAQ);
+    }
+
+    if (timeLoop.msecsSinceStartOfDay() - timeDAQ.msecsSinceStartOfDay() < secondAdd * 1000)
+    {
+        timeLoop = QTime::fromMSecsSinceStartOfDay(timeDAQ.msecsSinceStartOfDay() + secondAdd * 1000);
+        ui->timeLoop->setTime(timeLoop);
+    }
+    ui->timeDAQSetting->setTime(timeDAQ);
+
+    // Start DAQ when the button is pushed.
+    StartDAQInLoop();
+    fDAQControlTimer.start(timeLoop.msecsSinceStartOfDay());
+    fDAQCountDownTimer.start(1000);
+
+    ui->btnStartLoop->setEnabled(0);
+    ui->btnStopLoop->setEnabled(1);
+    ui->btnClearCounter->setEnabled(0);
+    ui->btnGenerateList->setEnabled(0);
+}
+
+void FEEControlWin::on_btnStopLoop_clicked()
+{
+    ui->btnStartLoop->setEnabled(1);
+    ui->btnStopLoop->setEnabled(0);
+    ui->btnClearCounter->setEnabled(1);
+    ui->btnGenerateList->setEnabled(1);
+
+    fDAQControlTimer.stop();
+    fDAQCountDownTimer.stop();
+}
+
+void FEEControlWin::handle_LoopTimer()
+{
+    StartDAQInLoop();
+}
+
+void FEEControlWin::handle_CountDownTimer()
+{
+    UpdateCountDown();
+}
+
+void FEEControlWin::on_btnClearCounter_clicked()
+{
+    fLoopCounter = 0;
+    ui->lcdLoopCounter->display(fLoopCounter);
+    int idxGain, idxBias, idxCh;
+    ParseDAQCount(fLoopCounter, idxGain, idxBias, idxCh);
 }

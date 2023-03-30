@@ -107,7 +107,9 @@ public:
     bool Modify_SP_CITIROC_BiasDAC(const std::vector<std::pair<int, int>> &vStatus);
     bool Modify_SP_CITIROC_BiasDAC(int ch, int dac);
     bool Modify_SP_CITIROC_HGAmp(const std::vector<std::pair<int, int>> &vStatus);
+    bool Modify_SP_CITIROC_HGAmp(int ch, int dac);
     bool Modify_SP_CITIROC_LGAmp(const std::vector<std::pair<int, int>> &vStatus);
+    bool Modify_SP_CITIROC_LGAmp(int ch, int dac);
 
 signals:
     void startDAQSignal(FEEControlWin *); // FEE Start DAQ signal
@@ -230,6 +232,7 @@ private:
     void GenerateChList();
 
     // Loop order control
+    bool fLoopOrderGeneratedFlag = 0;
     bool fChAttendLoop = 0;
     int fLoopOrder[3]{1, 2, 0}; // Gain, Bias, Channel list order
     int &fGainLoopOrder = fLoopOrder[0];
@@ -239,6 +242,13 @@ private:
     std::map<int, int> fCurrentIndexMap;             // Save current index for each loop
     void GenerateLoopOrder();
     void ParseDAQCount(int daqCount, int &idxGain, int &idxBias, int &idxCh);
+
+    // Timer Control
+    QTimer fDAQControlTimer;
+    QTimer fDAQCountDownTimer;
+    int fLoopCounter = 0;
+    void UpdateCountDown();
+    void StartDAQInLoop();
 
 private slots:
     // FEE Board Control
@@ -292,7 +302,14 @@ private slots:
     void on_btnVISAControl_clicked();
     void on_btnZaberControl_clicked();
     void on_btnGenerateList_clicked();
+
+    // Timer, Loop DAQ Control
     void on_btnTest_clicked();
+    void on_btnStartLoop_clicked();
+    void on_btnStopLoop_clicked();
+    void handle_LoopTimer();
+    void handle_CountDownTimer();
+    void on_btnClearCounter_clicked();
 };
 #define gFEEControlWin (FEEControlWin::Instance())
 

@@ -1369,13 +1369,6 @@
          <enum>QFrame::Raised</enum>
         </property>
         <layout class="QGridLayout" name="gridLayout_29">
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_42">
-           <property name="text">
-            <string>DAQ Time:</string>
-           </property>
-          </widget>
-         </item>
          <item row="0" column="1" colspan="2">
           <widget class="QTimeEdit" name="timeDAQInLoop">
            <property name="displayFormat">
@@ -1385,8 +1378,15 @@
             <time>
              <hour>0</hour>
              <minute>0</minute>
-             <second>0</second>
+             <second>30</second>
             </time>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_42">
+           <property name="text">
+            <string>DAQ Time:</string>
            </property>
           </widget>
          </item>
@@ -1405,9 +1405,16 @@
            <property name="time">
             <time>
              <hour>0</hour>
-             <minute>0</minute>
+             <minute>5</minute>
              <second>0</second>
             </time>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1" colspan="2">
+          <widget class="QPushButton" name="btnStopLoop">
+           <property name="text">
+            <string>Stop Timer</string>
            </property>
           </widget>
          </item>
@@ -1418,10 +1425,10 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="1" colspan="2">
-          <widget class="QPushButton" name="btnStopLoop">
+         <item row="3" column="0" colspan="3">
+          <widget class="QPushButton" name="btnClearCounter">
            <property name="text">
-            <string>Stop Timer</string>
+            <string>Clear Counter</string>
            </property>
           </widget>
          </item>
@@ -1453,6 +1460,9 @@
      </layout>
     </widget>
     <widget class="QPushButton" name="btnTest">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="geometry">
       <rect>
        <x>260</x>
@@ -1466,6 +1476,9 @@
      </property>
     </widget>
     <widget class="QSpinBox" name="boxTest">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="geometry">
       <rect>
        <x>80</x>
