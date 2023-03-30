@@ -109,17 +109,10 @@ bool DataManager::Init(string sInput)
 void DataManager::Close()
 {
     fFile->cd();
-    if (fHGTree && fFile && fFile->IsWritable())
-    {
-        fHGTree->Write();
-        fLGTree->Write();
-        fTDCTree->Write();
-    }
-
     if (fDatimeFlag)
     {
         fFile->WriteObject(fDAQDatime, "DAQDatime");
-        delete fDAQDatime;
+        // delete fDAQDatime;
         fDAQDatime = NULL;
         fDatimeFlag = 0;
     }
@@ -129,7 +122,7 @@ void DataManager::Close()
         for (int i = 0; i < 4; i++)
         {
             fFile->WriteObject(fTemp[i], Form("Temp%d", i));
-            delete fTemp[i];
+            // delete fTemp[i];
             fTemp[i] = NULL;
         }
         fTFlag = 0;
@@ -138,7 +131,7 @@ void DataManager::Close()
     if (fBoardFlag)
     {
         fFile->WriteObject(fBoardNo, "BoardNo");
-        delete fBoardNo;
+        // delete fBoardNo;
         fBoardNo = NULL;
         fBoardFlag = 0;
     }
@@ -146,7 +139,7 @@ void DataManager::Close()
     if (fConfigFlag)
     {
         fFile->WriteObject(fConfig, "Config");
-        delete fConfig;
+        // delete fConfig;
         fConfig = NULL;
         fConfigFlag = 0;
     }
@@ -154,9 +147,16 @@ void DataManager::Close()
     if (fLogicFlag)
     {
         fFile->WriteObject(fSelectedLogic, "Logic");
-        delete fSelectedLogic;
+        // delete fSelectedLogic;
         fSelectedLogic = NULL;
         fLogicFlag = 0;
+    }
+
+    if (fHGTree && fFile && fFile->IsWritable())
+    {
+        fHGTree->Write();
+        fLGTree->Write();
+        fTDCTree->Write();
     }
 
     fFile->Close();

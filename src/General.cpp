@@ -191,7 +191,9 @@ namespace UserDefine
         auto rtn = GetGateIPList(list1);
         if (rtn < 1)
             return "";
-            
+        if (list1.size() < 1)
+            return "";
+
         auto sIP = list1[0].first;
         std::stringstream ss(sIP);
         std::string sParsed, sTotal;
