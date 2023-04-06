@@ -82,7 +82,16 @@ public:
     void changeEvent(QEvent *e);
     int GetWinID() { return winID; }
     ROOTWidget *getROOTWidget() { return fRTWidget; }
-    void Update() { fRTWidget->Update(); }
+    void cd()
+    {
+        if (fRTWidget)
+            fRTWidget->cd();
+    }
+    void Update()
+    {
+        if (fRTWidget)
+            fRTWidget->Update();
+    }
 
 private:
     ROOTWidget *fRTWidget;
@@ -140,6 +149,12 @@ public:
     bool SetDrawOption(int option);
     int GetDrawChannel();
     bool SetDrawChannel(int ch);
+
+    void cd()
+    {
+        if (fPlotWin)
+            fPlotWin->cd();
+    }
 
     /// @brief Find Peaks for histogram hInput
     /// @param hInput [IN] input histogram

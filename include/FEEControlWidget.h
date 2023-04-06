@@ -7,6 +7,7 @@
 #include <QThread>
 #include <QTimer>
 #include <QTime>
+#include <QDateTime>
 
 // C++ STL
 #include <string>
@@ -29,6 +30,10 @@ class QSpinBox;
 class QButtonGroup;
 class QLabel;
 class QLabel;
+
+class TGraph;
+class TFile;
+class TLegend;
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -247,8 +252,21 @@ private:
     QTimer fDAQControlTimer;
     QTimer fDAQCountDownTimer;
     int fLoopCounter = 0;
+    int fMaxLoop = 0;
     void UpdateCountDown();
     void StartDAQInLoop();
+
+    // Temperture Measurement Control
+    TGraph *tgTemp[4]; // Temperature measurement for 4 modules
+    int tgPointCounter = 0;
+    QDateTime fTempStartTime;
+    double fTempStopTime; // in unit of msec
+    bool fAutoStop = 0;
+    void StartTempMeasure();
+    void StopTempMeasure();
+    TFile *fTempFile;
+    QTimer fTempTimer;
+    TLegend *flegend;
 
 private slots:
     // FEE Board Control
@@ -310,6 +328,11 @@ private slots:
     void handle_LoopTimer();
     void handle_CountDownTimer();
     void on_btnClearCounter_clicked();
+
+    // Temperature Measurement
+    void handle_TempMeasurement();
+    void on_btnStartTemp_clicked();
+    void on_btnStopTemp_clicked();
 };
 #define gFEEControlWin (FEEControlWin::Instance())
 

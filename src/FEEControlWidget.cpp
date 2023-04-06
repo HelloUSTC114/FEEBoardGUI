@@ -240,6 +240,9 @@ FEEControlWin::FEEControlWin(QWidget *parent)
     connect(&fDAQControlTimer, SIGNAL(timeout()), this, SLOT(handle_LoopTimer()));
     connect(&fDAQCountDownTimer, SIGNAL(timeout()), this, SLOT(handle_CountDownTimer()));
 
+    // Temperature Control
+    connect(&fTempTimer, SIGNAL(timeout()), this, SLOT(handle_TempMeasurement()));
+
     // End
     // show();
     ui->tabTotal->setCurrentIndex(0);
@@ -614,6 +617,7 @@ void FEEControlWin::GenerateLoopOrder()
         ui->cbbBias->setCurrentIndex(fLoopOrder[1] - 1);
         QString temp = "Channels do not change, change [Gain,Bias] as: [" + QString::number(fGainLoopOrder) + "," + QString::number(fBiasLoopOrder) + "].";
         ui->lblLoopOrder->setText(temp);
+        fMaxLoop = fGainList.size() * fBiasList.size();
     }
     else
     {
@@ -637,6 +641,7 @@ void FEEControlWin::GenerateLoopOrder()
 
         QString temp = "Change [Gain,Bias,Channel] as: [" + QString::number(fGainLoopOrder) + "," + QString::number(fBiasLoopOrder) + "," + QString::number(fChLoopOrder) + "].";
         ui->lblLoopOrder->setText(temp);
+        fMaxLoop = fGainList.size() * fBiasList.size() * fChList.size();
     }
 
     for (int i = 0; i < 3; i++)
@@ -693,6 +698,12 @@ void FEEControlWin::StartDAQInLoop()
     on_btnTMon_clicked();
     // std::cout << "John: Only for Test: Simulation: start DAQ." << std::endl;
 
+    if (fLoopCounter >= fMaxLoop)
+    {
+        on_btnStopLoop_clicked();
+        std::cout << "Loop is over." << std::endl;
+        return;
+    }
     // Change CITIROC Setting
     int idxGain, idxBias, idxCh;
     ParseDAQCount(fLoopCounter, idxGain, idxBias, idxCh);
@@ -719,10 +730,100 @@ void FEEControlWin::StartDAQInLoop()
     }
 
     // Start DAQ
-//     on_btnDAQStart_clicked();
-     QTimer::singleShot(15*1000, this, SLOT(on_btnDAQStart_clicked()));
+    //     on_btnDAQStart_clicked();
+    QTimer::singleShot(15 * 1000, this, SLOT(on_btnDAQStart_clicked()));
 
     fLoopCounter++;
+}
+
+#include <TFile.h>
+#include <TGraph.h>
+#include <TLegend.h>
+void FEEControlWin::StartTempMeasure()
+{
+    auto fileTimeStamp = QDateTime::currentDateTime();
+    QString fileName = "Temperature";
+    QString fileNameTotal = fileName;
+    ui->lblFileOut->setText(fsFilePath + "/" + fileName + "*.root");
+    fileNameTotal += fileTimeStamp.toString("-yyyy-MM-dd-hh-mm-ss");
+    fileNameTotal += ".root";
+
+    fTempFile = new TFile((fsFilePath + "/" + fileNameTotal).toStdString().c_str(), "recreate");
+    for (int i = 0; i < 4; i++)
+    {
+        tgTemp[i] = new TGraph();
+        tgTemp[i]->SetName(Form("temp%d", i));
+        tgTemp[i]->SetTitle(Form("Module %d;Time/s;Temperature/^{#circ}C", i));
+    }
+
+    // Judge Stop Condition
+    auto totalTime = ui->timeTTotal->time();
+    if (fTempStopTime = totalTime.msecsSinceStartOfDay())
+    {
+        fAutoStop = 1;
+    }
+    // Measure T at once
+    fTempStartTime = QDateTime::currentDateTime();
+    gBoard->ReadTemp();
+    double temp[4];
+    gBoard->GetTemp(temp);
+    for (int i = 0; i < 4; i++)
+    {
+        if (temp[i] == 510)
+            continue;
+        tgTemp[i]->SetPoint(0, 0, temp[i]);
+    }
+    tgTemp[0]->SetLineColor(kRed);
+    tgTemp[1]->SetLineColor(kBlue);
+    tgTemp[2]->SetLineColor(kBlack);
+    tgTemp[3]->SetLineColor(kGray);
+    tgPointCounter = 1;
+    // Draw
+    flegend = new TLegend(0.75, 0.1, 0.9, 0.2);
+    for (int i = 0; i < 4; i++)
+    {
+        flegend->AddEntry(tgTemp[i], Form("Module %d", i));
+    }
+    fdrawWin->cd();
+    int drawID = 0;
+    for (; drawID < 4; drawID++)
+    {
+        if (temp[drawID] != 510)
+        {
+            tgTemp[drawID]->Draw("AZLP");
+            tgTemp[drawID]->GetYaxis()->SetRangeUser(15, 60);
+            break;
+        }
+    }
+    for (; drawID < 4; drawID++)
+    {
+        tgTemp[drawID]->Draw("AZLP same");
+    }
+    flegend->Draw("same");
+    fTempTimer.start(ui->timeTInterval->time().msecsSinceStartOfDay());
+}
+
+void FEEControlWin::StopTempMeasure()
+{
+    fTempFile->cd();
+    for (int i = 0; i < 4; i++)
+    {
+        tgTemp[i]->Write(Form("temp%d", i));
+    }
+    fTempFile->Close();
+    delete fTempFile;
+    fTempFile = NULL;
+
+    for (int i = 0; i < 4; i++)
+    {
+        delete tgTemp[i];
+        tgTemp[i] = NULL;
+    }
+
+    delete flegend;
+    flegend = NULL;
+    fTempTimer.stop();
+    tgPointCounter = 0;
 }
 
 void FEEControlWin::on_btnHVON_clicked()
@@ -1786,4 +1887,38 @@ void FEEControlWin::on_btnClearCounter_clicked()
     ui->lcdLoopCounter->display(fLoopCounter);
     int idxGain, idxBias, idxCh;
     ParseDAQCount(fLoopCounter, idxGain, idxBias, idxCh);
+}
+
+void FEEControlWin::handle_TempMeasurement()
+{
+    QDateTime timeNow = QDateTime::currentDateTime();
+    double sec = timeNow.msecsTo(fTempStartTime) / 1000.0;
+    gBoard->ReadTemp();
+    double temp[4];
+    gBoard->GetTemp(temp);
+
+    for (int i = 0; i < 4; i++)
+    {
+        if (temp[i] == 510)
+            continue;
+        tgTemp[i]->SetPoint(tgPointCounter, sec, temp[i]);
+    }
+    fdrawWin->Update();
+    tgPointCounter++;
+
+    auto timeStop = ui->timeTTotal->time();
+    if (fAutoStop && sec * 1000 > fTempStopTime)
+    {
+        on_btnStopTemp_clicked();
+    }
+}
+
+void FEEControlWin::on_btnStartTemp_clicked()
+{
+    StartTempMeasure();
+}
+
+void FEEControlWin::on_btnStopTemp_clicked()
+{
+    StopTempMeasure();
 }

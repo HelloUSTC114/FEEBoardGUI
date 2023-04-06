@@ -518,7 +518,7 @@ int ROOTDraw::FindPeaks(TH1 *hInput, std::vector<PeakFitValue> &outPeaks, int nR
 {
     static TSpectrum *sp = new TSpectrum;
     if (nRebins > 0)
-        hInput->Rebin(2 ^ nRebins);
+        hInput->Rebin((int)TMath::Power(2, nRebins));
 
     sp->Search(hInput, maxPeakSigma);
     hInput->Draw();
@@ -584,6 +584,25 @@ int ROOTDraw::FindPeaks(TH1 *hInput, std::vector<PeakFitValue> &outPeaks, int nR
     }
 
     return outPeaks.size();
+}
+
+double GetGain(std::vector<PeakFitValue> &peakArray, std::vector<double> &devArray)
+{
+    for (int peak = 0; peak < peakArray.size(); peak++)
+    {
+        if (peak > 0)
+        {
+            double dev = peakArray[peak].first - peakArray[peak - 1].first;
+            devArray.push_back(dev);
+        }
+    }
+    if (devArray.size() < 4)
+    {
+        std::cout << "Warning: Count of peaks is too small to evaluate mean gain";
+        return 0;
+    }
+    double gain = (devArray[1] + devArray[2] + devArray[3]) / 3.0;
+    return gain;
 }
 
 void ROOTDraw::Setup()
