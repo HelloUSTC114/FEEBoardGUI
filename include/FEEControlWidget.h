@@ -34,6 +34,7 @@ class QLabel;
 class TGraph;
 class TFile;
 class TLegend;
+class TMultiGraph;
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -258,12 +259,14 @@ private:
 
     // Temperture Measurement Control
     TGraph *tgTemp[4]; // Temperature measurement for 4 modules
+    TMultiGraph *fmg;
     int tgPointCounter = 0;
     QDateTime fTempStartTime;
     double fTempStopTime; // in unit of msec
     bool fAutoStop = 0;
     void StartTempMeasure();
     void StopTempMeasure();
+    void DrawTemp();
     TFile *fTempFile;
     QTimer fTempTimer;
     TLegend *flegend;

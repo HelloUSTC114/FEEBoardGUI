@@ -150,11 +150,8 @@ public:
     int GetDrawChannel();
     bool SetDrawChannel(int ch);
 
-    void cd()
-    {
-        if (fPlotWin)
-            fPlotWin->cd();
-    }
+    void cd();
+
 
     /// @brief Find Peaks for histogram hInput
     /// @param hInput [IN] input histogram

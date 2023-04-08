@@ -1577,7 +1577,7 @@
         </time>
        </property>
       </widget>
-      <widget class="QPushButton" name="pushButton">
+      <widget class="QPushButton" name="btnStartTemp">
        <property name="geometry">
         <rect>
          <x>10</x>
@@ -1590,7 +1590,7 @@
         <string>Start T Meas</string>
        </property>
       </widget>
-      <widget class="QPushButton" name="pushButton_2">
+      <widget class="QPushButton" name="btnStopTemp">
        <property name="geometry">
         <rect>
          <x>130</x>

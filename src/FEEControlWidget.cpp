@@ -24,6 +24,9 @@
 #include <QSpinBox>
 #include <QButtonGroup>
 
+// ROOT
+#include <TLegend.h>
+
 using namespace std;
 
 QColor redColor(255, 0, 0), blackColor(0, 0, 0), greenColor(0, 255, 0);
@@ -242,6 +245,7 @@ FEEControlWin::FEEControlWin(QWidget *parent)
 
     // Temperature Control
     connect(&fTempTimer, SIGNAL(timeout()), this, SLOT(handle_TempMeasurement()));
+    flegend = new TLegend(0.75, 0.2, 0.9, 0.35);
 
     // End
     // show();
@@ -284,6 +288,9 @@ FEEControlWin::~FEEControlWin()
     fCRClock.stop();
 
     delete ui;
+
+    // Temperature Control;
+    delete flegend;
 }
 
 // FEE Control
@@ -739,6 +746,7 @@ void FEEControlWin::StartDAQInLoop()
 #include <TFile.h>
 #include <TGraph.h>
 #include <TLegend.h>
+#include <TMultiGraph.h>
 void FEEControlWin::StartTempMeasure()
 {
     auto fileTimeStamp = QDateTime::currentDateTime();
@@ -749,12 +757,14 @@ void FEEControlWin::StartTempMeasure()
     fileNameTotal += ".root";
 
     fTempFile = new TFile((fsFilePath + "/" + fileNameTotal).toStdString().c_str(), "recreate");
-    for (int i = 0; i < 4; i++)
-    {
-        tgTemp[i] = new TGraph();
-        tgTemp[i]->SetName(Form("temp%d", i));
-        tgTemp[i]->SetTitle(Form("Module %d;Time/s;Temperature/^{#circ}C", i));
-    }
+    fmg = new TMultiGraph();
+    // for (int i = 0; i < 4; i++)
+    // {
+    //     tgTemp[i] = new TGraph();
+    //     tgTemp[i]->SetName(Form("temp%d", i));
+    //     tgTemp[i]->SetTitle(Form("Module %d;Time/s;Temperature/^{#circ}C", i));
+    //     fmg->Add(tgTemp[i]);
+    // }
 
     // Judge Stop Condition
     auto totalTime = ui->timeTTotal->time();
@@ -770,60 +780,91 @@ void FEEControlWin::StartTempMeasure()
     for (int i = 0; i < 4; i++)
     {
         if (temp[i] == 510)
+        {
+            tgTemp[i] = NULL;
+            // tgTemp[i]->SetPoint(0, 0, 0);
             continue;
+        }
+
+        tgTemp[i] = new TGraph();
+        tgTemp[i]->SetName(Form("temp%d", i));
+        tgTemp[i]->SetTitle(Form("Module %d;Time/s;Temperature/^{#circ}C", i));
+        fmg->Add(tgTemp[i]);
+
         tgTemp[i]->SetPoint(0, 0, temp[i]);
     }
-    tgTemp[0]->SetLineColor(kRed);
-    tgTemp[1]->SetLineColor(kBlue);
-    tgTemp[2]->SetLineColor(kBlack);
-    tgTemp[3]->SetLineColor(kGray);
+    fmg->SetTitle("Temperature Measurement;Time/s;Temperature/^{#circ}C");
+    if (tgTemp[0])
+        tgTemp[0]->SetLineColor(kRed);
+    if (tgTemp[1])
+        tgTemp[1]->SetLineColor(kBlue);
+    if (tgTemp[2])
+        tgTemp[2]->SetLineColor(kBlack);
+    if (tgTemp[3])
+        tgTemp[3]->SetLineColor(kGray);
     tgPointCounter = 1;
     // Draw
-    flegend = new TLegend(0.75, 0.1, 0.9, 0.2);
     for (int i = 0; i < 4; i++)
     {
-        flegend->AddEntry(tgTemp[i], Form("Module %d", i));
+        if (tgTemp[i])
+            flegend->AddEntry(tgTemp[i], Form("Module %d", i));
     }
-    fdrawWin->cd();
-    int drawID = 0;
-    for (; drawID < 4; drawID++)
-    {
-        if (temp[drawID] != 510)
-        {
-            tgTemp[drawID]->Draw("AZLP");
-            tgTemp[drawID]->GetYaxis()->SetRangeUser(15, 60);
-            break;
-        }
-    }
-    for (; drawID < 4; drawID++)
-    {
-        tgTemp[drawID]->Draw("AZLP same");
-    }
-    flegend->Draw("same");
+    DrawTemp();
+
     fTempTimer.start(ui->timeTInterval->time().msecsSinceStartOfDay());
 }
 
 void FEEControlWin::StopTempMeasure()
 {
-    fTempFile->cd();
+    if (!fTempFile)
+        return;
     for (int i = 0; i < 4; i++)
     {
-        tgTemp[i]->Write(Form("temp%d", i));
+        if (tgTemp[i])
+            tgTemp[i]->Write(Form("temp%d", i));
     }
     fTempFile->Close();
     delete fTempFile;
     fTempFile = NULL;
 
-    for (int i = 0; i < 4; i++)
-    {
-        delete tgTemp[i];
-        tgTemp[i] = NULL;
-    }
+    // for (int i = 0; i < 4; i++)
+    // {
+    //     delete tgTemp[i];
+    //     tgTemp[i] = NULL;
+    // }
 
-    delete flegend;
-    flegend = NULL;
+    flegend->Clear();
+    delete fmg;
+    fmg = NULL;
     fTempTimer.stop();
     tgPointCounter = 0;
+    fdrawWin->Update();
+}
+
+void FEEControlWin::DrawTemp()
+{
+    if (!fdrawWin)
+        on_btnDraw_clicked();
+    fdrawWin->cd();
+    if (fmg)
+        fmg->Draw("AZLP");
+    // int drawID = 0;
+    // for (; drawID < 4; drawID++)
+    // {
+    //     if (tgTemp[drawID]->GetN())
+    //     {
+    //         tgTemp[drawID]->Draw("AZLP");
+    //         tgTemp[drawID]->GetYaxis()->SetRangeUser(15, 60);
+    //         break;
+    //     }
+    // }
+    // for (; drawID < 4; drawID++)
+    // {
+    //     if (tgTemp[drawID]->GetN())
+    //         tgTemp[drawID]->Draw("LP same");
+    // }
+    flegend->Draw("same");
+    fdrawWin->Update();
 }
 
 void FEEControlWin::on_btnHVON_clicked()
@@ -1892,20 +1933,25 @@ void FEEControlWin::on_btnClearCounter_clicked()
 void FEEControlWin::handle_TempMeasurement()
 {
     QDateTime timeNow = QDateTime::currentDateTime();
-    double sec = timeNow.msecsTo(fTempStartTime) / 1000.0;
+    double sec = -1 * timeNow.msecsTo(fTempStartTime) / 1000.0;
     gBoard->ReadTemp();
     double temp[4];
     gBoard->GetTemp(temp);
 
     for (int i = 0; i < 4; i++)
     {
-        if (temp[i] == 510)
+        if (!tgTemp[i])
             continue;
-        tgTemp[i]->SetPoint(tgPointCounter, sec, temp[i]);
+        tgTemp[i]->AddPoint(sec, temp[i]);
+        // tgTemp[i]->SetPoint(tgPointCounter, sec, temp[i]);
+        std::cout << sec << '\t' << temp[i] << std::endl;
+        std::cout << tgTemp[i]->GetN() << std::endl;
+        // tgTemp[i]->Draw("AZLP");
     }
-    fdrawWin->Update();
+    DrawTemp();
     tgPointCounter++;
 
+    std::cout << "Add Temperature point: " << tgPointCounter << std::endl;
     auto timeStop = ui->timeTTotal->time();
     if (fAutoStop && sec * 1000 > fTempStopTime)
     {

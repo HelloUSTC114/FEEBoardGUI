@@ -708,6 +708,12 @@ bool ROOTDraw::SetDrawChannel(int ch)
     return true;
 }
 
+void ROOTDraw::cd()
+{
+    if (fPlotWin)
+        fPlotWin->cd();
+}
+
 #include <QFileDialog>
 #include "datamanager.h"
 void ROOTDraw::on_btnFileChoose_clicked()
